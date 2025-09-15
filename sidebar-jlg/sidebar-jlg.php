@@ -96,16 +96,23 @@ class Sidebar_JLG {
 
     private function get_custom_icons() {
         $custom_icons = [];
-        $icons_dir = plugin_dir_path(__FILE__) . 'assets/icons/';
-        if (is_dir($icons_dir)) {
-            $files = scandir($icons_dir);
-            foreach ($files as $file) {
-                if (pathinfo($file, PATHINFO_EXTENSION) === 'svg') {
-                    $icon_name = 'custom_' . sanitize_key(pathinfo($file, PATHINFO_FILENAME));
-                    $custom_icons[$icon_name] = plugin_dir_url(__FILE__) . 'assets/icons/' . $file;
+        $icons_dir = realpath( plugin_dir_path( __FILE__ ) . 'assets/icons' );
+
+        if ( $icons_dir && is_dir( $icons_dir ) ) {
+            $icons_dir = trailingslashit( $icons_dir );
+            foreach ( new DirectoryIterator( $icons_dir ) as $fileinfo ) {
+                if ( $fileinfo->isFile() ) {
+                    $file_path = $fileinfo->getPathname();
+                    $checked   = wp_check_filetype_and_ext( $file_path, $fileinfo->getFilename(), [ 'svg' => 'image/svg+xml' ] );
+
+                    if ( $checked['ext'] === 'svg' && $checked['type'] === 'image/svg+xml' ) {
+                        $icon_name                       = 'custom_' . sanitize_key( $fileinfo->getBasename( '.svg' ) );
+                        $custom_icons[ $icon_name ] = trailingslashit( plugin_dir_url( __FILE__ ) . 'assets/icons' ) . $fileinfo->getFilename();
+                    }
                 }
             }
         }
+
         return $custom_icons;
     }
 
