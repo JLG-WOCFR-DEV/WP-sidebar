@@ -16,7 +16,7 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 - Choisir le style : couleurs, typographie, effets d'animation, marges…
 - Ajouter des éléments de menu (pages, articles, catégories, liens personnalisés) et des icônes sociales.
 - Activer une recherche intégrée et personnaliser son affichage.
-- Importer vos propres icônes SVG.
+- Importer vos propres icônes SVG en les plaçant dans le dossier `wp-content/uploads/sidebar-jlg/icons/`.
 
 ## Désinstallation
 

@@ -20,7 +20,7 @@ if ( ! defined( 'SIDEBAR_JLG_VERSION' ) ) {
 
 // Créer le dossier d'icônes personnalisées à l'activation
 register_activation_hook(__FILE__, function() {
-    $icons_dir = plugin_dir_path(__FILE__) . 'assets/icons/';
+    $icons_dir = wp_upload_dir()['basedir'] . '/sidebar-jlg/icons/';
     if (!is_dir($icons_dir)) {
         wp_mkdir_p($icons_dir);
     }
@@ -96,13 +96,14 @@ class Sidebar_JLG {
 
     private function get_custom_icons() {
         $custom_icons = [];
-        $icons_dir = plugin_dir_path(__FILE__) . 'assets/icons/';
+        $upload_dir = wp_upload_dir();
+        $icons_dir = $upload_dir['basedir'] . '/sidebar-jlg/icons/';
         if (is_dir($icons_dir)) {
             $files = scandir($icons_dir);
             foreach ($files as $file) {
                 if (pathinfo($file, PATHINFO_EXTENSION) === 'svg') {
                     $icon_name = 'custom_' . sanitize_key(pathinfo($file, PATHINFO_FILENAME));
-                    $custom_icons[$icon_name] = plugin_dir_url(__FILE__) . 'assets/icons/' . $file;
+                    $custom_icons[$icon_name] = $upload_dir['baseurl'] . '/sidebar-jlg/icons/' . $file;
                 }
             }
         }
