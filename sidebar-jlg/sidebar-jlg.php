@@ -341,10 +341,13 @@ class Sidebar_JLG {
     }
 
     public function ajax_get_posts() {
-        check_ajax_referer('jlg_ajax_nonce', 'nonce');
-        if ( ! current_user_can('manage_options') ) {
-            wp_send_json_error('Permission refusée.');
+        $capability = $this->get_ajax_capability();
+
+        if ( ! current_user_can( $capability ) ) {
+            wp_send_json_error( 'Permission refusée.' );
         }
+
+        check_ajax_referer( 'jlg_ajax_nonce', 'nonce' );
         $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
         $per_page = isset($_POST['posts_per_page']) ? intval($_POST['posts_per_page']) : 20;
         $posts = get_posts([
@@ -359,10 +362,13 @@ class Sidebar_JLG {
     }
 
     public function ajax_get_categories() {
-        check_ajax_referer('jlg_ajax_nonce', 'nonce');
-        if ( ! current_user_can('manage_options') ) {
-            wp_send_json_error('Permission refusée.');
+        $capability = $this->get_ajax_capability();
+
+        if ( ! current_user_can( $capability ) ) {
+            wp_send_json_error( 'Permission refusée.' );
         }
+
+        check_ajax_referer( 'jlg_ajax_nonce', 'nonce' );
         $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
         $per_page = isset($_POST['posts_per_page']) ? intval($_POST['posts_per_page']) : 20;
         $offset = ($page - 1) * $per_page;
@@ -379,13 +385,26 @@ class Sidebar_JLG {
     }
     
     public function ajax_reset_settings() {
-        check_ajax_referer('jlg_reset_nonce', 'nonce');
-        if ( ! current_user_can( 'manage_options' ) ) {
+        $capability = $this->get_ajax_capability();
+
+        if ( ! current_user_can( $capability ) ) {
             wp_send_json_error( 'Permission refusée.' );
         }
+
+        check_ajax_referer( 'jlg_reset_nonce', 'nonce' );
         delete_option( 'sidebar_jlg_settings' );
         delete_transient( 'sidebar_jlg_full_html' );
         wp_send_json_success( 'Réglages réinitialisés.' );
+    }
+
+    private function get_ajax_capability() {
+        /**
+         * Filter the capability required to access the plugin's AJAX endpoints.
+         *
+         * Using this filter allows granting access to roles with lesser permissions
+         * (e.g. `edit_posts`) when required.
+         */
+        return apply_filters( 'sidebar_jlg_ajax_capability', 'manage_options' );
     }
 
     private function color_picker($name, $options) {
