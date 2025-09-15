@@ -341,7 +341,15 @@ class Sidebar_JLG {
 
     public function ajax_get_posts() {
         check_ajax_referer('jlg_ajax_nonce', 'nonce');
-        $posts = get_posts(['numberposts' => -1]);
+        if ( ! current_user_can('manage_options') ) {
+            wp_send_json_error('Permission refusée.');
+        }
+        $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
+        $per_page = isset($_POST['posts_per_page']) ? intval($_POST['posts_per_page']) : 20;
+        $posts = get_posts([
+            'posts_per_page' => $per_page,
+            'paged' => $page,
+        ]);
         $options = [];
         foreach ($posts as $post) {
             $options[] = ['id' => $post->ID, 'title' => $post->post_title];
@@ -351,7 +359,17 @@ class Sidebar_JLG {
 
     public function ajax_get_categories() {
         check_ajax_referer('jlg_ajax_nonce', 'nonce');
-        $categories = get_categories(['hide_empty' => false]);
+        if ( ! current_user_can('manage_options') ) {
+            wp_send_json_error('Permission refusée.');
+        }
+        $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
+        $per_page = isset($_POST['posts_per_page']) ? intval($_POST['posts_per_page']) : 20;
+        $offset = ($page - 1) * $per_page;
+        $categories = get_categories([
+            'hide_empty' => false,
+            'number' => $per_page,
+            'offset' => $offset,
+        ]);
         $options = [];
         foreach ($categories as $category) {
             $options[] = ['id' => $category->term_id, 'name' => $category->name];
