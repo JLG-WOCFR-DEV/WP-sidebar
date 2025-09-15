@@ -95,7 +95,7 @@ jQuery(document).ready(function($) {
     });
 
     // --- Préréglages de style ---
-    $('#style-preset').on('change', function() {
+    $('#style-preset-select').on('change', function() {
         const preset = $(this).val();
         if (preset === 'custom') return;
 
