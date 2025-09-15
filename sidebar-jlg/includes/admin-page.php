@@ -10,7 +10,7 @@
     ?>
 
     <p><?php _e( 'Personnalisez l\'apparence et le comportement de votre sidebar.', 'sidebar-jlg' ); ?></p>
-    <p><b><?php _e( 'Nouveau :', 'sidebar-jlg' ); ?></b> <?php _e( 'Ajoutez vos propres icônes SVG dans le dossier <code>/wp-content/plugins/sidebar-jlg/assets/icons/</code>. Elles apparaîtront dans les listes de sélection !', 'sidebar-jlg' ); ?></p>
+    <p><b><?php _e( 'Nouveau :', 'sidebar-jlg' ); ?></b> <?php _e( 'Ajoutez vos propres icônes SVG dans le dossier <code>/wp-content/uploads/sidebar-jlg/icons/</code>. Elles apparaîtront dans les listes de sélection !', 'sidebar-jlg' ); ?></p>
 
     <div class="nav-tab-wrapper">
         <a href="#tab-general" class="nav-tab nav-tab-active"><?php _e( 'Général & Comportement', 'sidebar-jlg' ); ?></a>
