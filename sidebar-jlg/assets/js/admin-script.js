@@ -393,14 +393,19 @@ jQuery(document).ready(function($) {
         } else if (type === 'post' || type === 'category') {
             const action = type === 'post' ? 'jlg_get_posts' : 'jlg_get_categories';
             const name = `sidebar_jlg_settings[menu_items][${index}][value]`;
-            
+
             let html = '<p><label>' + (type === 'post' ? 'Article' : 'Catégorie') + '</label>';
             html += '<select class="widefat" name="' + name + '"><option value="">Chargement...</option></select></p>';
             valueWrapper.html(html);
-            
+
+            const page = 1;
+            const postsPerPage = 20;
+
             $.post(sidebarJLG.ajax_url, {
                 action: action,
-                nonce: sidebarJLG.nonce
+                nonce: sidebarJLG.nonce,
+                page: page,
+                posts_per_page: postsPerPage
             }).done(function(response) {
                 if (response.success) {
                     const idKey = type === 'post' ? 'id' : 'id';
