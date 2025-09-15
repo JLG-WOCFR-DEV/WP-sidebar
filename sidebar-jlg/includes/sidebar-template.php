@@ -16,7 +16,7 @@ ob_start();
                 elseif ($item['type'] === 'post') $url = get_permalink(absint($item['value']));
                 elseif ($item['type'] === 'category') $url = get_category_link(absint($item['value']));
                 
-                echo '<li><a href="' . $url . '">';
+                echo '<li><a href="' . esc_url( $url ) . '">';
                 if ( ! empty( $item['icon'] ) ) {
                     if ( ! empty( $item['icon_type'] ) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL)) {
                         echo '<span class="menu-icon svg-icon"><img src="' . esc_url($item['icon']) . '" alt=""></span>';
