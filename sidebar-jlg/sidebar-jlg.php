@@ -13,6 +13,11 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// Définir la version du plugin
+if ( ! defined( 'SIDEBAR_JLG_VERSION' ) ) {
+    define( 'SIDEBAR_JLG_VERSION', '4.9.2' );
+}
+
 // Créer le dossier d'icônes personnalisées à l'activation
 register_activation_hook(__FILE__, function() {
     $icons_dir = plugin_dir_path(__FILE__) . 'assets/icons/';
@@ -215,9 +220,9 @@ class Sidebar_JLG {
 
         wp_enqueue_style( 'wp-color-picker' );
         wp_enqueue_media();
-        wp_enqueue_style( 'sidebar-jlg-admin-css', plugin_dir_url( __FILE__ ) . 'assets/css/admin-style.css', [], '4.8.0' );
-        
-        wp_enqueue_script( 'sidebar-jlg-admin-js', plugin_dir_url( __FILE__ ) . 'assets/js/admin-script.js', [ 'jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util' ], '4.8.0', true );
+        wp_enqueue_style( 'sidebar-jlg-admin-css', plugin_dir_url( __FILE__ ) . 'assets/css/admin-style.css', [], SIDEBAR_JLG_VERSION );
+
+        wp_enqueue_script( 'sidebar-jlg-admin-js', plugin_dir_url( __FILE__ ) . 'assets/js/admin-script.js', [ 'jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util' ], SIDEBAR_JLG_VERSION, true );
 
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -229,8 +234,8 @@ class Sidebar_JLG {
     }
 
     public function enqueue_public_assets() {
-        wp_enqueue_style( 'sidebar-jlg-public-css', plugin_dir_url( __FILE__ ) . 'assets/css/public-style.css', [], '4.8.0' );
-        wp_enqueue_script( 'sidebar-jlg-public-js', plugin_dir_url( __FILE__ ) . 'assets/js/public-script.js', [], '4.8.0', true );
+        wp_enqueue_style( 'sidebar-jlg-public-css', plugin_dir_url( __FILE__ ) . 'assets/css/public-style.css', [], SIDEBAR_JLG_VERSION );
+        wp_enqueue_script( 'sidebar-jlg-public-js', plugin_dir_url( __FILE__ ) . 'assets/js/public-script.js', [], SIDEBAR_JLG_VERSION, true );
         
         $options = get_option( 'sidebar_jlg_settings', $this->get_default_settings() );
         wp_localize_script( 'sidebar-jlg-public-js', 'sidebarSettings', $options );
