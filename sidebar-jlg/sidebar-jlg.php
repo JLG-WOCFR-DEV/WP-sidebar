@@ -130,28 +130,28 @@ class Sidebar_JLG {
 
         // Onglet Général
         $sanitized_input['enable_sidebar'] = isset($sanitized_input['enable_sidebar']) ? 1 : 0;
-        $sanitized_input['layout_style'] = sanitize_text_field($sanitized_input['layout_style'] ?? $existing_options['layout_style']);
+        $sanitized_input['layout_style'] = sanitize_key($sanitized_input['layout_style'] ?? $existing_options['layout_style']);
         $sanitized_input['floating_vertical_margin'] = sanitize_text_field($sanitized_input['floating_vertical_margin'] ?? $existing_options['floating_vertical_margin']);
         $sanitized_input['border_radius'] = sanitize_text_field($sanitized_input['border_radius'] ?? $existing_options['border_radius']);
         $sanitized_input['border_width'] = absint($sanitized_input['border_width'] ?? $existing_options['border_width']);
         $sanitized_input['border_color'] = $this->sanitize_rgba_color($sanitized_input['border_color'] ?? $existing_options['border_color']);
-        $sanitized_input['desktop_behavior'] = sanitize_text_field($sanitized_input['desktop_behavior'] ?? $existing_options['desktop_behavior']);
+        $sanitized_input['desktop_behavior'] = sanitize_key($sanitized_input['desktop_behavior'] ?? $existing_options['desktop_behavior']);
         $sanitized_input['content_margin'] = sanitize_text_field($sanitized_input['content_margin'] ?? $existing_options['content_margin']);
         $sanitized_input['width_desktop'] = absint($sanitized_input['width_desktop'] ?? $existing_options['width_desktop']);
         $sanitized_input['width_tablet'] = absint($sanitized_input['width_tablet'] ?? $existing_options['width_tablet']);
         $sanitized_input['enable_search'] = isset($sanitized_input['enable_search']) ? 1 : 0;
-        $sanitized_input['search_method'] = sanitize_text_field($sanitized_input['search_method'] ?? $existing_options['search_method']);
+        $sanitized_input['search_method'] = sanitize_key($sanitized_input['search_method'] ?? $existing_options['search_method']);
         $sanitized_input['search_shortcode'] = sanitize_text_field($sanitized_input['search_shortcode'] ?? $existing_options['search_shortcode']);
-        $sanitized_input['search_alignment'] = sanitize_text_field($sanitized_input['search_alignment'] ?? $existing_options['search_alignment']);
+        $sanitized_input['search_alignment'] = sanitize_key($sanitized_input['search_alignment'] ?? $existing_options['search_alignment']);
         $sanitized_input['debug_mode'] = isset($sanitized_input['debug_mode']) ? 1 : 0;
         $sanitized_input['show_close_button'] = isset($sanitized_input['show_close_button']) ? 1 : 0;
         $sanitized_input['hamburger_top_position'] = sanitize_text_field($sanitized_input['hamburger_top_position'] ?? $existing_options['hamburger_top_position']);
 
         // Onglet Style & Préréglages
-        $sanitized_input['style_preset'] = sanitize_text_field($sanitized_input['style_preset'] ?? $existing_options['style_preset']);
+        $sanitized_input['style_preset'] = sanitize_key($sanitized_input['style_preset'] ?? $existing_options['style_preset']);
         $colors = ['bg_color', 'accent_color', 'font_color', 'font_hover_color'];
         foreach ($colors as $color_key) {
-            $sanitized_input[$color_key.'_type'] = sanitize_text_field($sanitized_input[$color_key.'_type'] ?? $existing_options[$color_key.'_type']);
+            $sanitized_input[$color_key.'_type'] = sanitize_key($sanitized_input[$color_key.'_type'] ?? $existing_options[$color_key.'_type']);
             if ($sanitized_input[$color_key.'_type'] === 'gradient') {
                 $sanitized_input[$color_key.'_start'] = $this->sanitize_rgba_color($sanitized_input[$color_key.'_start'] ?? $existing_options[$color_key.'_start']);
                 $sanitized_input[$color_key.'_end'] = $this->sanitize_rgba_color($sanitized_input[$color_key.'_end'] ?? $existing_options[$color_key.'_end']);
@@ -159,12 +159,12 @@ class Sidebar_JLG {
                 $sanitized_input[$color_key] = $this->sanitize_rgba_color($sanitized_input[$color_key] ?? $existing_options[$color_key]);
             }
         }
-        $sanitized_input['header_logo_type'] = sanitize_text_field($sanitized_input['header_logo_type'] ?? $existing_options['header_logo_type']);
+        $sanitized_input['header_logo_type'] = sanitize_key($sanitized_input['header_logo_type'] ?? $existing_options['header_logo_type']);
         $sanitized_input['app_name'] = sanitize_text_field($sanitized_input['app_name'] ?? $existing_options['app_name']);
         $sanitized_input['header_logo_image'] = esc_url_raw($sanitized_input['header_logo_image'] ?? $existing_options['header_logo_image']);
         $sanitized_input['header_logo_size'] = absint($sanitized_input['header_logo_size'] ?? $existing_options['header_logo_size']);
-        $sanitized_input['header_alignment_desktop'] = sanitize_text_field($sanitized_input['header_alignment_desktop'] ?? $existing_options['header_alignment_desktop']);
-        $sanitized_input['header_alignment_mobile'] = sanitize_text_field($sanitized_input['header_alignment_mobile'] ?? $existing_options['header_alignment_mobile']);
+        $sanitized_input['header_alignment_desktop'] = sanitize_key($sanitized_input['header_alignment_desktop'] ?? $existing_options['header_alignment_desktop']);
+        $sanitized_input['header_alignment_mobile'] = sanitize_key($sanitized_input['header_alignment_mobile'] ?? $existing_options['header_alignment_mobile']);
         $sanitized_input['header_padding_top'] = sanitize_text_field($sanitized_input['header_padding_top'] ?? $existing_options['header_padding_top']);
         $sanitized_input['font_size'] = absint($sanitized_input['font_size'] ?? $existing_options['font_size']);
         $sanitized_input['mobile_bg_color'] = $this->sanitize_rgba_color($sanitized_input['mobile_bg_color'] ?? $existing_options['mobile_bg_color']);
@@ -172,31 +172,42 @@ class Sidebar_JLG {
         $sanitized_input['mobile_blur'] = absint($sanitized_input['mobile_blur'] ?? $existing_options['mobile_blur']);
 
         // Onglet Effets
-        $sanitized_input['hover_effect_desktop'] = sanitize_text_field($sanitized_input['hover_effect_desktop'] ?? $existing_options['hover_effect_desktop']);
-        $sanitized_input['hover_effect_mobile'] = sanitize_text_field($sanitized_input['hover_effect_mobile'] ?? $existing_options['hover_effect_mobile']);
+        $sanitized_input['hover_effect_desktop'] = sanitize_key($sanitized_input['hover_effect_desktop'] ?? $existing_options['hover_effect_desktop']);
+        $sanitized_input['hover_effect_mobile'] = sanitize_key($sanitized_input['hover_effect_mobile'] ?? $existing_options['hover_effect_mobile']);
         $sanitized_input['animation_speed'] = absint($sanitized_input['animation_speed'] ?? $existing_options['animation_speed']);
-        $sanitized_input['animation_type'] = sanitize_text_field($sanitized_input['animation_type'] ?? $existing_options['animation_type']);
+        $sanitized_input['animation_type'] = sanitize_key($sanitized_input['animation_type'] ?? $existing_options['animation_type']);
         $sanitized_input['neon_blur'] = absint($sanitized_input['neon_blur'] ?? $existing_options['neon_blur']);
         $sanitized_input['neon_spread'] = absint($sanitized_input['neon_spread'] ?? $existing_options['neon_spread']);
 
         // Menu Items & Alignment
-        $sanitized_input['menu_alignment_desktop'] = sanitize_text_field($sanitized_input['menu_alignment_desktop'] ?? $existing_options['menu_alignment_desktop']);
-        $sanitized_input['menu_alignment_mobile'] = sanitize_text_field($sanitized_input['menu_alignment_mobile'] ?? $existing_options['menu_alignment_mobile']);
+        $sanitized_input['menu_alignment_desktop'] = sanitize_key($sanitized_input['menu_alignment_desktop'] ?? $existing_options['menu_alignment_desktop']);
+        $sanitized_input['menu_alignment_mobile'] = sanitize_key($sanitized_input['menu_alignment_mobile'] ?? $existing_options['menu_alignment_mobile']);
         $sanitized_menu_items = [];
         if (isset($sanitized_input['menu_items']) && is_array($sanitized_input['menu_items'])) {
             foreach ($sanitized_input['menu_items'] as $item) {
+                $item_type = sanitize_key($item['type'] ?? '');
+                $icon_type = sanitize_key($item['icon_type'] ?? '');
+
                 $sanitized_item = [
-                    'label' => sanitize_text_field($item['label']),
-                    'type' => sanitize_text_field($item['type']),
-                    'icon_type' => sanitize_text_field($item['icon_type']),
-                    'icon' => sanitize_text_field($item['icon']),
+                    'label' => sanitize_text_field($item['label'] ?? ''),
+                    'type' => $item_type,
+                    'icon_type' => $icon_type,
                 ];
-                $sanitized_item['value'] = ($item['type'] === 'custom' || $item['icon_type'] === 'svg_url') ? esc_url_raw($item['value']) : absint($item['value']);
+
+                if ($icon_type === 'svg_url') {
+                    $sanitized_item['icon'] = esc_url_raw($item['icon'] ?? '');
+                } else {
+                    $sanitized_item['icon'] = sanitize_key($item['icon'] ?? '');
+                }
+
+                $sanitized_item['value'] = ($item_type === 'custom' || $icon_type === 'svg_url')
+                    ? esc_url_raw($item['value'] ?? '')
+                    : absint($item['value'] ?? 0);
                 $sanitized_menu_items[] = $sanitized_item;
             }
         }
         $sanitized_input['menu_items'] = $sanitized_menu_items;
-        
+
         // Social Icons
         $sanitized_social_icons = [];
         if (isset($sanitized_input['social_icons']) && is_array($sanitized_input['social_icons'])) {
@@ -209,8 +220,8 @@ class Sidebar_JLG {
             }
         }
         $sanitized_input['social_icons'] = $sanitized_social_icons;
-        $sanitized_input['social_orientation'] = sanitize_text_field($sanitized_input['social_orientation'] ?? $existing_options['social_orientation']);
-        $sanitized_input['social_position'] = sanitize_text_field($sanitized_input['social_position'] ?? $existing_options['social_position']);
+        $sanitized_input['social_orientation'] = sanitize_key($sanitized_input['social_orientation'] ?? $existing_options['social_orientation']);
+        $sanitized_input['social_position'] = sanitize_key($sanitized_input['social_position'] ?? $existing_options['social_position']);
         $sanitized_input['social_icon_size'] = absint($sanitized_input['social_icon_size'] ?? $existing_options['social_icon_size']);
 
         return array_merge($existing_options, $sanitized_input);
