@@ -408,7 +408,14 @@ class Sidebar_JLG {
 
         check_ajax_referer( 'jlg_ajax_nonce', 'nonce' );
         $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
-        $per_page = isset($_POST['posts_per_page']) ? intval($_POST['posts_per_page']) : 20;
+        $max_per_page = 50;
+        $requested_per_page = isset($_POST['posts_per_page']) ? intval($_POST['posts_per_page']) : 20;
+
+        if ($requested_per_page > $max_per_page) {
+            wp_send_json_error( sprintf( 'Le paramètre posts_per_page ne peut pas dépasser %d.', $max_per_page ) );
+        }
+
+        $per_page = min( max(1, $requested_per_page), $max_per_page );
         $posts = get_posts([
             'posts_per_page' => $per_page,
             'paged' => $page,
@@ -429,7 +436,14 @@ class Sidebar_JLG {
 
         check_ajax_referer( 'jlg_ajax_nonce', 'nonce' );
         $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
-        $per_page = isset($_POST['posts_per_page']) ? intval($_POST['posts_per_page']) : 20;
+        $max_per_page = 50;
+        $requested_per_page = isset($_POST['posts_per_page']) ? intval($_POST['posts_per_page']) : 20;
+
+        if ($requested_per_page > $max_per_page) {
+            wp_send_json_error( sprintf( 'Le paramètre posts_per_page ne peut pas dépasser %d.', $max_per_page ) );
+        }
+
+        $per_page = min( max(1, $requested_per_page), $max_per_page );
         $offset = ($page - 1) * $per_page;
         $categories = get_categories([
             'hide_empty' => false,
