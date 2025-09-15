@@ -224,16 +224,21 @@ class Sidebar_JLG {
             'nonce' => wp_create_nonce('jlg_ajax_nonce'),
             'reset_nonce' => wp_create_nonce('jlg_reset_nonce'),
             'options' => get_option('sidebar_jlg_settings', $this->get_default_settings()),
-            'all_icons' => $this->get_all_available_icons()
+            'all_icons' => $this->get_all_available_icons(),
+            'choose_logo' => __('Choisir un logo', 'sidebar-jlg'),
+            'use_logo' => __('Utiliser ce logo', 'sidebar-jlg')
         ]);
     }
 
     public function enqueue_public_assets() {
         wp_enqueue_style( 'sidebar-jlg-public-css', plugin_dir_url( __FILE__ ) . 'assets/css/public-style.css', [], '4.8.0' );
         wp_enqueue_script( 'sidebar-jlg-public-js', plugin_dir_url( __FILE__ ) . 'assets/js/public-script.js', [], '4.8.0', true );
-        
+
         $options = get_option( 'sidebar_jlg_settings', $this->get_default_settings() );
         wp_localize_script( 'sidebar-jlg-public-js', 'sidebarSettings', $options );
+        wp_localize_script( 'sidebar-jlg-public-js', 'sidebarJLGPublic', [
+            'notFoundMessage' => __('Sidebar JLG: Sidebar or hamburger button not found.', 'sidebar-jlg'),
+        ] );
     }
     
     public function render_sidebar_html() {

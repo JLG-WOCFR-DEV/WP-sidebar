@@ -5,8 +5,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.getElementById('sidebar-overlay');
 
     if (!sidebar || !hamburgerBtn) {
-        if (typeof sidebarSettings !== 'undefined' && sidebarSettings.debug_mode == '1') {
-            console.error('Sidebar JLG: Sidebar or hamburger button not found.');
+        if (
+            typeof sidebarSettings !== 'undefined' &&
+            sidebarSettings.debug_mode == '1' &&
+            typeof sidebarJLGPublic !== 'undefined'
+        ) {
+            console.error(sidebarJLGPublic.notFoundMessage);
         }
         return;
     }

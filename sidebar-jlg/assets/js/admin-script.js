@@ -82,8 +82,8 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         if (mediaFrame) { mediaFrame.open(); return; }
         mediaFrame = wp.media({
-            title: 'Choisir un logo',
-            button: { text: 'Utiliser ce logo' },
+            title: sidebarJLG.choose_logo,
+            button: { text: sidebarJLG.use_logo },
             multiple: false
         });
         mediaFrame.on('select', function() {
