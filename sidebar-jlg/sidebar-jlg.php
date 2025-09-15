@@ -237,7 +237,15 @@ class Sidebar_JLG {
     }
     
     public function render_sidebar_html() {
-        require_once plugin_dir_path( __FILE__ ) . 'includes/sidebar-template.php';
+        $html = get_transient( 'sidebar_jlg_full_html' );
+        if ( false === $html ) {
+            ob_start();
+            require plugin_dir_path( __FILE__ ) . 'includes/sidebar-template.php';
+            $html = ob_get_clean();
+            set_transient( 'sidebar_jlg_full_html', $html );
+        }
+
+        echo $html;
     }
 
     public function get_default_settings() {
