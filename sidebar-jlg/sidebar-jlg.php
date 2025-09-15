@@ -368,7 +368,29 @@ class Sidebar_JLG {
         delete_transient( 'sidebar_jlg_full_html' );
         wp_send_json_success( 'Réglages réinitialisés.' );
     }
-    
+
+    private function color_picker($name, $options) {
+        $type = $options[$name . '_type'] ?? 'solid';
+        $solid_color = $options[$name] ?? '#ffffff';
+        $start_color = $options[$name . '_start'] ?? '#000000';
+        $end_color = $options[$name . '_end'] ?? '#ffffff';
+        ?>
+        <div class="color-picker-wrapper" data-color-name="<?php echo esc_attr($name); ?>">
+            <p>
+                <label><input type="radio" name="sidebar_jlg_settings[<?php echo $name; ?>_type]" value="solid" <?php checked($type, 'solid'); ?>> <?php echo __('Solide', 'sidebar-jlg'); ?></label>
+                <label><input type="radio" name="sidebar_jlg_settings[<?php echo $name; ?>_type]" value="gradient" <?php checked($type, 'gradient'); ?>> <?php echo __('Dégradé', 'sidebar-jlg'); ?></label>
+            </p>
+            <div class="color-solid-field" style="<?php echo $type === 'solid' ? '' : 'display:none;'; ?>">
+                <input type="text" name="sidebar_jlg_settings[<?php echo $name; ?>]" value="<?php echo esc_attr($solid_color); ?>" class="color-picker-rgba"/>
+            </div>
+            <div class="color-gradient-field" style="<?php echo $type === 'gradient' ? '' : 'display:none;'; ?>">
+                <input type="text" name="sidebar_jlg_settings[<?php echo $name; ?>_start]" value="<?php echo esc_attr($start_color); ?>" class="color-picker-rgba"/>
+                <input type="text" name="sidebar_jlg_settings[<?php echo $name; ?>_end]" value="<?php echo esc_attr($end_color); ?>" class="color-picker-rgba"/>
+            </div>
+        </div>
+        <?php
+    }
+
     private function sanitize_rgba_color( $color ) {
         if ( empty( $color ) || is_array( $color ) ) return '';
         if ( false === strpos( $color, 'rgba' ) ) return sanitize_hex_color( $color );

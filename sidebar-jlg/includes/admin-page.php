@@ -175,12 +175,12 @@
                 </tr>
                 <tr>
                     <th scope="row"><?php _e( 'Couleur de fond (Desktop)', 'sidebar-jlg' ); ?></th>
-                    <td><?php jlg_color_picker('bg_color', $options); ?></td>
+                    <td><?php $this->color_picker('bg_color', $options); ?></td>
                 </tr>
                 <tr>
                     <th scope="row"><?php _e( 'Couleur d\'accentuation', 'sidebar-jlg' ); ?></th>
                     <td>
-                        <?php jlg_color_picker('accent_color', $options); ?>
+                        <?php $this->color_picker('accent_color', $options); ?>
                         <p class="description"><?php _e('Utilisée pour les liens actifs et certains effets.', 'sidebar-jlg'); ?></p>
                     </td>
                 </tr>
@@ -200,8 +200,8 @@
                     <th scope="row"><?php _e( 'Typographie du menu', 'sidebar-jlg' ); ?></th>
                     <td>
                         <p><label><?php _e( 'Taille de police', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[font_size]" value="<?php echo esc_attr($options['font_size']); ?>" class="small-text" /> px</p>
-                        <p><label><?php _e( 'Couleur du texte', 'sidebar-jlg' ); ?></label> <?php jlg_color_picker('font_color', $options); ?></p>
-                        <p><label><?php _e( 'Couleur du texte (survol)', 'sidebar-jlg' ); ?></label> <?php jlg_color_picker('font_hover_color', $options); ?></p>
+                        <p><label><?php _e( 'Couleur du texte', 'sidebar-jlg' ); ?></label> <?php $this->color_picker('font_color', $options); ?></p>
+                        <p><label><?php _e( 'Couleur du texte (survol)', 'sidebar-jlg' ); ?></label> <?php $this->color_picker('font_hover_color', $options); ?></p>
                     </td>
                 </tr>
              </table>
@@ -418,26 +418,3 @@
         </div>
     </div>
 </script>
-<?php
-function jlg_color_picker($name, $options) {
-    $type = $options[$name.'_type'] ?? 'solid';
-    $solid_color = $options[$name] ?? '#ffffff';
-    $start_color = $options[$name.'_start'] ?? '#000000';
-    $end_color = $options[$name.'_end'] ?? '#ffffff';
-    ?>
-    <div class="color-picker-wrapper" data-color-name="<?php echo esc_attr($name); ?>">
-        <p>
-            <label><input type="radio" name="sidebar_jlg_settings[<?php echo $name; ?>_type]" value="solid" <?php checked($type, 'solid'); ?>> Solide</label>
-            <label><input type="radio" name="sidebar_jlg_settings[<?php echo $name; ?>_type]" value="gradient" <?php checked($type, 'gradient'); ?>> Dégradé</label>
-        </p>
-        <div class="color-solid-field" style="<?php echo $type === 'solid' ? '' : 'display:none;'; ?>">
-            <input type="text" name="sidebar_jlg_settings[<?php echo $name; ?>]" value="<?php echo esc_attr($solid_color); ?>" class="color-picker-rgba"/>
-        </div>
-        <div class="color-gradient-field" style="<?php echo $type === 'gradient' ? '' : 'display:none;'; ?>">
-            <input type="text" name="sidebar_jlg_settings[<?php echo $name; ?>_start]" value="<?php echo esc_attr($start_color); ?>" class="color-picker-rgba"/>
-            <input type="text" name="sidebar_jlg_settings[<?php echo $name; ?>_end]" value="<?php echo esc_attr($end_color); ?>" class="color-picker-rgba"/>
-        </div>
-    </div>
-    <?php
-}
-?>
