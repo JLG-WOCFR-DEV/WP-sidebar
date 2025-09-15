@@ -3,7 +3,7 @@
     <h1><?php _e( 'Réglages de la Sidebar JLG', 'sidebar-jlg' ); ?></h1>
 
     <?php
-    if ( isset( $_GET['settings-updated'] ) && $_GET['settings-updated'] ) {
+    if ( filter_input( INPUT_GET, 'settings-updated', FILTER_VALIDATE_BOOLEAN ) ) {
         add_settings_error( 'sidebar_jlg_messages', 'sidebar_jlg_message', __( 'Réglages sauvegardés.', 'sidebar-jlg' ), 'updated' );
     }
     settings_errors( 'sidebar_jlg_messages' );
