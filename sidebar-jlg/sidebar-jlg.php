@@ -474,8 +474,8 @@ class Sidebar_JLG {
         ?>
         <div class="color-picker-wrapper" data-color-name="<?php echo esc_attr( $name ); ?>">
             <p>
-                <label><input type="radio" name="sidebar_jlg_settings[<?php echo esc_attr( $name ); ?>_type]" value="solid" <?php checked($type, 'solid'); ?>> <?php echo __('Solide', 'sidebar-jlg'); ?></label>
-                <label><input type="radio" name="sidebar_jlg_settings[<?php echo esc_attr( $name ); ?>_type]" value="gradient" <?php checked($type, 'gradient'); ?>> <?php echo __('Dégradé', 'sidebar-jlg'); ?></label>
+                <label><input type="radio" name="sidebar_jlg_settings[<?php echo esc_attr( $name ); ?>_type]" value="solid" <?php checked($type, 'solid'); ?>> <?php esc_html_e('Solide', 'sidebar-jlg'); ?></label>
+                <label><input type="radio" name="sidebar_jlg_settings[<?php echo esc_attr( $name ); ?>_type]" value="gradient" <?php checked($type, 'gradient'); ?>> <?php esc_html_e('Dégradé', 'sidebar-jlg'); ?></label>
             </p>
             <div class="color-solid-field" style="<?php echo $type === 'solid' ? '' : 'display:none;'; ?>">
                 <input type="text" name="sidebar_jlg_settings[<?php echo esc_attr( $name ); ?>]" value="<?php echo esc_attr( $solid_color ); ?>" class="color-picker-rgba"/>
