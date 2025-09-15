@@ -68,6 +68,11 @@ document.addEventListener('DOMContentLoaded', function() {
     hamburgerBtn.addEventListener('click', toggleSidebar);
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSidebar();
+        }
+    });
 
     // Appliquer la classe d'effet de survol en fonction de la taille de l'écran
     function applyHoverEffect() {
