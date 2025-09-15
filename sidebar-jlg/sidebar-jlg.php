@@ -204,9 +204,20 @@ class Sidebar_JLG {
         $sanitized_social_icons = [];
         if (isset($sanitized_input['social_icons']) && is_array($sanitized_input['social_icons'])) {
             foreach ($sanitized_input['social_icons'] as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $url = esc_url_raw($item['url'] ?? '');
+                $icon = sanitize_key($item['icon'] ?? '');
+
+                if ($url === '' || $icon === '') {
+                    continue;
+                }
+
                 $sanitized_item = [
-                    'url' => esc_url_raw($item['url']),
-                    'icon' => sanitize_key($item['icon']),
+                    'url' => $url,
+                    'icon' => $icon,
                 ];
                 $sanitized_social_icons[] = $sanitized_item;
             }
