@@ -41,6 +41,8 @@ class Sidebar_JLG {
         $db_options = get_option('sidebar_jlg_settings');
         $this->options = wp_parse_args($db_options, $this->get_default_settings());
 
+        $this->revalidate_custom_icons();
+
         add_action( 'admin_menu', [ $this, 'add_admin_menu' ] );
         add_action( 'admin_init', [ $this, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
@@ -157,7 +159,6 @@ class Sidebar_JLG {
         $common_attributes = [
             'class' => true,
             'id' => true,
-            'style' => true,
             'fill' => true,
             'stroke' => true,
             'stroke-width' => true,
@@ -251,6 +252,92 @@ class Sidebar_JLG {
         ];
 
         return $allowed;
+    }
+
+    private function revalidate_custom_icons() {
+        $available_icons = $this->get_all_available_icons();
+
+        if (empty($available_icons)) {
+            return;
+        }
+
+        $options = $this->options;
+        $menu_items_changed = false;
+        $social_icons_changed = false;
+
+        if (!empty($options['menu_items']) && is_array($options['menu_items'])) {
+            foreach ($options['menu_items'] as $index => $item) {
+                if (!is_array($item)) {
+                    unset($options['menu_items'][$index]);
+                    $menu_items_changed = true;
+                    continue;
+                }
+
+                $icon_type = $item['icon_type'] ?? '';
+                $icon_value = $item['icon'] ?? '';
+
+                if ($icon_type === 'svg_url' || $icon_value === '') {
+                    continue;
+                }
+
+                if (strpos($icon_value, 'custom_') === 0) {
+                    $icon_key = sanitize_key($icon_value);
+
+                    if ($icon_key === '' || !isset($available_icons[$icon_key])) {
+                        $options['menu_items'][$index]['icon'] = '';
+                        $options['menu_items'][$index]['icon_type'] = 'svg_inline';
+                        $menu_items_changed = true;
+                    } elseif ($icon_key !== $icon_value) {
+                        $options['menu_items'][$index]['icon'] = $icon_key;
+                        $menu_items_changed = true;
+                    }
+                }
+            }
+
+            if ($menu_items_changed) {
+                $options['menu_items'] = array_values(array_filter($options['menu_items'], function($item) {
+                    return is_array($item);
+                }));
+            }
+        }
+
+        if (!empty($options['social_icons']) && is_array($options['social_icons'])) {
+            foreach ($options['social_icons'] as $index => $icon) {
+                if (!is_array($icon)) {
+                    unset($options['social_icons'][$index]);
+                    $social_icons_changed = true;
+                    continue;
+                }
+
+                $icon_key = $icon['icon'] ?? '';
+
+                if (strpos($icon_key, 'custom_') !== 0) {
+                    continue;
+                }
+
+                $sanitized_key = sanitize_key($icon_key);
+
+                if ($sanitized_key === '' || !isset($available_icons[$sanitized_key])) {
+                    unset($options['social_icons'][$index]);
+                    $social_icons_changed = true;
+                } elseif ($sanitized_key !== $icon_key) {
+                    $options['social_icons'][$index]['icon'] = $sanitized_key;
+                    $social_icons_changed = true;
+                }
+            }
+
+            if ($social_icons_changed) {
+                $options['social_icons'] = array_values(array_filter($options['social_icons'], function($icon) {
+                    return is_array($icon) && !empty($icon['icon']) && !empty($icon['url']);
+                }));
+            }
+        }
+
+        if ($menu_items_changed || $social_icons_changed) {
+            $this->options = $options;
+            update_option('sidebar_jlg_settings', $options);
+            $this->clear_menu_cache();
+        }
     }
 
     private function normalize_svg_content($content) {
