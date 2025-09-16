@@ -61,7 +61,21 @@ class Sidebar_JLG {
         add_action( 'wp_ajax_jlg_get_categories', [ $this, 'ajax_get_categories' ] );
         add_action( 'wp_ajax_jlg_reset_settings', [ $this, 'ajax_reset_settings' ] );
         
-        add_action( 'update_option_sidebar_jlg_settings', [ $this, 'clear_menu_cache' ], 10, 2 );
+        add_action( 'update_option_sidebar_jlg_settings', [ $this, 'clear_menu_cache' ], 10, 0 );
+
+        $content_change_hooks = [
+            'save_post',
+            'deleted_post',
+            'trashed_post',
+            'untrashed_post',
+            'edited_term',
+            'delete_term',
+            'created_term',
+        ];
+
+        foreach ( $content_change_hooks as $hook ) {
+            add_action( $hook, [ $this, 'clear_menu_cache' ], 10, 0 );
+        }
     }
 
     public function get_all_available_icons() {
