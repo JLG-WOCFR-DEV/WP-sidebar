@@ -390,17 +390,56 @@ class Sidebar_JLG {
         return array_merge($existing_options, $sanitized_input);
     }
 
+    private function sanitize_css_dimension($value, $fallback) {
+        $fallback = is_string($fallback) || is_numeric($fallback) ? (string) $fallback : '';
+        $sanitized_fallback = sanitize_text_field($fallback);
+
+        $value = is_string($value) || is_numeric($value) ? (string) $value : '';
+        $value = trim($value);
+
+        if ($value === '') {
+            return $sanitized_fallback;
+        }
+
+        $value = sanitize_text_field($value);
+
+        static $pattern = null;
+        if ($pattern === null) {
+            $allowed_units = ['px', 'rem', 'em', '%', 'vh', 'vw', 'vmin', 'vmax', 'ch'];
+            $pattern = '/^-?(?:\d+|\d*\.\d+)(?:' . implode('|', array_map('preg_quote', $allowed_units)) . ')$/i';
+        }
+
+        if (preg_match($pattern, $value)) {
+            return $value;
+        }
+
+        if (preg_match('/^0(?:\.0+)?$/', $value)) {
+            return '0';
+        }
+
+        return $sanitized_fallback;
+    }
+
     private function sanitize_general_settings($input, $existing_options) {
         $sanitized = [];
 
         $sanitized['enable_sidebar'] = isset($input['enable_sidebar']) ? 1 : 0;
         $sanitized['layout_style'] = sanitize_key($input['layout_style'] ?? $existing_options['layout_style']);
-        $sanitized['floating_vertical_margin'] = sanitize_text_field($input['floating_vertical_margin'] ?? $existing_options['floating_vertical_margin']);
-        $sanitized['border_radius'] = sanitize_text_field($input['border_radius'] ?? $existing_options['border_radius']);
+        $sanitized['floating_vertical_margin'] = $this->sanitize_css_dimension(
+            $input['floating_vertical_margin'] ?? null,
+            $existing_options['floating_vertical_margin'] ?? ''
+        );
+        $sanitized['border_radius'] = $this->sanitize_css_dimension(
+            $input['border_radius'] ?? null,
+            $existing_options['border_radius'] ?? ''
+        );
         $sanitized['border_width'] = absint($input['border_width'] ?? $existing_options['border_width']);
         $sanitized['border_color'] = $this->sanitize_rgba_color($input['border_color'] ?? $existing_options['border_color']);
         $sanitized['desktop_behavior'] = sanitize_key($input['desktop_behavior'] ?? $existing_options['desktop_behavior']);
-        $sanitized['content_margin'] = sanitize_text_field($input['content_margin'] ?? $existing_options['content_margin']);
+        $sanitized['content_margin'] = $this->sanitize_css_dimension(
+            $input['content_margin'] ?? null,
+            $existing_options['content_margin'] ?? ''
+        );
         $sanitized['width_desktop'] = absint($input['width_desktop'] ?? $existing_options['width_desktop']);
         $sanitized['width_tablet'] = absint($input['width_tablet'] ?? $existing_options['width_tablet']);
         $sanitized['enable_search'] = isset($input['enable_search']) ? 1 : 0;
@@ -409,7 +448,10 @@ class Sidebar_JLG {
         $sanitized['search_alignment'] = sanitize_key($input['search_alignment'] ?? $existing_options['search_alignment']);
         $sanitized['debug_mode'] = isset($input['debug_mode']) ? 1 : 0;
         $sanitized['show_close_button'] = isset($input['show_close_button']) ? 1 : 0;
-        $sanitized['hamburger_top_position'] = sanitize_text_field($input['hamburger_top_position'] ?? $existing_options['hamburger_top_position']);
+        $sanitized['hamburger_top_position'] = $this->sanitize_css_dimension(
+            $input['hamburger_top_position'] ?? null,
+            $existing_options['hamburger_top_position'] ?? ''
+        );
 
         return $sanitized;
     }
