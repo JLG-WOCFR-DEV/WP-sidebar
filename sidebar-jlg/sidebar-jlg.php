@@ -503,11 +503,55 @@ class Sidebar_JLG {
     }
 
     private function sanitize_rgba_color( $color ) {
-        if ( empty( $color ) || is_array( $color ) ) return '';
-        if ( false === strpos( $color, 'rgba' ) ) return sanitize_hex_color( $color );
-        sscanf( $color, 'rgba(%d, %d, %d, %f)', $r, $g, $b, $a );
-        return 'rgba('.absint($r).','.absint($g).','.absint($b).','.floatval($a).')';
+        if ( empty( $color ) || is_array( $color ) ) {
+            return '';
+        }
+
+        $color = trim( $color );
+
+        if ( 0 !== stripos( $color, 'rgba' ) ) {
+            $sanitized_hex = sanitize_hex_color( $color );
+            return $sanitized_hex ? $sanitized_hex : '';
+        }
+
+        $pattern = '/^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(0|1|0?\.\d+|1\.0+)\s*\)$/i';
+
+        if ( ! preg_match( $pattern, $color, $matches ) ) {
+            return '';
+        }
+
+        $r = (int) $matches[1];
+        $g = (int) $matches[2];
+        $b = (int) $matches[3];
+        $a_value = (float) $matches[4];
+
+        foreach ( [ $r, $g, $b ] as $component ) {
+            if ( $component < 0 || $component > 255 ) {
+                return '';
+            }
+        }
+
+        if ( $a_value < 0 || $a_value > 1 ) {
+            return '';
+        }
+
+        $alpha = $matches[4];
+
+        if ( '.' === substr( $alpha, 0, 1 ) ) {
+            $alpha = '0' . $alpha;
+        }
+
+        $alpha = rtrim( $alpha, '0' );
+        $alpha = rtrim( $alpha, '.' );
+
+        if ( '' === $alpha ) {
+            $alpha = '0';
+        }
+
+        return sprintf( 'rgba(%d,%d,%d,%s)', $r, $g, $b, $alpha );
     }
 }
 
-Sidebar_JLG::get_instance();
+if ( ! defined( 'SIDEBAR_JLG_SKIP_BOOTSTRAP' ) ) {
+    Sidebar_JLG::get_instance();
+}
