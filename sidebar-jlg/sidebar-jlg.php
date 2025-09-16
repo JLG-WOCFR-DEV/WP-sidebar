@@ -89,17 +89,178 @@ class Sidebar_JLG {
     private function get_custom_icons() {
         $custom_icons = [];
         $upload_dir = wp_upload_dir();
-        $icons_dir = $upload_dir['basedir'] . '/sidebar-jlg/icons/';
-        if (is_dir($icons_dir)) {
-            $files = scandir($icons_dir);
-            foreach ($files as $file) {
-                if (pathinfo($file, PATHINFO_EXTENSION) === 'svg') {
-                    $icon_name = 'custom_' . sanitize_key(pathinfo($file, PATHINFO_FILENAME));
-                    $custom_icons[$icon_name] = $upload_dir['baseurl'] . '/sidebar-jlg/icons/' . $file;
-                }
-            }
+        $icons_dir = trailingslashit($upload_dir['basedir']) . 'sidebar-jlg/icons/';
+
+        if ( ! is_dir($icons_dir) || ! is_readable($icons_dir) ) {
+            return $custom_icons;
         }
+
+        $files = scandir($icons_dir);
+        if ( ! is_array($files) ) {
+            return $custom_icons;
+        }
+
+        $allowed_mimes = [ 'svg' => 'image/svg+xml' ];
+
+        foreach ($files as $file) {
+            if ($file === '.' || $file === '..' || strpos($file, '.') === 0) {
+                continue;
+            }
+
+            $file_path = $icons_dir . $file;
+
+            if ( ! is_file($file_path) || ! is_readable($file_path) ) {
+                continue;
+            }
+
+            $filetype = wp_check_filetype($file_path, $allowed_mimes);
+            if (empty($filetype['ext']) || $filetype['ext'] !== 'svg' || empty($filetype['type'])) {
+                continue;
+            }
+
+            $raw_contents = file_get_contents($file_path);
+            if ($raw_contents === false) {
+                continue;
+            }
+
+            $sanitized_contents = wp_kses($raw_contents, $this->get_allowed_svg_elements());
+            if (empty($sanitized_contents)) {
+                continue;
+            }
+
+            $normalized_original = $this->normalize_svg_content($raw_contents);
+            $normalized_sanitized = $this->normalize_svg_content($sanitized_contents);
+
+            if ($normalized_original === '' || $normalized_original !== $normalized_sanitized) {
+                continue;
+            }
+
+            $icon_key = sanitize_key(pathinfo($file, PATHINFO_FILENAME));
+            if ($icon_key === '') {
+                continue;
+            }
+
+            $icon_name = 'custom_' . $icon_key;
+            $custom_icons[$icon_name] = trailingslashit($upload_dir['baseurl']) . 'sidebar-jlg/icons/' . rawurlencode($file);
+        }
+
         return $custom_icons;
+    }
+
+    private function get_allowed_svg_elements() {
+        static $allowed = null;
+
+        if ($allowed !== null) {
+            return $allowed;
+        }
+
+        $common_attributes = [
+            'class' => true,
+            'id' => true,
+            'style' => true,
+            'fill' => true,
+            'stroke' => true,
+            'stroke-width' => true,
+            'stroke-linecap' => true,
+            'stroke-linejoin' => true,
+            'stroke-miterlimit' => true,
+            'stroke-dasharray' => true,
+            'stroke-dashoffset' => true,
+            'fill-opacity' => true,
+            'stroke-opacity' => true,
+            'fill-rule' => true,
+            'clip-rule' => true,
+            'opacity' => true,
+            'transform' => true,
+            'data-name' => true,
+            'focusable' => true,
+        ];
+
+        $allowed = [
+            'svg' => array_merge(
+                $common_attributes,
+                [
+                    'xmlns' => true,
+                    'xmlns:xlink' => true,
+                    'width' => true,
+                    'height' => true,
+                    'viewBox' => true,
+                    'preserveAspectRatio' => true,
+                    'aria-hidden' => true,
+                    'aria-labelledby' => true,
+                    'role' => true,
+                    'version' => true,
+                    'xml:space' => true,
+                ]
+            ),
+            'g' => $common_attributes,
+            'title' => [],
+            'path' => array_merge($common_attributes, [ 'd' => true ]),
+            'circle' => array_merge($common_attributes, [ 'cx' => true, 'cy' => true, 'r' => true ]),
+            'ellipse' => array_merge($common_attributes, [ 'cx' => true, 'cy' => true, 'rx' => true, 'ry' => true ]),
+            'rect' => array_merge($common_attributes, [ 'x' => true, 'y' => true, 'width' => true, 'height' => true, 'rx' => true, 'ry' => true ]),
+            'line' => array_merge($common_attributes, [ 'x1' => true, 'y1' => true, 'x2' => true, 'y2' => true ]),
+            'polyline' => array_merge($common_attributes, [ 'points' => true ]),
+            'polygon' => array_merge($common_attributes, [ 'points' => true ]),
+            'linearGradient' => array_merge($common_attributes, [
+                'gradientUnits' => true,
+                'gradientTransform' => true,
+                'x1' => true,
+                'y1' => true,
+                'x2' => true,
+                'y2' => true,
+            ]),
+            'radialGradient' => array_merge($common_attributes, [
+                'gradientUnits' => true,
+                'gradientTransform' => true,
+                'cx' => true,
+                'cy' => true,
+                'fx' => true,
+                'fy' => true,
+                'r' => true,
+            ]),
+            'stop' => array_merge($common_attributes, [
+                'offset' => true,
+                'stop-color' => true,
+                'stop-opacity' => true,
+            ]),
+            'defs' => $common_attributes,
+            'clipPath' => array_merge($common_attributes, [ 'id' => true, 'clipPathUnits' => true ]),
+            'mask' => array_merge($common_attributes, [ 'id' => true, 'maskUnits' => true, 'maskContentUnits' => true, 'x' => true, 'y' => true, 'width' => true, 'height' => true ]),
+            'symbol' => array_merge($common_attributes, [ 'viewBox' => true, 'preserveAspectRatio' => true ]),
+            'use' => array_merge($common_attributes, [ 'x' => true, 'y' => true, 'xlink:href' => true, 'href' => true ]),
+            'text' => array_merge($common_attributes, [
+                'x' => true,
+                'y' => true,
+                'dx' => true,
+                'dy' => true,
+                'text-anchor' => true,
+                'font-family' => true,
+                'font-size' => true,
+                'font-weight' => true,
+                'letter-spacing' => true,
+                'word-spacing' => true,
+            ]),
+            'tspan' => array_merge($common_attributes, [
+                'x' => true,
+                'y' => true,
+                'dx' => true,
+                'dy' => true,
+                'text-anchor' => true,
+            ]),
+        ];
+
+        return $allowed;
+    }
+
+    private function normalize_svg_content($content) {
+        $content = preg_replace('/<\?xml.*?\?>/i', '', $content);
+        $content = preg_replace('/<!DOCTYPE.*?>/is', '', $content);
+        $content = preg_replace('/<!--.*?-->/s', '', $content);
+        $content = html_entity_decode($content, ENT_QUOTES | ENT_XML1, 'UTF-8');
+        $content = preg_replace('/\s+/', '', $content ?? '');
+
+        return trim($content);
     }
 
     public function add_admin_menu() {
