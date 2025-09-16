@@ -39,7 +39,10 @@ ob_start();
                 echo '<div class="social-icons ' . esc_attr($options['social_orientation']) . '">';
                 foreach($options['social_icons'] as $social) {
                     if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($all_icons[$social['icon']]) ) {
-                        echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr(explode('_', $social['icon'])[0]) . '">';
+                        $icon_parts = explode('_', $social['icon']);
+                        $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
+
+                        echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($icon_label) . '">';
                         if (strpos($social['icon'], 'custom_') === 0) {
                             echo '<img class="social-svg-icon" src="' . esc_url($all_icons[$social['icon']]) . '" alt="">';
                         } else {
@@ -63,7 +66,10 @@ if ($options['social_position'] === 'footer' && !empty($options['social_icons'])
         echo '<div class="social-icons ' . esc_attr($options['social_orientation']) . '">';
         foreach($options['social_icons'] as $social) {
             if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($all_icons[$social['icon']]) ) {
-                echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr(explode('_', $social['icon'])[0]) . '">';
+                $icon_parts = explode('_', $social['icon']);
+                $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
+
+                echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($icon_label) . '">';
                 if (strpos($social['icon'], 'custom_') === 0) {
                     echo '<img class="social-svg-icon" src="' . esc_url($all_icons[$social['icon']]) . '" alt="">';
                 } else {
