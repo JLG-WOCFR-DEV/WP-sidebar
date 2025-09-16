@@ -18,6 +18,11 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 - Activer une recherche intégrée et personnaliser son affichage.
 - Importer vos propres icônes SVG en les plaçant dans le dossier `wp-content/uploads/sidebar-jlg/icons/`.
 
+### Icônes personnalisées
+
+- Seuls les fichiers au format `.svg` sont chargés par le plugin. Chaque fichier est contrôlé avec `wp_check_filetype()` avant d'être ajouté à la bibliothèque.
+- Le contenu SVG est validé via `wp_kses`. Les fichiers dont le contenu est altéré par le nettoyage ou qui contiennent des éléments non autorisés sont ignorés pour éviter toute contamination.
+
 ## Désinstallation
 
 La désinstallation supprime les options enregistrées par le plugin.
