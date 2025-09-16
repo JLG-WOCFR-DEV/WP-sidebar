@@ -374,6 +374,16 @@
     </form>
 </div>
 
+<div id="icon-library-modal" style="display:none;">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+        <button type="button" class="modal-close" aria-label="<?php esc_attr_e( 'Fermer la modale', 'sidebar-jlg' ); ?>">&times;</button>
+        <h2><?php esc_html_e( 'Bibliothèque d\'icônes', 'sidebar-jlg' ); ?></h2>
+        <input type="search" id="icon-search" placeholder="<?php esc_attr_e( 'Rechercher une icône…', 'sidebar-jlg' ); ?>" />
+        <div id="icon-grid"></div>
+    </div>
+</div>
+
 <!-- Templates JS -->
 <script type="text/html" id="tmpl-menu-item">
     <div class="menu-item-box">
