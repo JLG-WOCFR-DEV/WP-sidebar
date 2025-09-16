@@ -495,7 +495,10 @@ class Sidebar_JLG {
         $sanitized['header_logo_size'] = absint($input['header_logo_size'] ?? $existing_options['header_logo_size']);
         $sanitized['header_alignment_desktop'] = sanitize_key($input['header_alignment_desktop'] ?? $existing_options['header_alignment_desktop']);
         $sanitized['header_alignment_mobile'] = sanitize_key($input['header_alignment_mobile'] ?? $existing_options['header_alignment_mobile']);
-        $sanitized['header_padding_top'] = sanitize_text_field($input['header_padding_top'] ?? $existing_options['header_padding_top']);
+        $sanitized['header_padding_top'] = $this->sanitize_css_dimension(
+            $input['header_padding_top'] ?? null,
+            $existing_options['header_padding_top'] ?? ''
+        );
         $sanitized['font_size'] = absint($input['font_size'] ?? $existing_options['font_size']);
         $sanitized['mobile_bg_color'] = $this->sanitize_rgba_color($input['mobile_bg_color'] ?? $existing_options['mobile_bg_color']);
         $sanitized['mobile_bg_opacity'] = floatval($input['mobile_bg_opacity'] ?? $existing_options['mobile_bg_opacity']);
