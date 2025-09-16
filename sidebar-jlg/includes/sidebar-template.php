@@ -1,8 +1,8 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-$options = get_option('sidebar_jlg_settings', Sidebar_JLG::get_instance()->get_default_settings());
-$all_icons = Sidebar_JLG::get_instance()->get_all_available_icons();
+$options = get_option('sidebar_jlg_settings', \JLG\Sidebar\Sidebar_JLG::get_instance()->get_default_settings());
+$all_icons = \JLG\Sidebar\Sidebar_JLG::get_instance()->get_all_available_icons();
 
 ob_start();
 ?>
