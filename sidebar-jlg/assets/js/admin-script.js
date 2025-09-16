@@ -408,7 +408,7 @@ jQuery(document).ready(function($) {
                 posts_per_page: postsPerPage
             }).done(function(response) {
                 if (response.success) {
-                    const idKey = type === 'post' ? 'id' : 'id';
+                    const idKey = 'id';
                     const titleKey = type === 'post' ? 'title' : 'name';
                     html = `<select class="widefat" name="${name}">`;
                     response.data.forEach(opt => {
