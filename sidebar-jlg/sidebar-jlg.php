@@ -11,7 +11,11 @@
  * Domain Path:       /languages
  */
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+namespace JLG\Sidebar;
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 // Définir la version du plugin
 if ( ! defined( 'SIDEBAR_JLG_VERSION' ) ) {
@@ -808,5 +812,5 @@ class Sidebar_JLG {
 }
 
 if ( ! defined( 'SIDEBAR_JLG_SKIP_BOOTSTRAP' ) ) {
-    Sidebar_JLG::get_instance();
+    \JLG\Sidebar\Sidebar_JLG::get_instance();
 }

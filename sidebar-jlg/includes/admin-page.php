@@ -24,7 +24,7 @@
     <form action="options.php" method="post" id="sidebar-jlg-form">
         <?php
         settings_fields( 'sidebar_jlg_options_group' );
-        $defaults = Sidebar_JLG::get_instance()->get_default_settings();
+        $defaults = \JLG\Sidebar\Sidebar_JLG::get_instance()->get_default_settings();
         $options_from_db = get_option( 'sidebar_jlg_settings' );
         $options = wp_parse_args( $options_from_db, $defaults );
         ?>

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+use JLG\Sidebar\Sidebar_JLG;
+
 define('ABSPATH', true);
 define('SIDEBAR_JLG_SKIP_BOOTSTRAP', true);
 
