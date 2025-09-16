@@ -97,6 +97,8 @@ class Sidebar_JLG {
             return $custom_icons;
         }
 
+        $max_file_size = 200 * 1024; // 200 KB limit
+
         $files = scandir($icons_dir);
         if ( ! is_array($files) ) {
             return $custom_icons;
@@ -117,6 +119,11 @@ class Sidebar_JLG {
 
             $filetype = wp_check_filetype($file_path, $allowed_mimes);
             if (empty($filetype['ext']) || $filetype['ext'] !== 'svg' || empty($filetype['type'])) {
+                continue;
+            }
+
+            $file_size = filesize($file_path);
+            if ($file_size === false || $file_size > $max_file_size) {
                 continue;
             }
 
