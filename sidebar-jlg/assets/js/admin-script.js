@@ -393,10 +393,22 @@ jQuery(document).ready(function($) {
         } else if (type === 'post' || type === 'category') {
             const action = type === 'post' ? 'jlg_get_posts' : 'jlg_get_categories';
             const name = `sidebar_jlg_settings[menu_items][${index}][value]`;
+            const labelText = type === 'post' ? 'Article' : 'Catégorie';
+            const $label = $('<label>').text(labelText);
+            const $selectElement = $('<select>', {
+                class: 'widefat',
+                name
+            });
 
-            let html = '<p><label>' + (type === 'post' ? 'Article' : 'Catégorie') + '</label>';
-            html += '<select class="widefat" name="' + name + '"><option value="">Chargement...</option></select></p>';
-            valueWrapper.html(html);
+            const loadingOption = document.createElement('option');
+            loadingOption.value = '';
+            loadingOption.textContent = 'Chargement...';
+            $selectElement.append(loadingOption);
+
+            const $paragraph = $('<p>');
+            $paragraph.append($label);
+            $paragraph.append($selectElement);
+            valueWrapper.append($paragraph);
 
             const page = 1;
             const postsPerPage = 20;
@@ -407,19 +419,55 @@ jQuery(document).ready(function($) {
                 page: page,
                 posts_per_page: postsPerPage
             }).done(function(response) {
+                if (!$selectElement.closest('body').length) {
+                    return;
+                }
+
                 if (response.success) {
                     const idKey = 'id';
                     const titleKey = type === 'post' ? 'title' : 'name';
-                    html = `<select class="widefat" name="${name}">`;
-                    response.data.forEach(opt => {
-                        const selected = opt[idKey] == value ? 'selected' : '';
-                        html += `<option value="${opt[idKey]}" ${selected}>${opt[titleKey]}</option>`;
+                    const optionsArray = Array.isArray(response.data) ? response.data : [];
+
+                    $selectElement.empty();
+
+                    optionsArray.forEach(opt => {
+                        const optionElement = document.createElement('option');
+                        optionElement.value = opt[idKey];
+                        optionElement.textContent = opt[titleKey] || '';
+                        if (String(opt[idKey]) === String(value)) {
+                            optionElement.selected = true;
+                        }
+                        $selectElement.append(optionElement);
                     });
-                    html += `</select>`;
-                    valueWrapper.html(html);
+
+                    if (!$selectElement.children().length) {
+                        const emptyOption = document.createElement('option');
+                        emptyOption.value = '';
+                        emptyOption.textContent = 'Aucun résultat';
+                        $selectElement.append(emptyOption);
+                    }
                 } else {
                     logDebug(`Failed to fetch data for ${action}.`);
+                    $selectElement.empty();
+
+                    const errorOption = document.createElement('option');
+                    errorOption.value = '';
+                    errorOption.textContent = 'Erreur de chargement';
+                    $selectElement.append(errorOption);
                 }
+            }).fail(function() {
+                logDebug(`AJAX request failed for ${action}.`);
+
+                if (!$selectElement.closest('body').length) {
+                    return;
+                }
+
+                $selectElement.empty();
+
+                const errorOption = document.createElement('option');
+                errorOption.value = '';
+                errorOption.textContent = 'Erreur de chargement';
+                $selectElement.append(errorOption);
             });
         }
     }
