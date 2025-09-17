@@ -852,14 +852,52 @@ class Sidebar_JLG {
         }
 
         $per_page = min( max(1, $requested_per_page), $max_per_page );
+        $include_ids = [];
+        if ( isset( $_POST['include'] ) ) {
+            $raw_include = wp_unslash( $_POST['include'] );
+            $include_source = is_array( $raw_include ) ? $raw_include : explode( ',', (string) $raw_include );
+            $include_ids = array_filter( array_map( 'absint', $include_source ) );
+        }
+
         $posts = get_posts([
             'posts_per_page' => $per_page,
             'paged' => $page,
         ]);
-        $options = [];
+
+        $options_by_id = [];
         foreach ($posts as $post) {
-            $options[] = ['id' => $post->ID, 'title' => $post->post_title];
+            $options_by_id[$post->ID] = ['id' => $post->ID, 'title' => $post->post_title];
         }
+
+        if (!empty($include_ids)) {
+            $existing_ids = array_keys($options_by_id);
+            $missing_ids = array_diff($include_ids, $existing_ids);
+
+            if (!empty($missing_ids)) {
+                $additional_posts = get_posts([
+                    'posts_per_page' => count($missing_ids),
+                    'post__in'       => $missing_ids,
+                    'orderby'        => 'post__in',
+                ]);
+
+                foreach ($additional_posts as $post) {
+                    $options_by_id[$post->ID] = ['id' => $post->ID, 'title' => $post->post_title];
+                }
+            }
+
+            $ordered_options = [];
+            foreach ($include_ids as $include_id) {
+                if (isset($options_by_id[$include_id])) {
+                    $ordered_options[] = $options_by_id[$include_id];
+                    unset($options_by_id[$include_id]);
+                }
+            }
+
+            $options = array_merge($ordered_options, array_values($options_by_id));
+        } else {
+            $options = array_values($options_by_id);
+        }
+
         wp_send_json_success($options);
     }
 
@@ -881,15 +919,54 @@ class Sidebar_JLG {
 
         $per_page = min( max(1, $requested_per_page), $max_per_page );
         $offset = ($page - 1) * $per_page;
+        $include_ids = [];
+        if ( isset( $_POST['include'] ) ) {
+            $raw_include = wp_unslash( $_POST['include'] );
+            $include_source = is_array( $raw_include ) ? $raw_include : explode( ',', (string) $raw_include );
+            $include_ids = array_filter( array_map( 'absint', $include_source ) );
+        }
+
         $categories = get_categories([
             'hide_empty' => false,
             'number' => $per_page,
             'offset' => $offset,
         ]);
-        $options = [];
+
+        $options_by_id = [];
         foreach ($categories as $category) {
-            $options[] = ['id' => $category->term_id, 'name' => $category->name];
+            $options_by_id[$category->term_id] = ['id' => $category->term_id, 'name' => $category->name];
         }
+
+        if (!empty($include_ids)) {
+            $existing_ids = array_keys($options_by_id);
+            $missing_ids = array_diff($include_ids, $existing_ids);
+
+            if (!empty($missing_ids)) {
+                $additional_categories = get_categories([
+                    'hide_empty' => false,
+                    'include'    => $missing_ids,
+                    'number'     => count($missing_ids),
+                    'orderby'    => 'include',
+                ]);
+
+                foreach ($additional_categories as $category) {
+                    $options_by_id[$category->term_id] = ['id' => $category->term_id, 'name' => $category->name];
+                }
+            }
+
+            $ordered_options = [];
+            foreach ($include_ids as $include_id) {
+                if (isset($options_by_id[$include_id])) {
+                    $ordered_options[] = $options_by_id[$include_id];
+                    unset($options_by_id[$include_id]);
+                }
+            }
+
+            $options = array_merge($ordered_options, array_values($options_by_id));
+        } else {
+            $options = array_values($options_by_id);
+        }
+
         wp_send_json_success($options);
     }
     
