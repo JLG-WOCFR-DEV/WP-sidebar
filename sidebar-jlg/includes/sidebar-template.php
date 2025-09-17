@@ -18,13 +18,15 @@ ob_start();
                 
                 echo '<li><a href="' . esc_url( $url ) . '">';
                 if ( ! empty( $item['icon'] ) ) {
-                    if ( ! empty( $item['icon_type'] ) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL)) {
-                        echo '<span class="menu-icon svg-icon"><img src="' . esc_url($item['icon']) . '" alt=""></span>';
-                    } elseif (isset($all_icons[$item['icon']])) {
-                        if (strpos($item['icon'], 'custom_') === 0) {
-                            echo '<span class="menu-icon svg-icon"><img src="' . esc_url($all_icons[$item['icon']]) . '" alt=""></span>';
+                    if ( ! empty( $item['icon_type'] ) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL) ) {
+                        echo '<span class="menu-icon svg-icon"><img src="' . esc_url( $item['icon'] ) . '" alt=""></span>';
+                    } elseif ( isset( $all_icons[ $item['icon'] ] ) ) {
+                        $icon_markup = $all_icons[ $item['icon'] ];
+
+                        if ( strpos( $item['icon'], 'custom_' ) === 0 ) {
+                            echo '<span class="menu-icon svg-icon">' . $icon_markup . '</span>';
                         } else {
-                            echo '<span class="menu-icon">' . $all_icons[$item['icon']] . '</span>';
+                            echo '<span class="menu-icon">' . $icon_markup . '</span>';
                         }
                     }
                 }
@@ -43,11 +45,7 @@ ob_start();
                         $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
 
                         echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($icon_label) . '">';
-                        if (strpos($social['icon'], 'custom_') === 0) {
-                            echo '<img class="social-svg-icon" src="' . esc_url($all_icons[$social['icon']]) . '" alt="">';
-                        } else {
-                            echo $all_icons[$social['icon']]; 
-                        }
+                        echo $all_icons[$social['icon']];
                         echo '</a>';
                     }
                 }
@@ -70,11 +68,7 @@ if ($options['social_position'] === 'footer' && !empty($options['social_icons'])
                 $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
 
                 echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($icon_label) . '">';
-                if (strpos($social['icon'], 'custom_') === 0) {
-                    echo '<img class="social-svg-icon" src="' . esc_url($all_icons[$social['icon']]) . '" alt="">';
-                } else {
-                    echo $all_icons[$social['icon']]; 
-                }
+                echo $all_icons[$social['icon']];
                 echo '</a>';
             }
         }
