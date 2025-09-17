@@ -64,6 +64,16 @@ $tests = [
         'fallback' => '2.5rem',
         'expected' => '0',
     ],
+    'valid_calc_expression' => [
+        'input'    => 'calc(100% - 20px)',
+        'fallback' => '2.5rem',
+        'expected' => 'calc(100% - 20px)',
+    ],
+    'invalid_calc_disallowed_unit' => [
+        'input'    => 'calc(100% - 20pt)',
+        'fallback' => '2.5rem',
+        'expected' => '2.5rem',
+    ],
     'empty_input_uses_fallback' => [
         'input'    => '',
         'fallback' => '2.5rem',
