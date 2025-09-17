@@ -887,6 +887,7 @@ class Sidebar_JLG {
 
         check_ajax_referer( 'jlg_reset_nonce', 'nonce' );
         delete_option( 'sidebar_jlg_settings' );
+        // Also clear cached HTML so all locale-specific transients are removed.
         $this->clear_menu_cache();
         wp_send_json_success( 'Réglages réinitialisés.' );
     }
