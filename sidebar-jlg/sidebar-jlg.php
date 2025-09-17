@@ -623,12 +623,17 @@ class Sidebar_JLG {
     }
     
     public function render_sidebar_html() {
-        $html = get_transient( 'sidebar_jlg_full_html' );
+        $current_locale = $this->get_locale_for_cache();
+        $transient_key  = $this->get_transient_key_for_locale( $current_locale );
+
+        $html = get_transient( $transient_key );
         if ( false === $html ) {
             ob_start();
             require plugin_dir_path( __FILE__ ) . 'includes/sidebar-template.php';
             $html = ob_get_clean();
-            set_transient( 'sidebar_jlg_full_html', $html );
+
+            set_transient( $transient_key, $html );
+            $this->remember_cached_locale( $current_locale );
         }
 
         echo $html;
@@ -703,7 +708,102 @@ class Sidebar_JLG {
     }
     
     public function clear_menu_cache() {
-        delete_transient('sidebar_jlg_full_html');
+        $cached_locales = $this->get_cached_locales();
+
+        foreach ( $cached_locales as $locale ) {
+            $transient_key = $this->get_transient_key_for_locale( $locale );
+            delete_transient( $transient_key );
+        }
+
+        delete_transient( 'sidebar_jlg_full_html' );
+
+        if ( ! empty( $cached_locales ) ) {
+            delete_option( $this->get_cached_locales_option_name() );
+        }
+    }
+
+    private function get_locale_for_cache() {
+        if ( function_exists( 'determine_locale' ) ) {
+            $locale = determine_locale();
+        } elseif ( function_exists( 'get_locale' ) ) {
+            $locale = get_locale();
+        } else {
+            $locale = '';
+        }
+
+        if ( ! is_string( $locale ) ) {
+            $locale = '';
+        }
+
+        return '' === $locale ? 'default' : $locale;
+    }
+
+    private function normalize_locale_for_cache( $locale ) {
+        $locale = (string) $locale;
+        $normalized = preg_replace( '/[^A-Za-z0-9_\-]/', '', $locale );
+
+        if ( null === $normalized || '' === $normalized ) {
+            return 'default';
+        }
+
+        return $normalized;
+    }
+
+    private function get_transient_key_for_locale( $locale ) {
+        $normalized = $this->normalize_locale_for_cache( $locale );
+
+        return 'sidebar_jlg_full_html_' . $normalized;
+    }
+
+    private function remember_cached_locale( $locale ) {
+        $normalized = $this->normalize_locale_for_cache( $locale );
+
+        if ( '' === $normalized ) {
+            return;
+        }
+
+        $option_name     = $this->get_cached_locales_option_name();
+        $existing_option = get_option( $option_name, null );
+
+        if ( null === $existing_option ) {
+            add_option( $option_name, [ $normalized ], '', 'no' );
+            return;
+        }
+
+        if ( ! is_array( $existing_option ) ) {
+            $existing_option = [];
+        }
+
+        if ( in_array( $normalized, $existing_option, true ) ) {
+            return;
+        }
+
+        $existing_option[] = $normalized;
+        update_option( $option_name, $existing_option, 'no' );
+    }
+
+    private function get_cached_locales() {
+        $option_name = $this->get_cached_locales_option_name();
+        $stored      = get_option( $option_name, [] );
+
+        if ( ! is_array( $stored ) ) {
+            $stored = [];
+        }
+
+        $normalized = [];
+
+        foreach ( $stored as $locale ) {
+            $normalized_locale = $this->normalize_locale_for_cache( $locale );
+            if ( '' !== $normalized_locale ) {
+                $normalized[] = $normalized_locale;
+            }
+        }
+
+        return array_values( array_unique( $normalized ) );
+    }
+
+    private function get_cached_locales_option_name() {
+        return 'sidebar_jlg_cached_locales';
     }
 
     public function add_body_classes( $classes ) {
