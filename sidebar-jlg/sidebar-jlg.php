@@ -887,7 +887,7 @@ class Sidebar_JLG {
 
         check_ajax_referer( 'jlg_reset_nonce', 'nonce' );
         delete_option( 'sidebar_jlg_settings' );
-        delete_transient( 'sidebar_jlg_full_html' );
+        $this->clear_menu_cache();
         wp_send_json_success( 'Réglages réinitialisés.' );
     }
 
