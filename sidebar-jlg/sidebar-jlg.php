@@ -35,6 +35,7 @@ class Sidebar_JLG {
     private static $instance;
     private $options;
     private $all_icons = null;
+    private $rejected_custom_icons = [];
 
     public static function get_instance() {
         if ( null === self::$instance ) self::$instance = new self();
@@ -50,6 +51,7 @@ class Sidebar_JLG {
         add_action( 'admin_menu', [ $this, 'add_admin_menu' ] );
         add_action( 'admin_init', [ $this, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+        add_action( 'admin_notices', [ $this, 'render_custom_icon_notice' ] );
         
         if ( ! empty( $this->options['enable_sidebar'] ) ) {
             add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_public_assets' ] );
@@ -108,6 +110,7 @@ class Sidebar_JLG {
 
     private function get_custom_icons() {
         $custom_icons = [];
+        $this->rejected_custom_icons = [];
         $upload_dir = wp_upload_dir();
         $icons_dir = trailingslashit($upload_dir['basedir']) . 'sidebar-jlg/icons/';
 
@@ -137,21 +140,25 @@ class Sidebar_JLG {
 
             $filetype = wp_check_filetype($file_path, $allowed_mimes);
             if (empty($filetype['ext']) || $filetype['ext'] !== 'svg' || empty($filetype['type'])) {
+                $this->rejected_custom_icons[] = $file;
                 continue;
             }
 
             $file_size = filesize($file_path);
             if ($file_size === false || $file_size > $max_file_size) {
+                $this->rejected_custom_icons[] = $file;
                 continue;
             }
 
             $raw_contents = file_get_contents($file_path);
             if ($raw_contents === false) {
+                $this->rejected_custom_icons[] = $file;
                 continue;
             }
 
             $sanitized_contents = wp_kses($raw_contents, $this->get_allowed_svg_elements());
             if (empty($sanitized_contents)) {
+                $this->rejected_custom_icons[] = $file;
                 continue;
             }
 
@@ -159,11 +166,13 @@ class Sidebar_JLG {
             $normalized_sanitized = $this->normalize_svg_content($sanitized_contents);
 
             if ($normalized_original === '' || $normalized_original !== $normalized_sanitized) {
+                $this->rejected_custom_icons[] = $file;
                 continue;
             }
 
             $icon_key = sanitize_key(pathinfo($file, PATHINFO_FILENAME));
             if ($icon_key === '') {
+                $this->rejected_custom_icons[] = $file;
                 continue;
             }
 
@@ -172,6 +181,29 @@ class Sidebar_JLG {
         }
 
         return $custom_icons;
+    }
+
+    public function render_custom_icon_notice() {
+        if ( ! current_user_can( 'manage_options' ) || empty( $this->rejected_custom_icons ) ) {
+            return;
+        }
+
+        $unique_files = array_unique( $this->rejected_custom_icons );
+        sort( $unique_files, SORT_STRING );
+
+        $file_list = implode( ', ', array_map( 'sanitize_text_field', $unique_files ) );
+        $message = sprintf(
+            /* translators: %s: comma-separated list of SVG filenames. */
+            __( 'Sidebar JLG: the following SVG files were ignored: %s.', 'sidebar-jlg' ),
+            $file_list
+        );
+
+        printf(
+            '<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
+            esc_html( $message )
+        );
+
+        $this->rejected_custom_icons = [];
     }
 
     private function get_allowed_svg_elements() {
