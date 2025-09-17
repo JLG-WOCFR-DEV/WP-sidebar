@@ -482,10 +482,22 @@ class Sidebar_JLG {
             $sanitized[$type_key] = $color_type;
 
             if ($color_type === 'gradient') {
-                $sanitized[$color_key . '_start'] = $this->sanitize_rgba_color($input[$color_key . '_start'] ?? $existing_options[$color_key . '_start']);
-                $sanitized[$color_key . '_end'] = $this->sanitize_rgba_color($input[$color_key . '_end'] ?? $existing_options[$color_key . '_end']);
+                $start_key = $color_key . '_start';
+                $end_key = $color_key . '_end';
+
+                $sanitized[$start_key] = $this->sanitize_color_with_existing(
+                    $input[$start_key] ?? null,
+                    $existing_options[$start_key] ?? ''
+                );
+                $sanitized[$end_key] = $this->sanitize_color_with_existing(
+                    $input[$end_key] ?? null,
+                    $existing_options[$end_key] ?? ''
+                );
             } else {
-                $sanitized[$color_key] = $this->sanitize_rgba_color($input[$color_key] ?? $existing_options[$color_key]);
+                $sanitized[$color_key] = $this->sanitize_color_with_existing(
+                    $input[$color_key] ?? null,
+                    $existing_options[$color_key] ?? ''
+                );
             }
         }
 
@@ -500,7 +512,10 @@ class Sidebar_JLG {
             $existing_options['header_padding_top'] ?? ''
         );
         $sanitized['font_size'] = absint($input['font_size'] ?? $existing_options['font_size']);
-        $sanitized['mobile_bg_color'] = $this->sanitize_rgba_color($input['mobile_bg_color'] ?? $existing_options['mobile_bg_color']);
+        $sanitized['mobile_bg_color'] = $this->sanitize_color_with_existing(
+            $input['mobile_bg_color'] ?? null,
+            $existing_options['mobile_bg_color'] ?? ''
+        );
         $sanitized['mobile_bg_opacity'] = floatval($input['mobile_bg_opacity'] ?? $existing_options['mobile_bg_opacity']);
         $sanitized['mobile_blur'] = absint($input['mobile_blur'] ?? $existing_options['mobile_blur']);
 
@@ -921,6 +936,25 @@ class Sidebar_JLG {
             </div>
         </div>
         <?php
+    }
+
+    private function sanitize_color_with_existing($value, $existing_value) {
+        $existing_value = (is_string($existing_value) || is_numeric($existing_value))
+            ? (string) $existing_value
+            : '';
+
+        $candidate = $value;
+        if ($candidate === null) {
+            $candidate = $existing_value;
+        }
+
+        $sanitized = $this->sanitize_rgba_color($candidate);
+
+        if ($sanitized === '' && $existing_value !== '') {
+            return $existing_value;
+        }
+
+        return $sanitized;
     }
 
     private function sanitize_rgba_color( $color ) {
