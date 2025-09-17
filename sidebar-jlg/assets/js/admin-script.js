@@ -1,6 +1,7 @@
 jQuery(document).ready(function($) {
     const options = sidebarJLG.options;
     const debugMode = options.debug_mode == '1';
+    const ajaxCache = { posts: {}, categories: {} };
 
     function logDebug(message, data = '') {
         if (debugMode) {
@@ -375,6 +376,108 @@ jQuery(document).ready(function($) {
     }
 
     // Fonction pour mettre à jour le champ valeur selon le type
+    function getCacheBucket(action) {
+        return action === 'jlg_get_posts' ? ajaxCache.posts : ajaxCache.categories;
+    }
+
+    function buildCacheKey(action, include, page, perPage) {
+        const hasInclude = include !== undefined && include !== null && include !== '';
+        const includeKey = hasInclude ? (Array.isArray(include) ? include.join(',') : String(include)) : '';
+        return [action, includeKey, page, perPage].join('|');
+    }
+
+    function requestAjaxData(action, requestData) {
+        const bucket = getCacheBucket(action);
+        const key = buildCacheKey(action, requestData.include, requestData.page, requestData.posts_per_page);
+
+        if (bucket[key]) {
+            return bucket[key];
+        }
+
+        const jqxhr = $.post(sidebarJLG.ajax_url, requestData);
+
+        jqxhr.fail(function() {
+            delete bucket[key];
+        });
+
+        bucket[key] = jqxhr;
+        return jqxhr;
+    }
+
+    function populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action) {
+        if (!$selectElement.closest('body').length) {
+            return;
+        }
+
+        if (response.success) {
+            const idKey = 'id';
+            const titleKey = type === 'post' ? 'title' : 'name';
+            const optionsArray = Array.isArray(response.data) ? response.data : [];
+            const hasCurrentInResponse = normalizedValue && optionsArray.some(opt => String(opt[idKey]) === normalizedValue);
+
+            $selectElement.empty();
+
+            if (!hasCurrentInResponse) {
+                const currentOption = createCurrentOption();
+                if (currentOption) {
+                    $selectElement.append(currentOption);
+                }
+            }
+
+            optionsArray.forEach(opt => {
+                const optionElement = document.createElement('option');
+                optionElement.value = opt[idKey];
+                optionElement.textContent = opt[titleKey] || '';
+                if (normalizedValue && String(opt[idKey]) === normalizedValue) {
+                    optionElement.selected = true;
+                }
+                $selectElement.append(optionElement);
+            });
+
+            if (!$selectElement.children().length) {
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = 'Aucun résultat';
+                $selectElement.append(emptyOption);
+            }
+        } else {
+            logDebug(`Failed to fetch data for ${action}.`);
+            $selectElement.empty();
+
+            const currentOption = createCurrentOption();
+            if (currentOption) {
+                $selectElement.append(currentOption);
+            }
+
+            const errorOption = document.createElement('option');
+            errorOption.value = '';
+            errorOption.textContent = 'Erreur de chargement';
+            errorOption.disabled = true;
+            $selectElement.append(errorOption);
+        }
+    }
+
+    function handleAjaxFailure($selectElement, createCurrentOption, action) {
+        logDebug(`AJAX request failed for ${action}.`);
+
+        if (!$selectElement.closest('body').length) {
+            return;
+        }
+
+        $selectElement.empty();
+
+        const currentOption = createCurrentOption();
+        if (currentOption) {
+            $selectElement.append(currentOption);
+        }
+
+        const errorOption = document.createElement('option');
+        errorOption.value = '';
+        errorOption.textContent = 'Erreur de chargement';
+        errorOption.disabled = true;
+        $selectElement.append(errorOption);
+    }
+
     function updateValueField($itemBox, itemData) {
         const type = $itemBox.find('.menu-item-type').val();
         const valueWrapper = $itemBox.find('.menu-item-value-wrapper');
@@ -449,77 +552,13 @@ jQuery(document).ready(function($) {
                 requestData.include = normalizedValue;
             }
 
-            $.post(sidebarJLG.ajax_url, requestData).done(function(response) {
-                if (!$selectElement.closest('body').length) {
-                    return;
-                }
-
-                if (response.success) {
-                    const idKey = 'id';
-                    const titleKey = type === 'post' ? 'title' : 'name';
-                    const optionsArray = Array.isArray(response.data) ? response.data : [];
-                    const hasCurrentInResponse = normalizedValue && optionsArray.some(opt => String(opt[idKey]) === normalizedValue);
-
-                    $selectElement.empty();
-
-                    if (!hasCurrentInResponse) {
-                        const currentOption = createCurrentOption();
-                        if (currentOption) {
-                            $selectElement.append(currentOption);
-                        }
-                    }
-
-                    optionsArray.forEach(opt => {
-                        const optionElement = document.createElement('option');
-                        optionElement.value = opt[idKey];
-                        optionElement.textContent = opt[titleKey] || '';
-                        if (normalizedValue && String(opt[idKey]) === normalizedValue) {
-                            optionElement.selected = true;
-                        }
-                        $selectElement.append(optionElement);
-                    });
-
-                    if (!$selectElement.children().length) {
-                        const emptyOption = document.createElement('option');
-                        emptyOption.value = '';
-                        emptyOption.textContent = 'Aucun résultat';
-                        $selectElement.append(emptyOption);
-                    }
-                } else {
-                    logDebug(`Failed to fetch data for ${action}.`);
-                    $selectElement.empty();
-
-                    const currentOption = createCurrentOption();
-                    if (currentOption) {
-                        $selectElement.append(currentOption);
-                    }
-
-                    const errorOption = document.createElement('option');
-                    errorOption.value = '';
-                    errorOption.textContent = 'Erreur de chargement';
-                    errorOption.disabled = true;
-                    $selectElement.append(errorOption);
-                }
-            }).fail(function() {
-                logDebug(`AJAX request failed for ${action}.`);
-
-                if (!$selectElement.closest('body').length) {
-                    return;
-                }
-
-                $selectElement.empty();
-
-                const currentOption = createCurrentOption();
-                if (currentOption) {
-                    $selectElement.append(currentOption);
-                }
-
-                const errorOption = document.createElement('option');
-                errorOption.value = '';
-                errorOption.textContent = 'Erreur de chargement';
-                errorOption.disabled = true;
-                $selectElement.append(errorOption);
-            });
+            requestAjaxData(action, requestData)
+                .done(function(response) {
+                    populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action);
+                })
+                .fail(function() {
+                    handleAjaxFailure($selectElement, createCurrentOption, action);
+                });
         }
     }
 
