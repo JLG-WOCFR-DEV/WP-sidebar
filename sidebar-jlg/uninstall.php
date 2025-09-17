@@ -18,8 +18,26 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 // C'est ici que tous les réglages de la sidebar sont stockés.
 delete_option( 'sidebar_jlg_settings' );
 
-// 2. Supprimer le transient (cache) du menu.
-// Cela garantit qu'aucune donnée temporaire ne reste dans la base de données.
+// 2. Supprimer tous les transients de cache générés pour les locales mémorisées.
+$cached_locales = get_option( 'sidebar_jlg_cached_locales', [] );
+
+if ( ! is_array( $cached_locales ) ) {
+    $cached_locales = [];
+}
+
+foreach ( $cached_locales as $locale ) {
+    $normalized = preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) $locale );
+
+    if ( null === $normalized || '' === $normalized ) {
+        $normalized = 'default';
+    }
+
+    delete_transient( 'sidebar_jlg_full_html_' . $normalized );
+}
+
+// 3. Après la boucle, supprimer la liste des locales mises en cache
+//    ainsi que le transient générique existant.
+delete_option( 'sidebar_jlg_cached_locales' );
 delete_transient( 'sidebar_jlg_full_html' );
 
 // Note pour l'avenir : 
