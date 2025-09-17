@@ -397,12 +397,37 @@ jQuery(document).ready(function($) {
             const $label = $('<label>').text(labelText);
             const $selectElement = $('<select>', {
                 class: 'widefat',
-                name
+                name: name
             });
+
+            const normalizedValue = value !== null && value !== undefined ? String(value) : '';
+            const currentLabel = itemData.current_label || itemData.value_label || itemData.label || '';
+            const createCurrentOption = () => {
+                if (!normalizedValue) {
+                    return null;
+                }
+
+                const option = document.createElement('option');
+                option.value = normalizedValue;
+                option.textContent = currentLabel || `Élément actuel (ID: ${normalizedValue})`;
+                option.selected = true;
+                option.dataset.currentOption = '1';
+                return option;
+            };
+
+            const initialCurrentOption = createCurrentOption();
+
+            if (initialCurrentOption) {
+                $selectElement.append(initialCurrentOption);
+            }
 
             const loadingOption = document.createElement('option');
             loadingOption.value = '';
             loadingOption.textContent = 'Chargement...';
+            loadingOption.disabled = true;
+            if (!initialCurrentOption) {
+                loadingOption.selected = true;
+            }
             $selectElement.append(loadingOption);
 
             const $paragraph = $('<p>');
@@ -413,12 +438,18 @@ jQuery(document).ready(function($) {
             const page = 1;
             const postsPerPage = 20;
 
-            $.post(sidebarJLG.ajax_url, {
+            const requestData = {
                 action: action,
                 nonce: sidebarJLG.nonce,
                 page: page,
                 posts_per_page: postsPerPage
-            }).done(function(response) {
+            };
+
+            if (normalizedValue) {
+                requestData.include = normalizedValue;
+            }
+
+            $.post(sidebarJLG.ajax_url, requestData).done(function(response) {
                 if (!$selectElement.closest('body').length) {
                     return;
                 }
@@ -427,14 +458,22 @@ jQuery(document).ready(function($) {
                     const idKey = 'id';
                     const titleKey = type === 'post' ? 'title' : 'name';
                     const optionsArray = Array.isArray(response.data) ? response.data : [];
+                    const hasCurrentInResponse = normalizedValue && optionsArray.some(opt => String(opt[idKey]) === normalizedValue);
 
                     $selectElement.empty();
+
+                    if (!hasCurrentInResponse) {
+                        const currentOption = createCurrentOption();
+                        if (currentOption) {
+                            $selectElement.append(currentOption);
+                        }
+                    }
 
                     optionsArray.forEach(opt => {
                         const optionElement = document.createElement('option');
                         optionElement.value = opt[idKey];
                         optionElement.textContent = opt[titleKey] || '';
-                        if (String(opt[idKey]) === String(value)) {
+                        if (normalizedValue && String(opt[idKey]) === normalizedValue) {
                             optionElement.selected = true;
                         }
                         $selectElement.append(optionElement);
@@ -450,9 +489,15 @@ jQuery(document).ready(function($) {
                     logDebug(`Failed to fetch data for ${action}.`);
                     $selectElement.empty();
 
+                    const currentOption = createCurrentOption();
+                    if (currentOption) {
+                        $selectElement.append(currentOption);
+                    }
+
                     const errorOption = document.createElement('option');
                     errorOption.value = '';
                     errorOption.textContent = 'Erreur de chargement';
+                    errorOption.disabled = true;
                     $selectElement.append(errorOption);
                 }
             }).fail(function() {
@@ -464,9 +509,15 @@ jQuery(document).ready(function($) {
 
                 $selectElement.empty();
 
+                const currentOption = createCurrentOption();
+                if (currentOption) {
+                    $selectElement.append(currentOption);
+                }
+
                 const errorOption = document.createElement('option');
                 errorOption.value = '';
                 errorOption.textContent = 'Erreur de chargement';
+                errorOption.disabled = true;
                 $selectElement.append(errorOption);
             });
         }
