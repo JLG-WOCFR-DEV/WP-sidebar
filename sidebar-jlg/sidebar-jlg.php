@@ -36,6 +36,7 @@ class Sidebar_JLG {
     private $options;
     private $all_icons = null;
     private $rejected_custom_icons = [];
+    private $custom_icon_sources = [];
 
     public static function get_instance() {
         if ( null === self::$instance ) self::$instance = new self();
@@ -111,6 +112,7 @@ class Sidebar_JLG {
     private function get_custom_icons() {
         $custom_icons = [];
         $this->rejected_custom_icons = [];
+        $this->custom_icon_sources = [];
         $upload_dir = wp_upload_dir();
         $icons_dir = trailingslashit($upload_dir['basedir']) . 'sidebar-jlg/icons/';
 
@@ -177,10 +179,23 @@ class Sidebar_JLG {
             }
 
             $icon_name = 'custom_' . $icon_key;
-            $custom_icons[$icon_name] = trailingslashit($upload_dir['baseurl']) . 'sidebar-jlg/icons/' . rawurlencode($file);
+            $relative_path = 'sidebar-jlg/icons/' . $file;
+            $encoded_file = rawurlencode($file);
+
+            $this->custom_icon_sources[$icon_name] = [
+                'relative_path' => $relative_path,
+                'encoded_filename' => $encoded_file,
+                'url' => trailingslashit($upload_dir['baseurl']) . 'sidebar-jlg/icons/' . $encoded_file,
+            ];
+
+            $custom_icons[$icon_name] = $sanitized_contents;
         }
 
         return $custom_icons;
+    }
+
+    public function get_custom_icon_source($icon_key) {
+        return $this->custom_icon_sources[$icon_key] ?? null;
     }
 
     public function render_custom_icon_notice() {

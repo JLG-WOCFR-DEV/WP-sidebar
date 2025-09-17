@@ -137,7 +137,11 @@ body { transition: padding-left var(--transition-speed, 0.4s) ease; }
     background-image: var(--primary-accent-image);
     color: var(--sidebar-text-hover-color); 
 }
-.menu-icon.svg-icon img { width: 24px; height: 24px; }
+.menu-icon.svg-icon svg,
+.menu-icon.svg-icon img {
+    width: 24px;
+    height: 24px;
+}
 
 /* Alignement du menu */
 @media (min-width: 993px) {
