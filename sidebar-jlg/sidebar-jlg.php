@@ -464,13 +464,27 @@ class Sidebar_JLG {
 
         $value = sanitize_text_field($value);
 
-        static $pattern = null;
-        if ($pattern === null) {
+        static $cache = null;
+        if ($cache === null) {
             $allowed_units = ['px', 'rem', 'em', '%', 'vh', 'vw', 'vmin', 'vmax', 'ch'];
-            $pattern = '/^-?(?:\d+|\d*\.\d+)(?:' . implode('|', array_map('preg_quote', $allowed_units)) . ')$/i';
+            $unit_pattern = '(?:' . implode('|', array_map(static function ($unit) {
+                return preg_quote($unit, '/');
+            }, $allowed_units)) . ')';
+
+            $cache = [
+                'numeric_pattern'   => '/^-?(?:\d+|\d*\.\d+)(?:' . $unit_pattern . ')$/i',
+                'dimension_pattern' => '/^[-+]?(?:\d+|\d*\.\d+)(?:' . $unit_pattern . ')?$/i',
+            ];
         }
 
-        if (preg_match($pattern, $value)) {
+        $numeric_pattern = $cache['numeric_pattern'];
+        $dimension_pattern = $cache['dimension_pattern'];
+
+        if (preg_match($numeric_pattern, $value)) {
+            return $value;
+        }
+
+        if ($this->is_valid_calc_expression($value, $dimension_pattern)) {
             return $value;
         }
 
@@ -479,6 +493,107 @@ class Sidebar_JLG {
         }
 
         return $sanitized_fallback;
+    }
+
+    private function is_valid_calc_expression($value, $dimension_pattern) {
+        if (!preg_match('/^calc\((.*)\)$/i', $value, $matches)) {
+            return false;
+        }
+
+        $expression = trim($matches[1]);
+
+        if ($expression === '') {
+            return false;
+        }
+
+        if (!preg_match('/^[0-9+\-*\/().%a-z\s]+$/i', $expression)) {
+            return false;
+        }
+
+        $expression = preg_replace('/\s+/', '', $expression);
+
+        if ($expression === '') {
+            return false;
+        }
+
+        $length = strlen($expression);
+        $tokens = [];
+        $current = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $expression[$i];
+
+            if ($char === '+' || $char === '-') {
+                $previous_char = $i > 0 ? $expression[$i - 1] : null;
+
+                if ($current === '' && ($i === 0 || in_array($previous_char, ['+', '-', '*', '/', '('], true))) {
+                    $current = $char;
+                    continue;
+                }
+            }
+
+            if ($char === '+' || $char === '-' || $char === '*' || $char === '/' || $char === '(' || $char === ')') {
+                if ($current !== '') {
+                    $tokens[] = $current;
+                    $current = '';
+                }
+
+                $tokens[] = $char;
+                continue;
+            }
+
+            $current .= $char;
+        }
+
+        if ($current !== '') {
+            $tokens[] = $current;
+        }
+
+        $expect_operand = true;
+        $parentheses = 0;
+
+        foreach ($tokens as $token) {
+            if ($token === '(') {
+                if (! $expect_operand) {
+                    return false;
+                }
+
+                $parentheses++;
+                continue;
+            }
+
+            if ($token === ')') {
+                if ($expect_operand) {
+                    return false;
+                }
+
+                $parentheses--;
+
+                if ($parentheses < 0) {
+                    return false;
+                }
+
+                $expect_operand = false;
+                continue;
+            }
+
+            if ($token === '+' || $token === '-' || $token === '*' || $token === '/') {
+                if ($expect_operand) {
+                    return false;
+                }
+
+                $expect_operand = true;
+                continue;
+            }
+
+            if (!preg_match($dimension_pattern, $token)) {
+                return false;
+            }
+
+            $expect_operand = false;
+        }
+
+        return $parentheses === 0 && ! $expect_operand;
     }
 
     private function sanitize_general_settings($input, $existing_options) {
