@@ -241,7 +241,7 @@ $sanitized_settings = $plugin->sanitize_settings($input_settings);
 
 assertTrue(
     isset($sanitized_settings['menu_items'][0]['value']) && $sanitized_settings['menu_items'][0]['value'] === 789,
-    'Post ID preserved after sanitization'
+    'Post ID sanitized with absint even when icon type is svg_url'
 );
 assertTrue(
     isset($sanitized_settings['menu_items'][1]['value']) && $sanitized_settings['menu_items'][1]['value'] === 321,

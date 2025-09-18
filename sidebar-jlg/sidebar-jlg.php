@@ -725,10 +725,16 @@ class Sidebar_JLG {
                     $sanitized_item['icon'] = sanitize_key($item['icon'] ?? '');
                 }
 
-                if ($item_type === 'custom') {
-                    $sanitized_item['value'] = esc_url_raw($item['value'] ?? '');
-                } else {
-                    $sanitized_item['value'] = absint($item['value'] ?? 0);
+                switch ($item_type) {
+                    case 'custom':
+                        $sanitized_item['value'] = esc_url_raw($item['value'] ?? '');
+                        break;
+                    case 'post':
+                    case 'page':
+                    case 'category':
+                    default:
+                        $sanitized_item['value'] = absint($item['value'] ?? 0);
+                        break;
                 }
 
                 $sanitized_menu_items[] = $sanitized_item;
