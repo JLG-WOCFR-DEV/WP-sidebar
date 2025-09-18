@@ -135,6 +135,9 @@ function esc_html($value) {
 function esc_url($value) {
     return $value;
 }
+function esc_attr_e($text, $domain = 'default'): void {
+    echo esc_attr(__($text, $domain));
+}
 function esc_url_raw($value) {
     return $value;
 }
@@ -158,6 +161,17 @@ function wp_check_filetype($file, $allowed = []) {
 }
 function wp_kses($string, $allowed_html = []) {
     return $string;
+}
+function sanitize_text_field($value) {
+    if (is_array($value) || is_object($value)) {
+        return '';
+    }
+
+    $value = (string) $value;
+    $value = strip_tags($value);
+    $value = preg_replace('/[\r\n\t ]+/', ' ', $value);
+
+    return trim($value);
 }
 function sanitize_key($key) {
     $key = strtolower((string) $key);
@@ -204,6 +218,38 @@ $default_settings = $plugin->get_default_settings();
 $default_settings['social_icons'] = [];
 update_option('sidebar_jlg_settings', $default_settings);
 
+$input_settings = [
+    'menu_items' => [
+        [
+            'label' => 'Article SVG',
+            'type' => 'post',
+            'icon_type' => 'svg_url',
+            'icon' => 'https://example.com/icon.svg',
+            'value' => '789',
+        ],
+        [
+            'label' => 'Catégorie liens',
+            'type' => 'category',
+            'icon_type' => 'svg_inline',
+            'icon' => 'folder',
+            'value' => '321',
+        ],
+    ],
+];
+
+$sanitized_settings = $plugin->sanitize_settings($input_settings);
+
+assertTrue(
+    isset($sanitized_settings['menu_items'][0]['value']) && $sanitized_settings['menu_items'][0]['value'] === 789,
+    'Post ID preserved after sanitization'
+);
+assertTrue(
+    isset($sanitized_settings['menu_items'][1]['value']) && $sanitized_settings['menu_items'][1]['value'] === 321,
+    'Category ID preserved after sanitization'
+);
+
+update_option('sidebar_jlg_settings', $sanitized_settings);
+
 $testsPassed = true;
 function assertTrue($condition, string $message): void {
     global $testsPassed;
@@ -233,6 +279,8 @@ $plugin->render_sidebar_html();
 $french_html = ob_get_clean();
 
 assertContains('Ouvrir le menu', $french_html, 'French menu label rendered');
+assertContains('href="http://example.com/post/789"', $french_html, 'Post menu item links to the correct article');
+assertContains('href="http://example.com/category/321"', $french_html, 'Category menu item links to the correct term');
 assertNotContains('Open menu', $french_html, 'English menu label absent in French cache');
 assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']), 'French transient stored');
 
