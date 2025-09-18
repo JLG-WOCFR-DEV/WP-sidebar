@@ -9,18 +9,7 @@ define('SIDEBAR_JLG_SKIP_BOOTSTRAP', true);
 $GLOBALS['wp_test_options']    = [];
 $GLOBALS['wp_test_transients'] = [];
 $GLOBALS['wp_test_current_locale'] = 'fr_FR';
-$GLOBALS['wp_test_translations'] = [
-    'fr_FR' => [
-        'Navigation principale' => 'Navigation principale',
-        'Ouvrir le menu'        => 'Ouvrir le menu',
-        'Fermer le menu'        => 'Fermer le menu',
-    ],
-    'en_US' => [
-        'Navigation principale' => 'Main navigation',
-        'Ouvrir le menu'        => 'Open menu',
-        'Fermer le menu'        => 'Close menu',
-    ],
-];
+$GLOBALS['wp_test_force_category_link_error'] = true;
 
 function register_activation_hook($file, $callback): void {}
 if (!class_exists('WP_Error')) {
@@ -189,6 +178,10 @@ function get_permalink($post_id) {
     return 'http://example.com/post/' . $post_id;
 }
 function get_category_link($cat_id) {
+    if (!empty($GLOBALS['wp_test_force_category_link_error'])) {
+        return new WP_Error('mock_error', 'Mocked category error');
+    }
+
     return 'http://example.com/category/' . $cat_id;
 }
 function get_bloginfo($show = '', $filter = 'raw') {
@@ -205,58 +198,34 @@ function wp_kses_post($string) {
     return $string;
 }
 function __($text, $domain = 'default') {
-    $locale = determine_locale();
-    $translations = $GLOBALS['wp_test_translations'];
-
-    if (isset($translations[$locale][$text])) {
-        return $translations[$locale][$text];
-    }
-
     return $text;
 }
 function _e($text, $domain = 'default'): void {
     echo __($text, $domain);
 }
 
-require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
-
-$plugin = Sidebar_JLG::get_instance();
-
-$default_settings = $plugin->get_default_settings();
-$default_settings['social_icons'] = [];
-update_option('sidebar_jlg_settings', $default_settings);
-
-$input_settings = [
+update_option('sidebar_jlg_settings', [
+    'enable_sidebar' => true,
     'menu_items' => [
         [
-            'label' => 'Article SVG',
-            'type' => 'post',
-            'icon_type' => 'svg_url',
-            'icon' => 'https://example.com/icon.svg',
-            'value' => '789',
-        ],
-        [
-            'label' => 'Catégorie liens',
-            'type' => 'category',
-            'icon_type' => 'svg_inline',
-            'icon' => 'folder',
+            'label' => 'Catégorie en erreur',
+            'type'  => 'category',
+            'icon'  => '',
+            'icon_type' => '',
             'value' => '321',
         ],
     ],
-];
+    'social_icons' => [],
+]);
 
-$sanitized_settings = $plugin->sanitize_settings($input_settings);
+require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
-assertTrue(
-    isset($sanitized_settings['menu_items'][0]['value']) && $sanitized_settings['menu_items'][0]['value'] === 789,
-    'Post ID sanitized with absint even when icon type is svg_url'
-);
-assertTrue(
-    isset($sanitized_settings['menu_items'][1]['value']) && $sanitized_settings['menu_items'][1]['value'] === 321,
-    'Category ID preserved after sanitization'
-);
+$plugin = Sidebar_JLG::get_instance();
+$plugin->clear_menu_cache();
 
-update_option('sidebar_jlg_settings', $sanitized_settings);
+ob_start();
+$plugin->render_sidebar_html();
+$html = ob_get_clean();
 
 $testsPassed = true;
 function assertTrue($condition, string $message): void {
@@ -270,58 +239,13 @@ function assertTrue($condition, string $message): void {
     echo "[FAIL] {$message}\n";
 }
 
-function assertContains(string $needle, string $haystack, string $message): void {
-    assertTrue(strpos($haystack, $needle) !== false, $message);
-}
-
-function assertNotContains(string $needle, string $haystack, string $message): void {
-    assertTrue(strpos($haystack, $needle) === false, $message);
-}
-
-$plugin->clear_menu_cache();
-$GLOBALS['wp_test_transients'] = [];
-
-switch_to_locale('fr_FR');
-ob_start();
-$plugin->render_sidebar_html();
-$french_html = ob_get_clean();
-
-assertContains('Ouvrir le menu', $french_html, 'French menu label rendered');
-assertContains('href="http://example.com/post/789"', $french_html, 'Post menu item links to the correct article');
-assertContains('href="http://example.com/category/321"', $french_html, 'Category menu item links to the correct term');
-assertNotContains('Open menu', $french_html, 'English menu label absent in French cache');
-assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']), 'French transient stored');
-
-switch_to_locale('en_US');
-ob_start();
-$plugin->render_sidebar_html();
-$english_html = ob_get_clean();
-
-assertContains('Open menu', $english_html, 'English menu label rendered after locale switch');
-assertNotContains('Ouvrir le menu', $english_html, 'French label absent in English cache');
-assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US']), 'English transient stored');
-
-switch_to_locale('fr_FR');
-ob_start();
-$plugin->render_sidebar_html();
-$french_cached_html = ob_get_clean();
-
-assertContains('Ouvrir le menu', $french_cached_html, 'French cache reused correctly');
-
-$cached_locales_option = get_option('sidebar_jlg_cached_locales', []);
-assertTrue(in_array('fr_FR', $cached_locales_option, true), 'French locale tracked');
-assertTrue(in_array('en_US', $cached_locales_option, true), 'English locale tracked');
-
-$plugin->clear_menu_cache();
-
-assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']), 'French transient cleared');
-assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US']), 'English transient cleared');
-assertTrue(!isset($GLOBALS['wp_test_options']['sidebar_jlg_cached_locales']), 'Cached locales option cleared');
+assertTrue(strpos($html, 'href="#"') !== false, 'Category link falls back to hash when WP_Error returned');
+assertTrue($html !== '', 'Sidebar HTML rendered despite WP_Error');
 
 if ($testsPassed) {
-    echo "Sidebar locale cache tests passed.\n";
+    echo "Sidebar WP_Error handling test passed.\n";
     exit(0);
 }
 
-echo "Sidebar locale cache tests failed.\n";
+echo "Sidebar WP_Error handling test failed.\n";
 exit(1);

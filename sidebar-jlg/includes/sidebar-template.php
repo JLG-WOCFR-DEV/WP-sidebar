@@ -4,6 +4,16 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 $options = get_option('sidebar_jlg_settings', \JLG\Sidebar\Sidebar_JLG::get_instance()->get_default_settings());
 $all_icons = \JLG\Sidebar\Sidebar_JLG::get_instance()->get_all_available_icons();
 
+if ( ! function_exists( 'sidebar_jlg_normalize_url' ) ) {
+    function sidebar_jlg_normalize_url( $url ) {
+        if ( is_wp_error( $url ) || empty( $url ) ) {
+            return '#';
+        }
+
+        return $url;
+    }
+}
+
 ob_start();
 ?>
 <nav class="sidebar-navigation" role="navigation" aria-label="<?php esc_attr_e('Navigation principale', 'sidebar-jlg'); ?>">
@@ -12,11 +22,15 @@ ob_start();
         if (!empty($options['menu_items'])) {
             foreach ($options['menu_items'] as $item) {
                 $url = '#';
-                if ($item['type'] === 'custom') $url = esc_url($item['value']);
-                elseif ($item['type'] === 'post') $url = get_permalink(absint($item['value']));
-                elseif ($item['type'] === 'category') $url = get_category_link(absint($item['value']));
-                
-                echo '<li><a href="' . esc_url( $url ) . '">';
+                if ($item['type'] === 'custom') {
+                    $url = $item['value'];
+                } elseif ($item['type'] === 'post') {
+                    $url = get_permalink(absint($item['value']));
+                } elseif ($item['type'] === 'category') {
+                    $url = get_category_link(absint($item['value']));
+                }
+
+                echo '<li><a href="' . esc_url( sidebar_jlg_normalize_url( $url ) ) . '">';
                 if ( ! empty( $item['icon'] ) ) {
                     if ( ! empty( $item['icon_type'] ) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL) ) {
                         echo '<span class="menu-icon svg-icon"><img src="' . esc_url( $item['icon'] ) . '" alt=""></span>';
