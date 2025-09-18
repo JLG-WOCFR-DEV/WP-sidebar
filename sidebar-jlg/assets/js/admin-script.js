@@ -1,5 +1,6 @@
 jQuery(document).ready(function($) {
     const options = sidebarJLG.options;
+    const availableIcons = sidebarJLG.all_icons || {};
     const debugMode = options.debug_mode == '1';
     const ajaxCache = { posts: {}, categories: {} };
 
@@ -172,18 +173,23 @@ jQuery(document).ready(function($) {
         const grid = $('#icon-grid');
         grid.empty();
         
-        if (typeof lucide !== 'undefined' && lucide.icons) {
-            Object.keys(lucide.icons).forEach(iconName => {
-                const iconNode = lucide.icons[iconName];
-                const svgElement = createLucideSvg(iconNode);
-                const btn = $(`<button type="button" data-icon-name="${iconName}" title="${iconName}">${svgElement} <span>${iconName}</span></button>`);
-                grid.append(btn);
-            });
-        }
-    }
+        Object.keys(availableIcons).forEach(iconName => {
+            const svgMarkup = availableIcons[iconName];
 
-    function createLucideSvg(iconNode) {
-        return lucide.createElement(iconNode);
+            if (typeof svgMarkup !== 'string' || svgMarkup.trim() === '') {
+                return;
+            }
+
+            const $button = $('<button>', {
+                type: 'button',
+                'data-icon-name': iconName,
+                title: iconName
+            });
+
+            $button.append(svgMarkup);
+            $button.append($('<span></span>').text(iconName));
+            grid.append($button);
+        });
     }
 
     function updateIconPreview(input, $preview) {
@@ -196,9 +202,8 @@ jQuery(document).ready(function($) {
         const iconType = $(input).closest('.menu-item-box').find('.menu-item-icon-type').val();
         if (iconType === 'svg_url') {
             $preview.html(iconValue.startsWith('http') ? `<img src="${iconValue}" alt="preview">` : '');
-        } else if (typeof lucide !== 'undefined' && lucide.icons && lucide.icons[iconValue]) {
-            const iconNode = lucide.icons[iconValue];
-            $preview.html(createLucideSvg(iconNode));
+        } else if (availableIcons[iconValue]) {
+            $preview.html(availableIcons[iconValue]);
         } else {
             $preview.empty();
         }
@@ -592,7 +597,7 @@ jQuery(document).ready(function($) {
     });
 
     // --- Builder pour les icônes sociales ---
-    const standardIcons = sidebarJLG.all_icons || {};
+    const standardIcons = availableIcons;
     
     function populateStandardIconsDropdown($select, selectedValue) {
         $select.empty();

@@ -777,10 +777,7 @@ class Sidebar_JLG {
         wp_enqueue_media();
         wp_enqueue_style( 'sidebar-jlg-admin-css', plugin_dir_url( __FILE__ ) . 'assets/css/admin-style.css', [], SIDEBAR_JLG_VERSION );
 
-        wp_register_script( 'sidebar-jlg-lucide', plugin_dir_url( __FILE__ ) . 'assets/js/lucide.min.js', [], SIDEBAR_JLG_VERSION, true );
-        wp_enqueue_script( 'sidebar-jlg-lucide' );
-
-        wp_enqueue_script( 'sidebar-jlg-admin-js', plugin_dir_url( __FILE__ ) . 'assets/js/admin-script.js', [ 'jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'sidebar-jlg-lucide' ], SIDEBAR_JLG_VERSION, true );
+        wp_enqueue_script( 'sidebar-jlg-admin-js', plugin_dir_url( __FILE__ ) . 'assets/js/admin-script.js', [ 'jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util' ], SIDEBAR_JLG_VERSION, true );
 
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php'),
