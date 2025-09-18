@@ -725,9 +725,11 @@ class Sidebar_JLG {
                     $sanitized_item['icon'] = sanitize_key($item['icon'] ?? '');
                 }
 
-                $sanitized_item['value'] = ($item_type === 'custom' || $icon_type === 'svg_url')
-                    ? esc_url_raw($item['value'] ?? '')
-                    : absint($item['value'] ?? 0);
+                if ($item_type === 'custom') {
+                    $sanitized_item['value'] = esc_url_raw($item['value'] ?? '');
+                } else {
+                    $sanitized_item['value'] = absint($item['value'] ?? 0);
+                }
 
                 $sanitized_menu_items[] = $sanitized_item;
             }
