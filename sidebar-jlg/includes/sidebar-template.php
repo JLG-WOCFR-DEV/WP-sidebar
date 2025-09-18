@@ -12,10 +12,30 @@ ob_start();
         if (!empty($options['menu_items'])) {
             foreach ($options['menu_items'] as $item) {
                 $url = '#';
-                if ($item['type'] === 'custom') $url = esc_url($item['value']);
-                elseif ($item['type'] === 'post') $url = get_permalink(absint($item['value']));
-                elseif ($item['type'] === 'category') $url = get_category_link(absint($item['value']));
-                
+                $raw_url = '';
+
+                if ($item['type'] === 'custom') {
+                    $raw_url = $item['value'] ?? '';
+                } elseif ($item['type'] === 'post') {
+                    $raw_url = get_permalink(absint($item['value']));
+                } elseif ($item['type'] === 'category') {
+                    $raw_url = get_category_link(absint($item['value']));
+                }
+
+                $is_valid_url = true;
+
+                if (function_exists('is_wp_error') && is_wp_error($raw_url)) {
+                    $is_valid_url = false;
+                }
+
+                if (!is_string($raw_url) || $raw_url === '') {
+                    $is_valid_url = false;
+                }
+
+                if ($is_valid_url) {
+                    $url = $raw_url;
+                }
+
                 echo '<li><a href="' . esc_url( $url ) . '">';
                 if ( ! empty( $item['icon'] ) ) {
                     if ( ! empty( $item['icon_type'] ) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL) ) {
