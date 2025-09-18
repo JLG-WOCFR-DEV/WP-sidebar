@@ -169,10 +169,18 @@ jQuery(document).ready(function($) {
         frame.open();
     }
 
+    function sanitizeIconKey(iconName) {
+        if (typeof iconName !== 'string') {
+            return '';
+        }
+
+        return iconName.toLowerCase().replace(/[^a-z0-9_\-]/g, '');
+    }
+
     function populateIconGrid() {
         const grid = $('#icon-grid');
         grid.empty();
-        
+
         Object.keys(availableIcons).forEach(iconName => {
             const svgMarkup = availableIcons[iconName];
 
@@ -202,8 +210,14 @@ jQuery(document).ready(function($) {
         const iconType = $(input).closest('.menu-item-box').find('.menu-item-icon-type').val();
         if (iconType === 'svg_url') {
             $preview.html(iconValue.startsWith('http') ? `<img src="${iconValue}" alt="preview">` : '');
-        } else if (availableIcons[iconValue]) {
-            $preview.html(availableIcons[iconValue]);
+            return;
+        }
+
+        const sanitizedKey = sanitizeIconKey(iconValue);
+        const iconMarkup = availableIcons[iconValue] || availableIcons[sanitizedKey];
+
+        if (iconMarkup) {
+            $preview.html(iconMarkup);
         } else {
             $preview.empty();
         }

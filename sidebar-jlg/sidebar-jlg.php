@@ -699,6 +699,7 @@ class Sidebar_JLG {
 
     private function sanitize_menu_settings($input, $existing_options) {
         $sanitized = [];
+        $available_icons = $this->get_all_available_icons();
 
         $sanitized['menu_alignment_desktop'] = sanitize_key($input['menu_alignment_desktop'] ?? $existing_options['menu_alignment_desktop']);
         $sanitized['menu_alignment_mobile'] = sanitize_key($input['menu_alignment_mobile'] ?? $existing_options['menu_alignment_mobile']);
@@ -712,6 +713,7 @@ class Sidebar_JLG {
 
                 $item_type = sanitize_key($item['type'] ?? '');
                 $icon_type = sanitize_key($item['icon_type'] ?? '');
+                $icon_type = ($icon_type === 'svg_url') ? 'svg_url' : 'svg_inline';
 
                 $sanitized_item = [
                     'label' => sanitize_text_field($item['label'] ?? ''),
@@ -722,7 +724,13 @@ class Sidebar_JLG {
                 if ($icon_type === 'svg_url') {
                     $sanitized_item['icon'] = esc_url_raw($item['icon'] ?? '');
                 } else {
-                    $sanitized_item['icon'] = sanitize_key($item['icon'] ?? '');
+                    $icon_key = sanitize_key($item['icon'] ?? '');
+                    if ($icon_key !== '' && isset($available_icons[$icon_key])) {
+                        $sanitized_item['icon'] = $icon_key;
+                    } else {
+                        $sanitized_item['icon'] = '';
+                        $sanitized_item['icon_type'] = 'svg_inline';
+                    }
                 }
 
                 if ($item_type === 'custom') {
@@ -742,6 +750,7 @@ class Sidebar_JLG {
 
     private function sanitize_social_settings($input, $existing_options) {
         $sanitized = [];
+        $available_icons = $this->get_all_available_icons();
 
         $sanitized_social_icons = [];
         if (isset($input['social_icons']) && is_array($input['social_icons'])) {
@@ -753,7 +762,7 @@ class Sidebar_JLG {
                 $url = esc_url_raw($item['url'] ?? '');
                 $icon = sanitize_key($item['icon'] ?? '');
 
-                if ($url === '' || $icon === '') {
+                if ($url === '' || $icon === '' || !isset($available_icons[$icon])) {
                     continue;
                 }
 
