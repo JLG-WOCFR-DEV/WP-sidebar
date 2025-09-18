@@ -129,6 +129,9 @@ function switch_to_locale(string $locale): bool {
 function esc_attr($value) {
     return $value;
 }
+function esc_attr_e($text, $domain = 'default'): void {
+    echo esc_attr(__($text, $domain));
+}
 function esc_html($value) {
     return $value;
 }

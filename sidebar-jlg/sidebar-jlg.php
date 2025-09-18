@@ -725,7 +725,7 @@ class Sidebar_JLG {
                     $sanitized_item['icon'] = sanitize_key($item['icon'] ?? '');
                 }
 
-                $sanitized_item['value'] = ($item_type === 'custom' || $icon_type === 'svg_url')
+                $sanitized_item['value'] = ($item_type === 'custom')
                     ? esc_url_raw($item['value'] ?? '')
                     : absint($item['value'] ?? 0);
 
