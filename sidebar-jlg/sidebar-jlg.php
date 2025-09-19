@@ -678,7 +678,9 @@ class Sidebar_JLG {
             $input['mobile_bg_color'] ?? null,
             $existing_options['mobile_bg_color'] ?? ''
         );
-        $sanitized['mobile_bg_opacity'] = floatval($input['mobile_bg_opacity'] ?? $existing_options['mobile_bg_opacity']);
+        $opacity_value = $input['mobile_bg_opacity'] ?? $existing_options['mobile_bg_opacity'];
+        $opacity_value = floatval($opacity_value);
+        $sanitized['mobile_bg_opacity'] = max(0.0, min(1.0, $opacity_value));
         $sanitized['mobile_blur'] = absint($input['mobile_blur'] ?? $existing_options['mobile_blur']);
 
         return $sanitized;
