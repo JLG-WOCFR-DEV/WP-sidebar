@@ -399,15 +399,22 @@ jQuery(document).ready(function($) {
         return action === 'jlg_get_posts' ? ajaxCache.posts : ajaxCache.categories;
     }
 
-    function buildCacheKey(action, include, page, perPage) {
+    function buildCacheKey(action, include, page, perPage, postType) {
         const hasInclude = include !== undefined && include !== null && include !== '';
         const includeKey = hasInclude ? (Array.isArray(include) ? include.join(',') : String(include)) : '';
-        return [action, includeKey, page, perPage].join('|');
+        const normalizedPostType = postType ? String(postType) : '';
+        return [action, includeKey, page, perPage, normalizedPostType].join('|');
     }
 
     function requestAjaxData(action, requestData) {
         const bucket = getCacheBucket(action);
-        const key = buildCacheKey(action, requestData.include, requestData.page, requestData.posts_per_page);
+        const key = buildCacheKey(
+            action,
+            requestData.include,
+            requestData.page,
+            requestData.posts_per_page,
+            requestData.post_type
+        );
 
         if (bucket[key]) {
             return bucket[key];
@@ -430,7 +437,7 @@ jQuery(document).ready(function($) {
 
         if (response.success) {
             const idKey = 'id';
-            const titleKey = type === 'post' ? 'title' : 'name';
+            const titleKey = type === 'category' ? 'name' : 'title';
             const optionsArray = Array.isArray(response.data) ? response.data : [];
             const hasCurrentInResponse = normalizedValue && optionsArray.some(opt => String(opt[idKey]) === normalizedValue);
 
@@ -508,14 +515,20 @@ jQuery(document).ready(function($) {
         if (type === 'custom') {
             valueWrapper.html(`
                 <p><label>URL</label>
-                <input type="text" class="widefat" 
-                       name="sidebar_jlg_settings[menu_items][${index}][value]" 
+                <input type="text" class="widefat"
+                       name="sidebar_jlg_settings[menu_items][${index}][value]"
                        value="${value}" placeholder="https://..."></p>
             `);
-        } else if (type === 'post' || type === 'category') {
-            const action = type === 'post' ? 'jlg_get_posts' : 'jlg_get_categories';
+        } else if (type === 'post' || type === 'page' || type === 'category') {
+            const isContentType = type === 'post' || type === 'page';
+            const action = isContentType ? 'jlg_get_posts' : 'jlg_get_categories';
             const name = `sidebar_jlg_settings[menu_items][${index}][value]`;
-            const labelText = type === 'post' ? 'Article' : 'Catégorie';
+            const labelMap = {
+                post: 'Article',
+                page: 'Page',
+                category: 'Catégorie'
+            };
+            const labelText = labelMap[type] || 'Élément';
             const $label = $('<label>').text(labelText);
             const $selectElement = $('<select>', {
                 class: 'widefat',
@@ -569,6 +582,10 @@ jQuery(document).ready(function($) {
 
             if (normalizedValue) {
                 requestData.include = normalizedValue;
+            }
+
+            if (type === 'page' || type === 'post') {
+                requestData.post_type = type;
             }
 
             requestAjaxData(action, requestData)
