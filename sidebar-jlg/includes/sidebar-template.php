@@ -1,9 +1,8 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-$plugin = \JLG\Sidebar\Sidebar_JLG::get_instance();
-$options = wp_parse_args( get_option( 'sidebar_jlg_settings', [] ), $plugin->get_default_settings() );
-$all_icons = $plugin->get_all_available_icons();
+$options = $options ?? [];
+$allIcons = $allIcons ?? [];
 
 ob_start();
 ?>
@@ -41,8 +40,8 @@ ob_start();
                 if ( ! empty( $item['icon'] ) ) {
                     if ( ! empty( $item['icon_type'] ) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL) ) {
                         echo '<span class="menu-icon svg-icon"><img src="' . esc_url( $item['icon'] ) . '" alt=""></span>';
-                    } elseif ( isset( $all_icons[ $item['icon'] ] ) ) {
-                        $icon_markup = $all_icons[ $item['icon'] ];
+                    } elseif ( isset( $allIcons[ $item['icon'] ] ) ) {
+                        $icon_markup = $allIcons[ $item['icon'] ];
 
                         if ( strpos( $item['icon'], 'custom_' ) === 0 ) {
                             echo '<span class="menu-icon svg-icon">' . $icon_markup . '</span>';
@@ -61,12 +60,12 @@ ob_start();
             if ( ! empty( $options['social_icons'] ) ) {
                 echo '<div class="social-icons ' . esc_attr($options['social_orientation']) . '">';
                 foreach($options['social_icons'] as $social) {
-                    if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($all_icons[$social['icon']]) ) {
+                    if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($allIcons[$social['icon']]) ) {
                         $icon_parts = explode('_', $social['icon']);
                         $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
 
                         echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($icon_label) . '">';
-                        echo $all_icons[$social['icon']];
+                        echo $allIcons[$social['icon']];
                         echo '</a>';
                     }
                 }
@@ -84,12 +83,12 @@ if ($options['social_position'] === 'footer' && !empty($options['social_icons'])
     if ( ! empty( $options['social_icons'] ) ) {
         echo '<div class="social-icons ' . esc_attr($options['social_orientation']) . '">';
         foreach($options['social_icons'] as $social) {
-            if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($all_icons[$social['icon']]) ) {
+            if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($allIcons[$social['icon']]) ) {
                 $icon_parts = explode('_', $social['icon']);
                 $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
 
                 echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($icon_label) . '">';
-                echo $all_icons[$social['icon']];
+                echo $allIcons[$social['icon']];
                 echo '</a>';
             }
         }
@@ -170,7 +169,7 @@ $dynamic_styles .= "}";
         
         <?php if ($options['show_close_button']): ?>
             <button class="close-sidebar-btn" aria-label="<?php esc_attr_e('Fermer le menu', 'sidebar-jlg'); ?>">
-                <?php echo $all_icons['close_white']; ?>
+                <?php echo $allIcons['close_white']; ?>
             </button>
         <?php endif; ?>
     </div>

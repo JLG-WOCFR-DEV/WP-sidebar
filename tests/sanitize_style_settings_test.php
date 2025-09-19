@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-use JLG\Sidebar\Sidebar_JLG;
+use JLG\Sidebar\Admin\SettingsSanitizer;
+use JLG\Sidebar\Icons\IconLibrary;
+use JLG\Sidebar\Settings\DefaultSettings;
 
 define('ABSPATH', true);
 define('SIDEBAR_JLG_SKIP_BOOTSTRAP', true);
@@ -9,6 +11,46 @@ define('SIDEBAR_JLG_SKIP_BOOTSTRAP', true);
 if (!function_exists('register_activation_hook')) {
     function register_activation_hook($file, $callback): void {
         // No-op for tests.
+    }
+}
+
+if (!function_exists('plugin_dir_path')) {
+    function plugin_dir_path($file): string {
+        return rtrim(dirname($file), "/\\") . '/';
+    }
+}
+
+if (!function_exists('trailingslashit')) {
+    function trailingslashit($value): string {
+        return rtrim($value, "/\\") . '/';
+    }
+}
+
+if (!function_exists('wp_upload_dir')) {
+    function wp_upload_dir(): array {
+        return [
+            'basedir' => sys_get_temp_dir(),
+            'baseurl' => 'http://example.com/uploads',
+        ];
+    }
+}
+
+if (!function_exists('wp_check_filetype')) {
+    function wp_check_filetype($file, $allowed = []): array {
+        return ['ext' => '', 'type' => ''];
+    }
+}
+
+if (!function_exists('wp_kses')) {
+    function wp_kses($string, $allowed_html = []) {
+        return $string;
+    }
+}
+
+if (!function_exists('sanitize_key')) {
+    function sanitize_key($key): string {
+        $key = strtolower((string) $key);
+        return preg_replace('/[^a-z0-9_\-]/', '', $key);
     }
 }
 
@@ -54,12 +96,15 @@ if (!function_exists('absint')) {
 
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
-$reflection = new ReflectionClass(Sidebar_JLG::class);
-$instance = $reflection->newInstanceWithoutConstructor();
+$defaults = new DefaultSettings();
+$icons = new IconLibrary(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php');
+$sanitizer = new SettingsSanitizer($defaults, $icons);
+
+$reflection = new ReflectionClass(SettingsSanitizer::class);
 $method = $reflection->getMethod('sanitize_style_settings');
 $method->setAccessible(true);
 
-$existing_options = [
+$existing_options = array_merge((new DefaultSettings())->all(), [
     'style_preset'             => 'default',
     'bg_color_type'            => 'solid',
     'bg_color'                 => 'rgba(10,20,30,0.4)',
@@ -81,7 +126,7 @@ $existing_options = [
     'mobile_bg_color'          => 'rgba(0,0,0,0.6)',
     'mobile_bg_opacity'        => 0.6,
     'mobile_blur'              => 4,
-];
+]);
 
 $input = [
     'style_preset'             => 'custom',
@@ -107,7 +152,7 @@ $input = [
     'mobile_blur'              => 6,
 ];
 
-$result = $method->invoke($instance, $input, $existing_options);
+$result = $method->invoke($sanitizer, $input, $existing_options);
 
 $testsPassed = true;
 
@@ -137,19 +182,19 @@ assertSame(0.8, $result['mobile_bg_opacity'], 'Valid opacity within range is pre
 
 $inputBelowMin = $input;
 $inputBelowMin['mobile_bg_opacity'] = -0.5;
-$resultBelowMin = $method->invoke($instance, $inputBelowMin, $existing_options);
+$resultBelowMin = $method->invoke($sanitizer, $inputBelowMin, $existing_options);
 assertSame(0.0, $resultBelowMin['mobile_bg_opacity'], 'Opacity below 0 clamps to 0.0');
 
 $inputAboveMax = $input;
 $inputAboveMax['mobile_bg_opacity'] = 3.14;
-$resultAboveMax = $method->invoke($instance, $inputAboveMax, $existing_options);
+$resultAboveMax = $method->invoke($sanitizer, $inputAboveMax, $existing_options);
 assertSame(1.0, $resultAboveMax['mobile_bg_opacity'], 'Opacity above 1 clamps to 1.0');
 
 $existingOpacityOutOfRange = $existing_options;
 $existingOpacityOutOfRange['mobile_bg_opacity'] = 2.5;
 $inputWithoutOpacity = $input;
 unset($inputWithoutOpacity['mobile_bg_opacity']);
-$resultExistingClamp = $method->invoke($instance, $inputWithoutOpacity, $existingOpacityOutOfRange);
+$resultExistingClamp = $method->invoke($sanitizer, $inputWithoutOpacity, $existingOpacityOutOfRange);
 assertSame(1.0, $resultExistingClamp['mobile_bg_opacity'], 'Fallback opacity clamps existing value to 1.0');
 
 if ($testsPassed) {

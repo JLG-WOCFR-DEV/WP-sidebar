@@ -24,9 +24,8 @@
     <form action="options.php" method="post" id="sidebar-jlg-form">
         <?php
         settings_fields( 'sidebar_jlg_options_group' );
-        $defaults = \JLG\Sidebar\Sidebar_JLG::get_instance()->get_default_settings();
-        $options_from_db = get_option( 'sidebar_jlg_settings' );
-        $options = wp_parse_args( $options_from_db, $defaults );
+        $defaults = $defaults ?? [];
+        $options = wp_parse_args( $options ?? [], $defaults );
         ?>
 
         <!-- Onglet Général -->
@@ -175,12 +174,12 @@
                 </tr>
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Couleur de fond (Desktop)', 'sidebar-jlg' ); ?></th>
-                    <td><?php $this->color_picker('bg_color', $options); ?></td>
+                    <td><?php $colorPicker->render('bg_color', $options); ?></td>
                 </tr>
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Couleur d\'accentuation', 'sidebar-jlg' ); ?></th>
                     <td>
-                        <?php $this->color_picker('accent_color', $options); ?>
+                        <?php $colorPicker->render('accent_color', $options); ?>
                         <p class="description"><?php esc_html_e('Utilisée pour les liens actifs et certains effets.', 'sidebar-jlg'); ?></p>
                     </td>
                 </tr>
@@ -200,8 +199,8 @@
                     <th scope="row"><?php esc_html_e( 'Typographie du menu', 'sidebar-jlg' ); ?></th>
                     <td>
                         <p><label><?php esc_html_e( 'Taille de police', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[font_size]" value="<?php echo esc_attr($options['font_size']); ?>" class="small-text" /> px</p>
-                        <p><label><?php esc_html_e( 'Couleur du texte', 'sidebar-jlg' ); ?></label> <?php $this->color_picker('font_color', $options); ?></p>
-                        <p><label><?php esc_html_e( 'Couleur du texte (survol)', 'sidebar-jlg' ); ?></label> <?php $this->color_picker('font_hover_color', $options); ?></p>
+                        <p><label><?php esc_html_e( 'Couleur du texte', 'sidebar-jlg' ); ?></label> <?php $colorPicker->render('font_color', $options); ?></p>
+                        <p><label><?php esc_html_e( 'Couleur du texte (survol)', 'sidebar-jlg' ); ?></label> <?php $colorPicker->render('font_hover_color', $options); ?></p>
                     </td>
                 </tr>
              </table>
