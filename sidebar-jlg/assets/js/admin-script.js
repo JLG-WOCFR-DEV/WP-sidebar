@@ -102,37 +102,11 @@ jQuery(document).ready(function($) {
         if (preset === 'custom') return;
 
         const presets = {
-            dark: {
-                bg_color: '#1a1a1a', accent_color: '#007cba', 
-                font_color: '#ffffff', font_hover_color: '#ffffff'
-            },
-            light: {
-                bg_color: '#ffffff', accent_color: '#0073aa',
-                font_color: '#333333', font_hover_color: '#ffffff'
-            },
-            ocean: {
-                bg_color: '#0c4b77', accent_color: '#1e90ff',
-                font_color: '#e0f2fe', font_hover_color: '#ffffff'
-            },
-            forest: {
-                bg_color: '#1b4332', accent_color: '#52b788',
-                font_color: '#d8f3dc', font_hover_color: '#ffffff'
-            },
-            sunset: {
-                bg_color: '#5c2a45', accent_color: '#ff6b6b',
-                font_color: '#ffe0e0', font_hover_color: '#ffffff'
-            },
-            midnight: {
-                bg_color: '#0f0f23', accent_color: '#6366f1',
-                font_color: '#e2e8f0', font_hover_color: '#ffffff'
-            },
-            minimalist: {
-                bg_color: '#f8f9fa', accent_color: '#212529',
-                font_color: '#495057', font_hover_color: '#ffffff'
-            },
-            neon: {
-                bg_color: '#0a0a0a', accent_color: '#00ffff',
-                font_color: '#ffffff', font_hover_color: '#00ffff'
+            moderne_dark: {
+                bg_color: '#1a1d24',
+                accent_color: '#0d6efd',
+                font_color: '#e0e0e0',
+                font_hover_color: '#ffffff'
             }
         };
 
