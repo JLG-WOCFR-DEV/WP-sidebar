@@ -1028,6 +1028,9 @@ class Sidebar_JLG {
         }
 
         $per_page = min( max(1, $requested_per_page), $max_per_page );
+        $allowed_post_types = [ 'post', 'page' ];
+        $requested_post_type = isset( $_POST['post_type'] ) ? sanitize_key( wp_unslash( $_POST['post_type'] ) ) : 'post';
+        $post_type = in_array( $requested_post_type, $allowed_post_types, true ) ? $requested_post_type : 'post';
         $include_ids = [];
         if ( isset( $_POST['include'] ) ) {
             $raw_include = wp_unslash( $_POST['include'] );
@@ -1038,6 +1041,7 @@ class Sidebar_JLG {
         $posts = get_posts([
             'posts_per_page' => $per_page,
             'paged' => $page,
+            'post_type' => $post_type,
         ]);
 
         $options_by_id = [];
@@ -1054,6 +1058,7 @@ class Sidebar_JLG {
                     'posts_per_page' => count($missing_ids),
                     'post__in'       => $missing_ids,
                     'orderby'        => 'post__in',
+                    'post_type'      => $post_type,
                 ]);
 
                 foreach ($additional_posts as $post) {
