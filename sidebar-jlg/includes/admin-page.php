@@ -398,6 +398,7 @@
                 <select class="widefat menu-item-type" name="sidebar_jlg_settings[menu_items][{{ data.index }}][type]">
                     <option value="custom" <# if (data.type === 'custom') { #>selected<# } #>>Lien personnalisé</option>
                     <option value="post" <# if (data.type === 'post') { #>selected<# } #>>Article</option>
+                    <option value="page" <# if (data.type === 'page') { #>selected<# } #>>Page</option>
                     <option value="category" <# if (data.type === 'category') { #>selected<# } #>>Catégorie</option>
                 </select>
             </p>

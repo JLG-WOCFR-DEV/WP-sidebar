@@ -18,6 +18,8 @@ ob_start();
                     $raw_url = $item['value'] ?? '';
                 } elseif ($item['type'] === 'post') {
                     $raw_url = get_permalink(absint($item['value']));
+                } elseif ($item['type'] === 'page') {
+                    $raw_url = get_permalink(absint($item['value']));
                 } elseif ($item['type'] === 'category') {
                     $raw_url = get_category_link(absint($item['value']));
                 }

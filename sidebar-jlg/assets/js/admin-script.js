@@ -399,15 +399,17 @@ jQuery(document).ready(function($) {
         return action === 'jlg_get_posts' ? ajaxCache.posts : ajaxCache.categories;
     }
 
-    function buildCacheKey(action, include, page, perPage) {
+    function buildCacheKey(action, requestData) {
+        const { include, page, posts_per_page: perPage, post_type: postType } = requestData;
         const hasInclude = include !== undefined && include !== null && include !== '';
         const includeKey = hasInclude ? (Array.isArray(include) ? include.join(',') : String(include)) : '';
-        return [action, includeKey, page, perPage].join('|');
+        const normalizedPostType = postType ? String(postType) : '';
+        return [action, normalizedPostType, includeKey, page, perPage].join('|');
     }
 
     function requestAjaxData(action, requestData) {
         const bucket = getCacheBucket(action);
-        const key = buildCacheKey(action, requestData.include, requestData.page, requestData.posts_per_page);
+        const key = buildCacheKey(action, requestData);
 
         if (bucket[key]) {
             return bucket[key];
@@ -430,7 +432,7 @@ jQuery(document).ready(function($) {
 
         if (response.success) {
             const idKey = 'id';
-            const titleKey = type === 'post' ? 'title' : 'name';
+            const titleKey = type === 'category' ? 'name' : 'title';
             const optionsArray = Array.isArray(response.data) ? response.data : [];
             const hasCurrentInResponse = normalizedValue && optionsArray.some(opt => String(opt[idKey]) === normalizedValue);
 
@@ -508,14 +510,14 @@ jQuery(document).ready(function($) {
         if (type === 'custom') {
             valueWrapper.html(`
                 <p><label>URL</label>
-                <input type="text" class="widefat" 
-                       name="sidebar_jlg_settings[menu_items][${index}][value]" 
+                <input type="text" class="widefat"
+                       name="sidebar_jlg_settings[menu_items][${index}][value]"
                        value="${value}" placeholder="https://..."></p>
             `);
-        } else if (type === 'post' || type === 'category') {
-            const action = type === 'post' ? 'jlg_get_posts' : 'jlg_get_categories';
+        } else if (type === 'post' || type === 'page' || type === 'category') {
+            const action = type === 'category' ? 'jlg_get_categories' : 'jlg_get_posts';
             const name = `sidebar_jlg_settings[menu_items][${index}][value]`;
-            const labelText = type === 'post' ? 'Article' : 'Catégorie';
+            const labelText = type === 'post' ? 'Article' : (type === 'page' ? 'Page' : 'Catégorie');
             const $label = $('<label>').text(labelText);
             const $selectElement = $('<select>', {
                 class: 'widefat',
@@ -566,6 +568,10 @@ jQuery(document).ready(function($) {
                 page: page,
                 posts_per_page: postsPerPage
             };
+
+            if (type === 'post' || type === 'page') {
+                requestData.post_type = type;
+            }
 
             if (normalizedValue) {
                 requestData.include = normalizedValue;
