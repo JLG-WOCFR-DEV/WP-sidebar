@@ -133,6 +133,24 @@ assertSame('#000000', $result['font_color_start'], 'Fallback preserves existing 
 assertSame('#ffffff', $result['font_color_end'], 'Fallback preserves existing gradient end color');
 assertSame('#445566', $result['accent_color'], 'Valid solid color is sanitized normally');
 assertSame('rgba(0,0,0,0.6)', $result['mobile_bg_color'], 'Fallback preserves existing mobile background color');
+assertSame(0.8, $result['mobile_bg_opacity'], 'Valid opacity within range is preserved');
+
+$inputBelowMin = $input;
+$inputBelowMin['mobile_bg_opacity'] = -0.5;
+$resultBelowMin = $method->invoke($instance, $inputBelowMin, $existing_options);
+assertSame(0.0, $resultBelowMin['mobile_bg_opacity'], 'Opacity below 0 clamps to 0.0');
+
+$inputAboveMax = $input;
+$inputAboveMax['mobile_bg_opacity'] = 3.14;
+$resultAboveMax = $method->invoke($instance, $inputAboveMax, $existing_options);
+assertSame(1.0, $resultAboveMax['mobile_bg_opacity'], 'Opacity above 1 clamps to 1.0');
+
+$existingOpacityOutOfRange = $existing_options;
+$existingOpacityOutOfRange['mobile_bg_opacity'] = 2.5;
+$inputWithoutOpacity = $input;
+unset($inputWithoutOpacity['mobile_bg_opacity']);
+$resultExistingClamp = $method->invoke($instance, $inputWithoutOpacity, $existingOpacityOutOfRange);
+assertSame(1.0, $resultExistingClamp['mobile_bg_opacity'], 'Fallback opacity clamps existing value to 1.0');
 
 if ($testsPassed) {
     echo "All sanitize_style_settings tests passed.\n";
