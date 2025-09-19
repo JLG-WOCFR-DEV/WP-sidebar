@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use JLG\Sidebar\Sidebar_JLG;
+use function JLG\Sidebar\plugin;
 
 define('ABSPATH', true);
 define('SIDEBAR_JLG_SKIP_BOOTSTRAP', true);
@@ -165,6 +165,15 @@ function wp_check_filetype($file, $allowed = []) {
 function wp_kses($string, $allowed_html = []) {
     return $string;
 }
+function sanitize_hex_color($color) {
+    $color = trim((string) $color);
+    if (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $color)) {
+        return strtolower($color);
+    }
+
+    return '';
+}
+
 function sanitize_text_field($value) {
     if (is_array($value) || is_object($value)) {
         return '';
@@ -217,9 +226,13 @@ function _e($text, $domain = 'default'): void {
 
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
-$plugin = Sidebar_JLG::get_instance();
+$plugin = plugin();
+$settingsRepository = $plugin->getSettingsRepository();
+$sanitizer = $plugin->getSanitizer();
+$renderer = $plugin->getSidebarRenderer();
+$menuCache = $plugin->getMenuCache();
 
-$default_settings = $plugin->get_default_settings();
+$default_settings = $settingsRepository->getDefaultSettings();
 $default_settings['social_icons'] = [];
 update_option('sidebar_jlg_settings', $default_settings);
 
@@ -242,7 +255,8 @@ $input_settings = [
     ],
 ];
 
-$sanitized_settings = $plugin->sanitize_settings($input_settings);
+$sanitized_settings = $sanitizer->sanitize_settings($input_settings);
+$sanitized_settings['enable_sidebar'] = true;
 
 assertTrue(
     isset($sanitized_settings['menu_items'][0]['value']) && $sanitized_settings['menu_items'][0]['value'] === 789,
@@ -275,12 +289,12 @@ function assertNotContains(string $needle, string $haystack, string $message): v
     assertTrue(strpos($haystack, $needle) === false, $message);
 }
 
-$plugin->clear_menu_cache();
+$menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
 
 switch_to_locale('fr_FR');
 ob_start();
-$plugin->render_sidebar_html();
+$renderer->render();
 $french_html = ob_get_clean();
 
 assertContains('Ouvrir le menu', $french_html, 'French menu label rendered');
@@ -291,7 +305,7 @@ assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']),
 
 switch_to_locale('en_US');
 ob_start();
-$plugin->render_sidebar_html();
+$renderer->render();
 $english_html = ob_get_clean();
 
 assertContains('Open menu', $english_html, 'English menu label rendered after locale switch');
@@ -300,7 +314,7 @@ assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US']),
 
 switch_to_locale('fr_FR');
 ob_start();
-$plugin->render_sidebar_html();
+$renderer->render();
 $french_cached_html = ob_get_clean();
 
 assertContains('Ouvrir le menu', $french_cached_html, 'French cache reused correctly');
@@ -309,17 +323,17 @@ $cached_locales_option = get_option('sidebar_jlg_cached_locales', []);
 assertTrue(in_array('fr_FR', $cached_locales_option, true), 'French locale tracked');
 assertTrue(in_array('en_US', $cached_locales_option, true), 'English locale tracked');
 
-$plugin->clear_menu_cache();
+$menuCache->clear();
 
 assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']), 'French transient cleared');
 assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US']), 'English transient cleared');
 assertTrue(!isset($GLOBALS['wp_test_options']['sidebar_jlg_cached_locales']), 'Cached locales option cleared');
 
-$plugin->clear_menu_cache();
+$menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
 $GLOBALS['wp_test_shortcode_calls'] = 0;
 
-$dynamic_settings = $plugin->get_default_settings();
+$dynamic_settings = $settingsRepository->getDefaultSettings();
 $dynamic_settings['social_icons'] = [];
 $dynamic_settings['enable_search'] = true;
 $dynamic_settings['search_method'] = 'shortcode';
@@ -329,7 +343,7 @@ update_option('sidebar_jlg_settings', $dynamic_settings);
 
 switch_to_locale('en_US');
 ob_start();
-$plugin->render_sidebar_html();
+$renderer->render();
 $first_dynamic_html = ob_get_clean();
 
 $dynamic_transient_key = 'sidebar_jlg_full_html_en_US';
@@ -337,7 +351,7 @@ assertTrue(!isset($GLOBALS['wp_test_transients'][$dynamic_transient_key]), 'Dyna
 assertContains('#1', $first_dynamic_html, 'Dynamic render includes first shortcode marker');
 
 ob_start();
-$plugin->render_sidebar_html();
+$renderer->render();
 $second_dynamic_html = ob_get_clean();
 
 assertContains('#2', $second_dynamic_html, 'Dynamic render increments shortcode marker on subsequent render');

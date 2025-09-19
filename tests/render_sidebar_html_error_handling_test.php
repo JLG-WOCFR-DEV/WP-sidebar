@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use JLG\Sidebar\Sidebar_JLG;
+use function JLG\Sidebar\plugin;
 
 if (!defined('ABSPATH')) {
     define('ABSPATH', true);
@@ -54,6 +54,9 @@ function wp_upload_dir(): array {
 function wp_mkdir_p(string $dir): bool { return true; }
 function add_action($hook, $callback, $priority = 10, $accepted_args = 1): void {}
 function add_filter($hook, $callback, $priority = 10, $accepted_args = 1): void {}
+function apply_filters($hook, $value, ...$args) {
+    return $value;
+}
 function wp_parse_args($args, $defaults = []) {
     if (is_object($args)) {
         $args = get_object_vars($args);
@@ -235,9 +238,12 @@ function _e($text, $domain = 'default'): void {
 
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
-$plugin = Sidebar_JLG::get_instance();
+$plugin = plugin();
+$settingsRepository = $plugin->getSettingsRepository();
+$renderer = $plugin->getSidebarRenderer();
+$menuCache = $plugin->getMenuCache();
 
-$default_settings = $plugin->get_default_settings();
+$default_settings = $settingsRepository->getDefaultSettings();
 $default_settings['menu_items'] = [
     [
         'label' => 'Category Error Item',
@@ -250,12 +256,12 @@ $default_settings['menu_items'] = [
 $default_settings['social_icons'] = [];
 
 update_option('sidebar_jlg_settings', $default_settings);
-$plugin->clear_menu_cache();
+$menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
 $GLOBALS['test_category_link_return'] = new WP_Error('invalid_term', 'Invalid term');
 
 ob_start();
-$plugin->render_sidebar_html();
+$renderer->render();
 $html = ob_get_clean();
 
 $testsPassed = true;
