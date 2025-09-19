@@ -130,7 +130,15 @@
                     <td>
                         <select name="sidebar_jlg_settings[style_preset]" id="style-preset-select">
                             <option value="custom" <?php selected($options['style_preset'], 'custom'); ?>><?php esc_html_e('Personnalisé', 'sidebar-jlg'); ?></option>
-                            <option value="moderne_dark" <?php selected($options['style_preset'], 'moderne_dark'); ?>><?php esc_html_e('Critique Moderne (Dark)', 'sidebar-jlg'); ?></option>
+                            <option value="moderne_dark" <?php selected($options['style_preset'], 'moderne_dark'); ?>><?php esc_html_e('Critique moderne (sombre)', 'sidebar-jlg'); ?></option>
+                            <option value="dark" <?php selected($options['style_preset'], 'dark'); ?>><?php esc_html_e('Sombre classique', 'sidebar-jlg'); ?></option>
+                            <option value="light" <?php selected($options['style_preset'], 'light'); ?>><?php esc_html_e('Clair moderne', 'sidebar-jlg'); ?></option>
+                            <option value="ocean" <?php selected($options['style_preset'], 'ocean'); ?>><?php esc_html_e('Océan profond', 'sidebar-jlg'); ?></option>
+                            <option value="forest" <?php selected($options['style_preset'], 'forest'); ?>><?php esc_html_e('Forêt apaisante', 'sidebar-jlg'); ?></option>
+                            <option value="sunset" <?php selected($options['style_preset'], 'sunset'); ?>><?php esc_html_e('Crépuscule chaleureux', 'sidebar-jlg'); ?></option>
+                            <option value="midnight" <?php selected($options['style_preset'], 'midnight'); ?>><?php esc_html_e('Minuit électrique', 'sidebar-jlg'); ?></option>
+                            <option value="minimalist" <?php selected($options['style_preset'], 'minimalist'); ?>><?php esc_html_e('Minimaliste épuré', 'sidebar-jlg'); ?></option>
+                            <option value="neon" <?php selected($options['style_preset'], 'neon'); ?>><?php esc_html_e('Néon futuriste', 'sidebar-jlg'); ?></option>
                         </select>
                         <p class="description"><?php esc_html_e('Choisir un préréglage mettra à jour automatiquement les options de couleur ci-dessous.', 'sidebar-jlg'); ?></p>
                     </td>

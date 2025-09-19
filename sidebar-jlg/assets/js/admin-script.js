@@ -102,8 +102,12 @@ jQuery(document).ready(function($) {
         if (preset === 'custom') return;
 
         const presets = {
+            moderne_dark: {
+                bg_color: '#1a1d24', accent_color: '#0d6efd',
+                font_color: '#e0e0e0', font_hover_color: '#ffffff'
+            },
             dark: {
-                bg_color: '#1a1a1a', accent_color: '#007cba', 
+                bg_color: '#1a1a1a', accent_color: '#007cba',
                 font_color: '#ffffff', font_hover_color: '#ffffff'
             },
             light: {
