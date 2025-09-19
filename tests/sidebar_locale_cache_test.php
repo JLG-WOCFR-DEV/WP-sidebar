@@ -32,6 +32,9 @@ function wp_upload_dir(): array {
 function wp_mkdir_p(string $dir): bool { return true; }
 function add_action($hook, $callback, $priority = 10, $accepted_args = 1): void {}
 function add_filter($hook, $callback, $priority = 10, $accepted_args = 1): void {}
+function apply_filters($hook, $value, ...$args) {
+    return $value;
+}
 function wp_parse_args($args, $defaults = []) {
     if (is_object($args)) {
         $args = get_object_vars($args);
@@ -187,7 +190,9 @@ function get_bloginfo($show = '', $filter = 'raw') {
     return 'Test Blog';
 }
 function do_shortcode($content) {
-    return $content;
+    $GLOBALS['wp_test_shortcode_calls'] = ($GLOBALS['wp_test_shortcode_calls'] ?? 0) + 1;
+
+    return $content . ' #' . $GLOBALS['wp_test_shortcode_calls'];
 }
 function do_action($hook, ...$args): void {}
 function get_search_form(): string {
@@ -309,6 +314,36 @@ $plugin->clear_menu_cache();
 assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']), 'French transient cleared');
 assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US']), 'English transient cleared');
 assertTrue(!isset($GLOBALS['wp_test_options']['sidebar_jlg_cached_locales']), 'Cached locales option cleared');
+
+$plugin->clear_menu_cache();
+$GLOBALS['wp_test_transients'] = [];
+$GLOBALS['wp_test_shortcode_calls'] = 0;
+
+$dynamic_settings = $plugin->get_default_settings();
+$dynamic_settings['social_icons'] = [];
+$dynamic_settings['enable_search'] = true;
+$dynamic_settings['search_method'] = 'shortcode';
+$dynamic_settings['search_shortcode'] = '[dynamic]';
+
+update_option('sidebar_jlg_settings', $dynamic_settings);
+
+switch_to_locale('en_US');
+ob_start();
+$plugin->render_sidebar_html();
+$first_dynamic_html = ob_get_clean();
+
+$dynamic_transient_key = 'sidebar_jlg_full_html_en_US';
+assertTrue(!isset($GLOBALS['wp_test_transients'][$dynamic_transient_key]), 'Dynamic sidebar render skips transient storage');
+assertContains('#1', $first_dynamic_html, 'Dynamic render includes first shortcode marker');
+
+ob_start();
+$plugin->render_sidebar_html();
+$second_dynamic_html = ob_get_clean();
+
+assertContains('#2', $second_dynamic_html, 'Dynamic render increments shortcode marker on subsequent render');
+assertTrue($first_dynamic_html !== $second_dynamic_html, 'Dynamic HTML regenerated for each render when cache disabled');
+assertTrue(!isset($GLOBALS['wp_test_transients'][$dynamic_transient_key]), 'Dynamic sidebar never stores persistent transients');
+assertTrue(empty(get_option('sidebar_jlg_cached_locales', [])), 'Cached locales not tracked when cache is disabled');
 
 if ($testsPassed) {
     echo "Sidebar locale cache tests passed.\n";

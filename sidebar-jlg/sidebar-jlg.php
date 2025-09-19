@@ -819,17 +819,48 @@ class Sidebar_JLG {
         $current_locale = $this->get_locale_for_cache();
         $transient_key  = $this->get_transient_key_for_locale( $current_locale );
 
-        $html = get_transient( $transient_key );
-        if ( false === $html ) {
+        $is_dynamic_sidebar = $this->is_sidebar_output_dynamic();
+        $cache_enabled      = apply_filters(
+            'sidebar_jlg_cache_enabled',
+            ! $is_dynamic_sidebar,
+            $this->options,
+            $current_locale,
+            $transient_key
+        );
+
+        $html = false;
+
+        if ( $cache_enabled ) {
+            $html = get_transient( $transient_key );
+        } else {
+            delete_transient( $transient_key );
+        }
+
+        if ( ! $cache_enabled || false === $html ) {
             ob_start();
             require plugin_dir_path( __FILE__ ) . 'includes/sidebar-template.php';
             $html = ob_get_clean();
 
-            set_transient( $transient_key, $html );
-            $this->remember_cached_locale( $current_locale );
+            if ( $cache_enabled ) {
+                set_transient( $transient_key, $html );
+                $this->remember_cached_locale( $current_locale );
+            }
         }
 
         echo $html;
+    }
+
+    private function is_sidebar_output_dynamic() {
+        $stored_options = get_option( 'sidebar_jlg_settings', null );
+
+        if ( is_array( $stored_options ) ) {
+            $this->options = wp_parse_args( $stored_options, $this->get_default_settings() );
+        }
+
+        $search_method = $this->options['search_method'] ?? 'default';
+        $is_dynamic    = in_array( $search_method, [ 'shortcode', 'hook' ], true );
+
+        return (bool) apply_filters( 'sidebar_jlg_is_dynamic', $is_dynamic, $this->options );
     }
 
     public function get_default_settings() {
