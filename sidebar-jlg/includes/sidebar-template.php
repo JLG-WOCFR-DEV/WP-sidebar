@@ -1,8 +1,9 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-$options = get_option('sidebar_jlg_settings', \JLG\Sidebar\Sidebar_JLG::get_instance()->get_default_settings());
-$all_icons = \JLG\Sidebar\Sidebar_JLG::get_instance()->get_all_available_icons();
+$plugin = \JLG\Sidebar\Sidebar_JLG::get_instance();
+$options = wp_parse_args( get_option( 'sidebar_jlg_settings', [] ), $plugin->get_default_settings() );
+$all_icons = $plugin->get_all_available_icons();
 
 ob_start();
 ?>
