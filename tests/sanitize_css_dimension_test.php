@@ -5,68 +5,11 @@ use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
 
-define('ABSPATH', true);
-define('SIDEBAR_JLG_SKIP_BOOTSTRAP', true);
+require __DIR__ . '/bootstrap.php';
 
-if (!function_exists('register_activation_hook')) {
-    function register_activation_hook($file, $callback): void {
-        // No-op for tests.
-    }
-}
-
-if (!function_exists('plugin_dir_path')) {
-    function plugin_dir_path($file): string {
-        return rtrim(dirname($file), "/\\") . '/';
-    }
-}
-
-if (!function_exists('trailingslashit')) {
-    function trailingslashit($value): string {
-        return rtrim($value, "/\\") . '/';
-    }
-}
-
-if (!function_exists('wp_upload_dir')) {
-    function wp_upload_dir(): array {
-        return [
-            'basedir' => sys_get_temp_dir(),
-            'baseurl' => 'http://example.com/uploads',
-        ];
-    }
-}
-
-if (!function_exists('wp_check_filetype')) {
-    function wp_check_filetype($file, $allowed = []): array {
-        return ['ext' => '', 'type' => ''];
-    }
-}
-
-if (!function_exists('wp_kses')) {
-    function wp_kses($string, $allowed_html = []) {
-        return $string;
-    }
-}
-
-if (!function_exists('sanitize_key')) {
-    function sanitize_key($key): string {
-        $key = strtolower((string) $key);
-        return preg_replace('/[^a-z0-9_\-]/', '', $key);
-    }
-}
-
-if (!function_exists('sanitize_text_field')) {
-    function sanitize_text_field($value): string {
-        if (is_array($value) || is_object($value)) {
-            return '';
-        }
-
-        $value = (string) $value;
-        $value = strip_tags($value);
-        $value = preg_replace('/[\r\n\t ]+/', ' ', $value);
-
-        return trim($value);
-    }
-}
+$GLOBALS['wp_test_function_overrides']['wp_check_filetype'] = static function ($file, $allowed = []) {
+    return ['ext' => '', 'type' => ''];
+};
 
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
