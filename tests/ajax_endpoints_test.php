@@ -194,6 +194,10 @@ function esc_attr_e($text, $domain = 'default'): void
 {
     echo esc_attr($text);
 }
+function __($text, $domain = 'default')
+{
+    return $text;
+}
 function esc_url_raw($value)
 {
     return $value;

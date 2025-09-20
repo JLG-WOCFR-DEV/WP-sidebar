@@ -4,6 +4,7 @@ namespace JLG\Sidebar\Ajax;
 
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Settings\SettingsRepository;
+use function __;
 
 class Endpoints
 {
@@ -34,7 +35,7 @@ class Endpoints
         $capability = $this->get_ajax_capability();
 
         if (!current_user_can($capability)) {
-            wp_send_json_error('Permission refusée.');
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
         }
 
         check_ajax_referer('jlg_ajax_nonce', 'nonce');
@@ -43,7 +44,7 @@ class Endpoints
         $requestedPerPage = isset($_POST['posts_per_page']) ? intval(wp_unslash($_POST['posts_per_page'])) : 20;
 
         if ($requestedPerPage > $maxPerPage) {
-            wp_send_json_error(sprintf('Le paramètre posts_per_page ne peut pas dépasser %d.', $maxPerPage));
+            wp_send_json_error(sprintf(__('Le paramètre posts_per_page ne peut pas dépasser %d.', 'sidebar-jlg'), $maxPerPage));
         }
 
         $perPage = min(max(1, $requestedPerPage), $maxPerPage);
@@ -108,7 +109,7 @@ class Endpoints
         $capability = $this->get_ajax_capability();
 
         if (!current_user_can($capability)) {
-            wp_send_json_error('Permission refusée.');
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
         }
 
         check_ajax_referer('jlg_ajax_nonce', 'nonce');
@@ -117,7 +118,7 @@ class Endpoints
         $requestedPerPage = isset($_POST['posts_per_page']) ? intval(wp_unslash($_POST['posts_per_page'])) : 20;
 
         if ($requestedPerPage > $maxPerPage) {
-            wp_send_json_error(sprintf('Le paramètre posts_per_page ne peut pas dépasser %d.', $maxPerPage));
+            wp_send_json_error(sprintf(__('Le paramètre posts_per_page ne peut pas dépasser %d.', 'sidebar-jlg'), $maxPerPage));
         }
 
         $perPage = min(max(1, $requestedPerPage), $maxPerPage);
@@ -178,13 +179,13 @@ class Endpoints
         $capability = $this->get_ajax_capability();
 
         if (!current_user_can($capability)) {
-            wp_send_json_error('Permission refusée.');
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
         }
 
         check_ajax_referer('jlg_reset_nonce', 'nonce');
         $this->settings->deleteOptions();
         $this->cache->clear();
-        wp_send_json_success('Réglages réinitialisés.');
+        wp_send_json_success(__('Réglages réinitialisés.', 'sidebar-jlg'));
     }
 
     private function get_ajax_capability(): string
