@@ -361,19 +361,17 @@ class SettingsSanitizer
             ? (string) $existingValue
             : '';
 
-        $sanitizedExisting = $this->sanitize_rgba_color($existingValue);
-
         $candidate = $value;
         if ($candidate === null) {
             $candidate = $existingValue;
         }
 
-        $sanitized = $this->sanitize_rgba_color($candidate);
-
-        if ($sanitized !== '') {
-            return $sanitized;
+        $sanitizedCandidate = $this->sanitize_rgba_color($candidate);
+        if ($sanitizedCandidate !== '') {
+            return $sanitizedCandidate;
         }
 
+        $sanitizedExisting = $this->sanitize_rgba_color($existingValue);
         if ($sanitizedExisting !== '') {
             return $sanitizedExisting;
         }

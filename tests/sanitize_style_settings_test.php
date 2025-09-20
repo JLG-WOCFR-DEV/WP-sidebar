@@ -121,6 +121,13 @@ unset($inputWithoutBgColor['bg_color']);
 $resultSanitizedPayload = $method->invoke($sanitizer, $inputWithoutBgColor, $existingPayloadOptions);
 assertSame('', $resultSanitizedPayload['bg_color'], 'Existing bg color payload is sanitized to empty string');
 
+$existingAccentPayload = $existing_options;
+$existingAccentPayload['accent_color'] = '#112233;background-image:url(javascript:alert(1))';
+$inputWithoutAccent = $input;
+unset($inputWithoutAccent['accent_color']);
+$resultSanitizedAccentPayload = $method->invoke($sanitizer, $inputWithoutAccent, $existingAccentPayload);
+assertSame('', $resultSanitizedAccentPayload['accent_color'], 'Existing accent color payload is sanitized to empty string');
+
 if ($testsPassed) {
     echo "All sanitize_style_settings tests passed.\n";
     exit(0);
