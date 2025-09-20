@@ -133,12 +133,7 @@ class SidebarRenderer
             $options = $this->settings->getOptions();
         }
 
-        if (empty($options['enable_search'])) {
-            $isDynamic = false;
-        } else {
-            $searchMethod = $options['search_method'] ?? 'default';
-            $isDynamic = in_array($searchMethod, ['shortcode', 'hook'], true);
-        }
+        $isDynamic = !empty($options['enable_search']);
 
         return (bool) \apply_filters('sidebar_jlg_is_dynamic', $isDynamic, $options);
     }
