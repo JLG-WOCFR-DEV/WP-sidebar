@@ -23,6 +23,7 @@ $GLOBALS['test_get_posts_queue'] = [];
 $GLOBALS['test_get_posts_requests'] = [];
 $GLOBALS['test_get_categories_queue'] = [];
 $GLOBALS['test_get_categories_requests'] = [];
+$GLOBALS['test_nonce_results'] = [];
 
 function register_activation_hook($file, $callback): void {}
 function wp_upload_dir(): array
@@ -206,7 +207,17 @@ function check_ajax_referer($action, $query_arg = false)
 {
     $value = $query_arg !== false && isset($_POST[$query_arg]) ? $_POST[$query_arg] : null;
     $GLOBALS['checked_nonces'][] = [$action, $query_arg, $value];
+
+    if (!empty($GLOBALS['test_nonce_results'])) {
+        $outcome = $GLOBALS['test_nonce_results'][$action] ?? true;
+        if ($outcome !== true) {
+            $message = is_string($outcome) ? $outcome : 'Nonce invalide.';
+            wp_send_json_error($message);
+        }
+    }
 }
+
+function wp_reset_postdata(): void {}
 
 class WP_Die_Exception extends Exception {}
 
@@ -276,6 +287,7 @@ function reset_test_environment(): void
     $GLOBALS['test_get_categories_queue'] = [];
     $GLOBALS['test_get_categories_requests'] = [];
     $GLOBALS['test_current_user_can'] = true;
+    $GLOBALS['test_nonce_results'] = [];
     $_POST = [];
 }
 
@@ -293,6 +305,14 @@ $GLOBALS['test_current_user_can'] = false;
 invoke_endpoint($endpoints, 'ajax_get_posts');
 assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized posts request rejected');
 assertSame(0, count($GLOBALS['test_get_posts_requests']), 'Unauthorized posts request does not call get_posts');
+
+reset_test_environment();
+$GLOBALS['test_nonce_results']['jlg_ajax_nonce'] = 'Nonce invalide.';
+$_POST = ['nonce' => 'invalid'];
+invoke_endpoint($endpoints, 'ajax_get_posts');
+assertSame('Nonce invalide.', $GLOBALS['json_error_payloads'][0] ?? null, 'Posts nonce failure returns error');
+assertSame(['jlg_ajax_nonce', 'nonce', 'invalid'], $GLOBALS['checked_nonces'][0] ?? null, 'Posts nonce validation recorded before failure');
+assertSame(0, count($GLOBALS['test_get_posts_requests']), 'Nonce failure prevents posts query');
 
 reset_test_environment();
 $_POST = ['nonce' => 'posts-nonce', 'posts_per_page' => '75'];
@@ -328,12 +348,26 @@ $expectedPosts = [
 assertSame($expectedPosts, $GLOBALS['json_success_payloads'][0] ?? null, 'Posts include ordering respected');
 assertSame(3, $GLOBALS['test_get_posts_requests'][0]['posts_per_page'] ?? null, 'Posts query limited to requested page size');
 assertSame(['jlg_ajax_nonce', 'nonce', 'posts-success'], $GLOBALS['checked_nonces'][0] ?? null, 'Posts nonce validated for successful request');
+assertSame(1, $GLOBALS['test_get_posts_requests'][0]['paged'] ?? null, 'Posts query requested correct page');
+assertSame('post', $GLOBALS['test_get_posts_requests'][0]['post_type'] ?? null, 'Posts query requested default post type');
+assertSame(2, $GLOBALS['test_get_posts_requests'][1]['posts_per_page'] ?? null, 'Posts include lookup limited to missing IDs');
+assertSame([5, 4], array_values($GLOBALS['test_get_posts_requests'][1]['post__in'] ?? []), 'Posts include lookup requests missing IDs in order');
+assertSame('post__in', $GLOBALS['test_get_posts_requests'][1]['orderby'] ?? null, 'Posts include lookup orders by requested IDs');
+assertSame('post', $GLOBALS['test_get_posts_requests'][1]['post_type'] ?? null, 'Posts include lookup respects post type');
 
 reset_test_environment();
 $GLOBALS['test_current_user_can'] = false;
 invoke_endpoint($endpoints, 'ajax_get_categories');
 assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized categories request rejected');
 assertSame(0, count($GLOBALS['test_get_categories_requests']), 'Unauthorized categories request does not call get_categories');
+
+reset_test_environment();
+$GLOBALS['test_nonce_results']['jlg_ajax_nonce'] = 'Nonce invalide.';
+$_POST = ['nonce' => 'invalid'];
+invoke_endpoint($endpoints, 'ajax_get_categories');
+assertSame('Nonce invalide.', $GLOBALS['json_error_payloads'][0] ?? null, 'Categories nonce failure returns error');
+assertSame(['jlg_ajax_nonce', 'nonce', 'invalid'], $GLOBALS['checked_nonces'][0] ?? null, 'Categories nonce validation recorded before failure');
+assertSame(0, count($GLOBALS['test_get_categories_requests']), 'Nonce failure prevents categories query');
 
 reset_test_environment();
 $_POST = ['nonce' => 'cats-nonce', 'posts_per_page' => '120'];
@@ -369,6 +403,33 @@ $expectedCategories = [
 assertSame($expectedCategories, $GLOBALS['json_success_payloads'][0] ?? null, 'Categories include ordering respected');
 assertSame(40, $GLOBALS['test_get_categories_requests'][0]['number'] ?? null, 'Categories query limited to requested per-page value');
 assertSame(['jlg_ajax_nonce', 'nonce', 'cats-success'], $GLOBALS['checked_nonces'][0] ?? null, 'Categories nonce validated for successful request');
+assertSame(40, $GLOBALS['test_get_categories_requests'][0]['offset'] ?? null, 'Categories query offset honors page');
+assertSame(false, $GLOBALS['test_get_categories_requests'][0]['hide_empty'] ?? null, 'Categories query disables hide_empty');
+assertSame(false, $GLOBALS['test_get_categories_requests'][1]['hide_empty'] ?? null, 'Categories include lookup disables hide_empty');
+assertSame([9, 10], array_values($GLOBALS['test_get_categories_requests'][1]['include'] ?? []), 'Categories include lookup requests missing IDs in order');
+assertSame(2, $GLOBALS['test_get_categories_requests'][1]['number'] ?? null, 'Categories include lookup limited to missing IDs');
+assertSame('include', $GLOBALS['test_get_categories_requests'][1]['orderby'] ?? null, 'Categories include lookup orders by requested IDs');
+
+reset_test_environment();
+$GLOBALS['test_current_user_can'] = false;
+$GLOBALS['wp_test_options'] = ['sidebar_jlg_settings' => ['should' => 'stay']];
+$GLOBALS['wp_test_transients'] = ['sidebar_jlg_full_html_default' => '<div>keep</div>'];
+invoke_endpoint($endpoints, 'ajax_reset_settings');
+assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized reset request rejected');
+assertSame([], $GLOBALS['checked_nonces'], 'Nonce not validated when reset unauthorized');
+assertSame(['should' => 'stay'], get_option('sidebar_jlg_settings'), 'Unauthorized reset leaves settings untouched');
+assertSame('<div>keep</div>', get_transient('sidebar_jlg_full_html_default'), 'Unauthorized reset leaves caches untouched');
+
+reset_test_environment();
+$GLOBALS['wp_test_options'] = ['sidebar_jlg_settings' => ['should' => 'stay']];
+$GLOBALS['wp_test_transients'] = ['sidebar_jlg_full_html_default' => '<div>keep</div>'];
+$GLOBALS['test_nonce_results']['jlg_reset_nonce'] = 'Nonce invalide.';
+$_POST = ['nonce' => 'bad'];
+invoke_endpoint($endpoints, 'ajax_reset_settings');
+assertSame('Nonce invalide.', $GLOBALS['json_error_payloads'][0] ?? null, 'Reset nonce failure returns error');
+assertSame(['jlg_reset_nonce', 'nonce', 'bad'], $GLOBALS['checked_nonces'][0] ?? null, 'Reset nonce validated before failure');
+assertSame(['should' => 'stay'], get_option('sidebar_jlg_settings'), 'Nonce failure leaves settings untouched');
+assertSame('<div>keep</div>', get_transient('sidebar_jlg_full_html_default'), 'Nonce failure leaves caches untouched');
 
 reset_test_environment();
 $GLOBALS['wp_test_options'] = [
