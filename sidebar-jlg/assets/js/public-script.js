@@ -68,6 +68,23 @@ document.addEventListener('DOMContentLoaded', function() {
     hamburgerBtn.addEventListener('click', toggleSidebar);
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
+
+    const shouldCloseOnLinkClick = typeof sidebarSettings !== 'undefined'
+        && (sidebarSettings.close_on_link_click === true
+            || sidebarSettings.close_on_link_click === 1
+            || sidebarSettings.close_on_link_click === '1');
+
+    if (shouldCloseOnLinkClick) {
+        const selectors = ['.sidebar-menu a', '.social-icons a'];
+        selectors.forEach((selector) => {
+            sidebar.querySelectorAll(selector).forEach((element) => {
+                element.addEventListener('click', () => {
+                    setTimeout(closeSidebar, 50);
+                });
+            });
+        });
+    }
+
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeSidebar();

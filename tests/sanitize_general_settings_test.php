@@ -143,6 +143,20 @@ $result_valid = $method->invoke($sanitizer, $input_valid, $existing_options);
 assertSame('#abcdef', $result_valid['overlay_color'] ?? '', 'Overlay color accepts valid hex values');
 assertSame(0.4, $result_valid['overlay_opacity'] ?? null, 'Overlay opacity falls back to existing value when missing');
 
+$input_close_on_click = [
+    'close_on_link_click' => '1',
+];
+
+$result_close_on = $method->invoke($sanitizer, $input_close_on_click, $existing_options);
+
+assertSame(true, $result_close_on['close_on_link_click'] ?? null, 'Close-on-click option is enabled when checkbox is set');
+
+$input_close_on_click_disabled = [];
+
+$result_close_off = $method->invoke($sanitizer, $input_close_on_click_disabled, $existing_options);
+
+assertSame(false, $result_close_off['close_on_link_click'] ?? null, 'Close-on-click option defaults to disabled when missing');
+
 $input_min = [
     'overlay_opacity' => -0.3,
 ];

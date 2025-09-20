@@ -29,6 +29,7 @@ class DefaultSettings
             'search_alignment'  => 'flex-start',
             'debug_mode'        => false,
             'show_close_button' => true,
+            'close_on_link_click' => false,
             'hamburger_top_position' => '4rem',
             'header_logo_type'  => 'text',
             'header_logo_image' => '',
