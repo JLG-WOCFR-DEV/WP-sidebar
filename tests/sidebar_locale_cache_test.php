@@ -159,6 +159,37 @@ assertTrue($first_dynamic_html !== $second_dynamic_html, 'Dynamic HTML regenerat
 assertTrue(!isset($GLOBALS['wp_test_transients'][$dynamic_transient_key]), 'Dynamic sidebar never stores persistent transients');
 assertTrue(empty(get_option('sidebar_jlg_cached_locales', [])), 'Cached locales not tracked when cache is disabled');
 
+$menuCache->clear();
+$GLOBALS['wp_test_transients'] = [];
+$GLOBALS['wp_test_shortcode_calls'] = 0;
+
+$search_disabled_settings = $settingsRepository->getDefaultSettings();
+$search_disabled_settings['social_icons'] = [];
+$search_disabled_settings['enable_sidebar'] = true;
+$search_disabled_settings['enable_search'] = false;
+$search_disabled_settings['search_method'] = 'shortcode';
+$search_disabled_settings['search_shortcode'] = '[disabled]';
+
+update_option('sidebar_jlg_settings', $search_disabled_settings);
+
+switch_to_locale('en_US');
+ob_start();
+$renderer->render();
+$search_disabled_first_html = ob_get_clean();
+
+$search_disabled_transient_key = 'sidebar_jlg_full_html_en_US';
+assertTrue(isset($GLOBALS['wp_test_transients'][$search_disabled_transient_key]), 'Sidebar cache stored when search disabled despite shortcode method');
+
+ob_start();
+$renderer->render();
+$search_disabled_second_html = ob_get_clean();
+
+assertTrue($search_disabled_first_html === $search_disabled_second_html, 'Cached HTML reused when search disabled despite shortcode method');
+assertTrue(($GLOBALS['wp_test_shortcode_calls'] ?? 0) === 0, 'Shortcode not executed when search disabled');
+
+$cached_locales_option = get_option('sidebar_jlg_cached_locales', []);
+assertTrue(in_array('en_US', $cached_locales_option, true), 'Locale cached when search disabled with shortcode method');
+
 if ($testsPassed) {
     echo "Sidebar locale cache tests passed.\n";
     exit(0);
