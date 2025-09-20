@@ -9,7 +9,7 @@ ob_start();
 <nav class="sidebar-navigation" role="navigation" aria-label="<?php esc_attr_e('Navigation principale', 'sidebar-jlg'); ?>">
     <ul class="sidebar-menu">
         <?php
-        if (!empty($options['menu_items'])) {
+        if (!empty($options['menu_items']) && is_array($options['menu_items'])) {
             foreach ($options['menu_items'] as $item) {
                 $url = '#';
                 $raw_url = '';
@@ -54,10 +54,10 @@ ob_start();
             }
         }
         
-        if ($options['social_position'] === 'in-menu' && !empty($options['social_icons'])) {
+        if ($options['social_position'] === 'in-menu' && !empty($options['social_icons']) && is_array($options['social_icons'])) {
             echo '<li class="menu-separator" aria-hidden="true"><hr></li>';
             echo '<li class="social-icons-wrapper">';
-            if ( ! empty( $options['social_icons'] ) ) {
+            if ( ! empty( $options['social_icons'] ) && is_array( $options['social_icons'] ) ) {
                 echo '<div class="social-icons ' . esc_attr($options['social_orientation']) . '">';
                 foreach($options['social_icons'] as $social) {
                     if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($allIcons[$social['icon']]) ) {
@@ -78,9 +78,9 @@ ob_start();
 </nav>
 
 <?php
-if ($options['social_position'] === 'footer' && !empty($options['social_icons'])) {
+if ($options['social_position'] === 'footer' && !empty($options['social_icons']) && is_array($options['social_icons'])) {
     echo '<div class="sidebar-footer">';
-    if ( ! empty( $options['social_icons'] ) ) {
+    if ( ! empty( $options['social_icons'] ) && is_array( $options['social_icons'] ) ) {
         echo '<div class="social-icons ' . esc_attr($options['social_orientation']) . '">';
         foreach($options['social_icons'] as $social) {
             if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($allIcons[$social['icon']]) ) {
