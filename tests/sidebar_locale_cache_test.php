@@ -77,6 +77,7 @@ $input_settings = [
 
 $sanitized_settings = $sanitizer->sanitize_settings($input_settings);
 $sanitized_settings['enable_sidebar'] = true;
+$sanitized_settings['content_margin'] = 'calc(10px + 5%)';
 
 assertTrue(
     isset($sanitized_settings['menu_items'][0]['value']) && $sanitized_settings['menu_items'][0]['value'] === 789,
@@ -100,6 +101,8 @@ $french_html = ob_get_clean();
 assertContains('Ouvrir le menu', $french_html, 'French menu label rendered');
 assertContains('href="http://example.com/post/789"', $french_html, 'Post menu item links to the correct article');
 assertContains('href="http://example.com/category/321"', $french_html, 'Category menu item links to the correct term');
+assertContains('calc(var(--sidebar-width-desktop) + 10px + 5%)', $french_html, 'Content margin calc expression flattened');
+assertNotContains('calc(calc', $french_html, 'Content margin does not contain nested calc');
 assertNotContains('Open menu', $french_html, 'English menu label absent in French cache');
 assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']), 'French transient stored');
 

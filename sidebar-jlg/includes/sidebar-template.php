@@ -128,7 +128,21 @@ $dynamic_styles .= "--header-alignment-desktop: " . esc_attr($options['header_al
 $dynamic_styles .= "--header-alignment-mobile: " . esc_attr($options['header_alignment_mobile']) . ";";
 $dynamic_styles .= "--header-logo-size: " . esc_attr($options['header_logo_size']) . "px;";
 $dynamic_styles .= "--hamburger-top-position: " . esc_attr($options['hamburger_top_position']) . ";";
-$dynamic_styles .= "--content-margin: calc(var(--sidebar-width-desktop) + " . esc_attr($options['content_margin']) . ");";
+$content_margin_value = $options['content_margin'] ?? '';
+if (is_string($content_margin_value) || is_numeric($content_margin_value)) {
+    $content_margin_value = (string) $content_margin_value;
+    $content_margin_trimmed = trim($content_margin_value);
+
+    if (preg_match('/^calc\((.*)\)$/i', $content_margin_trimmed, $matches)) {
+        $content_margin_value = $matches[1];
+    } else {
+        $content_margin_value = $content_margin_trimmed;
+    }
+} else {
+    $content_margin_value = '';
+}
+
+$dynamic_styles .= "--content-margin: calc(var(--sidebar-width-desktop) + " . esc_attr($content_margin_value) . ");";
 $dynamic_styles .= "--floating-vertical-margin: " . esc_attr($options['floating_vertical_margin']) . ";";
 $dynamic_styles .= "--border-radius: " . esc_attr($options['border_radius']) . ";";
 $dynamic_styles .= "--border-width: " . esc_attr($options['border_width']) . "px;";
