@@ -23,6 +23,12 @@ class Endpoints
         add_action('wp_ajax_jlg_reset_settings', [$this, 'ajax_reset_settings']);
     }
 
+    /**
+     * Handle Select2 post lookups for the settings UI.
+     *
+     * Regression note: reset the global $post after get_posts() usage so other
+     * queries on the request are not polluted.
+     */
     public function ajax_get_posts(): void
     {
         $capability = $this->get_ajax_capability();
@@ -61,6 +67,7 @@ class Endpoints
         foreach ($posts as $post) {
             $optionsById[$post->ID] = ['id' => $post->ID, 'title' => $post->post_title];
         }
+        wp_reset_postdata();
 
         if (!empty($includeIds)) {
             $existingIds = array_keys($optionsById);
@@ -77,6 +84,7 @@ class Endpoints
                 foreach ($additionalPosts as $post) {
                     $optionsById[$post->ID] = ['id' => $post->ID, 'title' => $post->post_title];
                 }
+                wp_reset_postdata();
             }
 
             $orderedOptions = [];
