@@ -99,6 +99,13 @@
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e( 'Fermeture automatique', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <label><input type="checkbox" name="sidebar_jlg_settings[close_on_link_click]" value="1" <?php checked( $options['close_on_link_click'], 1 ); ?> /> <?php esc_html_e( 'Fermer la sidebar après un clic sur un lien ou une icône sociale.', 'sidebar-jlg' ); ?></label>
+                        <p class="description"><?php esc_html_e( 'Recommandé sur mobile pour éviter qu\'elle reste ouverte après navigation.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e( 'Barre de recherche', 'sidebar-jlg' ); ?></th>
                     <td>
                         <label><input type="checkbox" name="sidebar_jlg_settings[enable_search]" value="1" <?php checked( $options['enable_search'], 1 ); ?> /> <?php esc_html_e( 'Activer la barre de recherche.', 'sidebar-jlg' ); ?></label>

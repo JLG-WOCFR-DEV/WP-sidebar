@@ -72,6 +72,7 @@ class SettingsSanitizer
         $sanitized['search_alignment'] = sanitize_key($input['search_alignment'] ?? $existingOptions['search_alignment']);
         $sanitized['debug_mode'] = !empty($input['debug_mode']);
         $sanitized['show_close_button'] = !empty($input['show_close_button']);
+        $sanitized['close_on_link_click'] = !empty($input['close_on_link_click']);
         $sanitized['hamburger_top_position'] = $this->sanitize_css_dimension(
             $input['hamburger_top_position'] ?? $existingOptions['hamburger_top_position'],
             $existingOptions['hamburger_top_position']
