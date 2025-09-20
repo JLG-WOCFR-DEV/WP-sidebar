@@ -42,8 +42,8 @@ class MenuPage
     public function addAdminMenu(): void
     {
         add_menu_page(
-            'Sidebar JLG Settings',
-            'Sidebar JLG',
+            __('Sidebar JLG Settings', 'sidebar-jlg'),
+            __('Sidebar JLG', 'sidebar-jlg'),
             'manage_options',
             'sidebar-jlg',
             [$this, 'render'],
