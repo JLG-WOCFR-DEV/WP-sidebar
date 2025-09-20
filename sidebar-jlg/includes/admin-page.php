@@ -73,6 +73,18 @@
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e( 'Fond de superposition', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <p><label><?php esc_html_e( 'Couleur', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[overlay_color]" value="<?php echo esc_attr( $options['overlay_color'] ); ?>" class="color-picker-rgba"/></p>
+                        <p>
+                            <label><?php esc_html_e( 'Opacité', 'sidebar-jlg' ); ?></label>
+                            <input type="range" name="sidebar_jlg_settings[overlay_opacity]" min="0" max="1" step="0.05" value="<?php echo esc_attr( $options['overlay_opacity'] ); ?>">
+                            <span class="range-value"><?php echo esc_html($options['overlay_opacity']); ?></span>
+                        </p>
+                        <p class="description"><?php esc_html_e( 'Ajuste le fond affiché derrière la sidebar en mode overlay.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e( 'Dimensions', 'sidebar-jlg' ); ?></th>
                     <td>
                         <p><label><?php esc_html_e( 'Largeur (Desktop)', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[width_desktop]" value="<?php echo esc_attr( $options['width_desktop'] ); ?>" class="small-text"/> px</p>

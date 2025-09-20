@@ -18,6 +18,8 @@ class DefaultSettings
             'border_width'      => 1,
             'border_color'      => 'rgba(255,255,255,0.2)',
             'desktop_behavior'  => 'push',
+            'overlay_color'     => 'rgba(0, 0, 0, 1)',
+            'overlay_opacity'   => 0.5,
             'content_margin'    => '2rem',
             'width_desktop'     => 280,
             'width_tablet'      => 320,
