@@ -64,11 +64,27 @@ $result_close_on = $method->invoke($sanitizer, $input_close_on_click, $existing_
 
 assertSame(true, $result_close_on['close_on_link_click'] ?? null, 'Close-on-click option is enabled when checkbox is set');
 
+$input_close_on_click_true_string = [
+    'close_on_link_click' => 'true',
+];
+
+$result_close_on_true_string = $method->invoke($sanitizer, $input_close_on_click_true_string, $existing_options);
+
+assertSame(true, $result_close_on_true_string['close_on_link_click'] ?? null, 'Close-on-click option accepts "true" as a truthy value');
+
 $input_close_on_click_disabled = [];
 
 $result_close_off = $method->invoke($sanitizer, $input_close_on_click_disabled, $existing_options);
 
 assertSame(false, $result_close_off['close_on_link_click'] ?? null, 'Close-on-click option defaults to disabled when missing');
+
+$input_close_on_click_zero = [
+    'close_on_link_click' => '0',
+];
+
+$result_close_zero = $method->invoke($sanitizer, $input_close_on_click_zero, $existing_options);
+
+assertSame(false, $result_close_zero['close_on_link_click'] ?? null, 'Close-on-click option treats "0" as disabled');
 
 $input_min = [
     'overlay_opacity' => -0.3,

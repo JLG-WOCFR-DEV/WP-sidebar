@@ -69,10 +69,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
 
+    const closeOnClickTruthyValues = new Set([true, 1, '1', 'true']);
     const shouldCloseOnLinkClick = typeof sidebarSettings !== 'undefined'
-        && (sidebarSettings.close_on_link_click === true
-            || sidebarSettings.close_on_link_click === 1
-            || sidebarSettings.close_on_link_click === '1');
+        && closeOnClickTruthyValues.has(sidebarSettings.close_on_link_click);
 
     if (shouldCloseOnLinkClick) {
         const selectors = ['.sidebar-menu a', '.social-icons a'];
