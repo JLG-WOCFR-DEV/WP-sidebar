@@ -2,35 +2,76 @@
 declare(strict_types=1);
 
 use JLG\Sidebar\Ajax\Endpoints;
+use function JLG\Sidebar\plugin;
 
 if (!defined('ABSPATH')) {
     define('ABSPATH', true);
 }
 
-if (!defined('SIDEBAR_JLG_SKIP_BOOTSTRAP')) {
-    define('SIDEBAR_JLG_SKIP_BOOTSTRAP', true);
-}
+define('SIDEBAR_JLG_SKIP_BOOTSTRAP', true);
 
+$GLOBALS['wp_test_options'] = [];
+$GLOBALS['wp_test_transients'] = [];
+$GLOBALS['wp_test_current_locale'] = 'fr_FR';
 $GLOBALS['registered_actions'] = [];
-function add_action($hook, $callback, $priority = 10, $accepted_args = 1): void
-{
-    $GLOBALS['registered_actions'][] = [
-        'hook' => $hook,
-        'callback' => $callback,
-        'priority' => $priority,
-        'accepted_args' => $accepted_args,
-    ];
-}
+$GLOBALS['registered_filters'] = [];
+$GLOBALS['test_current_user_can'] = true;
+$GLOBALS['json_success_payloads'] = [];
+$GLOBALS['json_error_payloads'] = [];
+$GLOBALS['checked_nonces'] = [];
+$GLOBALS['test_get_posts_queue'] = [];
+$GLOBALS['test_get_posts_requests'] = [];
+$GLOBALS['test_get_categories_queue'] = [];
+$GLOBALS['test_get_categories_requests'] = [];
 
 function register_activation_hook($file, $callback): void {}
 function wp_upload_dir(): array
 {
     return [
-        'basedir' => sys_get_temp_dir(),
+        'basedir' => sys_get_temp_dir() . '/sidebar-jlg-test',
         'baseurl' => 'http://example.com/uploads',
     ];
 }
 function wp_mkdir_p(string $dir): bool { return true; }
+function add_action($hook, $callback, $priority = 10, $accepted_args = 1): void
+{
+    $GLOBALS['registered_actions'][] = compact('hook', 'callback', 'priority', 'accepted_args');
+}
+function add_filter($hook, $callback, $priority = 10, $accepted_args = 1): void
+{
+    $GLOBALS['registered_filters'][$hook][$priority][] = ['callback' => $callback, 'accepted_args' => $accepted_args];
+}
+function apply_filters($hook, $value, ...$args)
+{
+    if (empty($GLOBALS['registered_filters'][$hook])) {
+        return $value;
+    }
+
+    ksort($GLOBALS['registered_filters'][$hook]);
+    foreach ($GLOBALS['registered_filters'][$hook] as $callbacks) {
+        foreach ($callbacks as $data) {
+            $callback = $data['callback'];
+            $accepted = $data['accepted_args'];
+            $value = $callback(...array_slice(array_merge([$value], $args), 0, $accepted));
+        }
+    }
+
+    return $value;
+}
+function wp_parse_args($args, $defaults = [])
+{
+    if (is_object($args)) {
+        $args = get_object_vars($args);
+    } elseif (!is_array($args)) {
+        $args = [];
+    }
+
+    if (!is_array($defaults)) {
+        $defaults = [];
+    }
+
+    return array_merge($defaults, $args);
+}
 function trailingslashit($value): string
 {
     return rtrim($value, "/\\") . '/';
@@ -39,14 +80,128 @@ function plugin_dir_path($file): string
 {
     return trailingslashit(dirname($file));
 }
+function plugin_dir_url($file): string
+{
+    return 'http://example.com/plugin/';
+}
+function wp_enqueue_style(...$args): void {}
+function wp_enqueue_script(...$args): void {}
+function wp_register_script(...$args): void {}
+function wp_enqueue_media(): void {}
+function wp_localize_script(...$args): void {}
+function wp_create_nonce($action): string
+{
+    return 'nonce-' . $action;
+}
+function admin_url($path = ''): string
+{
+    return 'http://example.com/wp-admin/' . ltrim($path, '/');
+}
+function get_option($name, $default = false)
+{
+    $store = $GLOBALS['wp_test_options'];
+    return array_key_exists($name, $store) ? $store[$name] : $default;
+}
+function update_option($name, $value, $autoload = null): bool
+{
+    $GLOBALS['wp_test_options'][$name] = $value;
+    return true;
+}
+function add_option($name, $value, $deprecated = '', $autoload = 'yes'): bool
+{
+    if (array_key_exists($name, $GLOBALS['wp_test_options'])) {
+        return false;
+    }
 
-$GLOBALS['test_current_user_can'] = true;
+    $GLOBALS['wp_test_options'][$name] = $value;
+    return true;
+}
+function delete_option($name): bool
+{
+    if (array_key_exists($name, $GLOBALS['wp_test_options'])) {
+        unset($GLOBALS['wp_test_options'][$name]);
+    }
+
+    return true;
+}
+function get_transient($key)
+{
+    return $GLOBALS['wp_test_transients'][$key] ?? false;
+}
+function set_transient($key, $value, $expiration = 0): bool
+{
+    $GLOBALS['wp_test_transients'][$key] = $value;
+    return true;
+}
+function delete_transient($key): bool
+{
+    if (array_key_exists($key, $GLOBALS['wp_test_transients'])) {
+        unset($GLOBALS['wp_test_transients'][$key]);
+    }
+
+    return true;
+}
+function determine_locale(): string
+{
+    return $GLOBALS['wp_test_current_locale'];
+}
+function get_locale(): string
+{
+    return determine_locale();
+}
+function absint($value): int
+{
+    return abs((int) $value);
+}
+function wp_unslash($value)
+{
+    return $value;
+}
+function sanitize_key($key)
+{
+    $key = strtolower((string) $key);
+
+    return preg_replace('/[^a-z0-9_\-]/', '', $key);
+}
+function sanitize_text_field($value)
+{
+    if (is_array($value) || is_object($value)) {
+        return '';
+    }
+
+    $value = (string) $value;
+    $value = strip_tags($value);
+    $value = preg_replace('/[\r\n\t ]+/', ' ', $value);
+
+    return trim($value);
+}
+function add_menu_page(...$args): void {}
+function register_setting(...$args): void {}
+function esc_attr($value)
+{
+    return $value;
+}
+function esc_html($value)
+{
+    return $value;
+}
+function esc_url($value)
+{
+    return $value;
+}
+function esc_attr_e($text, $domain = 'default'): void
+{
+    echo esc_attr($text);
+}
+function esc_url_raw($value)
+{
+    return $value;
+}
+
 function current_user_can($capability): bool
 {
     return $GLOBALS['test_current_user_can'];
 }
-
-$GLOBALS['checked_nonces'] = [];
 function check_ajax_referer($action, $query_arg = false)
 {
     $value = $query_arg !== false && isset($_POST[$query_arg]) ? $_POST[$query_arg] : null;
@@ -55,56 +210,42 @@ function check_ajax_referer($action, $query_arg = false)
 
 class WP_Die_Exception extends Exception {}
 
-$GLOBALS['json_success_payloads'] = [];
-function wp_send_json_success($data = null)
+function wp_send_json_success($data = null): void
 {
     $GLOBALS['json_success_payloads'][] = $data;
     throw new WP_Die_Exception('success');
 }
-
-$GLOBALS['json_error_payloads'] = [];
-function wp_send_json_error($data = null)
+function wp_send_json_error($data = null): void
 {
     $GLOBALS['json_error_payloads'][] = $data;
     throw new WP_Die_Exception('error');
 }
 
-function apply_filters($hook, $value, ...$args)
+function get_posts($args = []): array
 {
-    return $value;
+    $GLOBALS['test_get_posts_requests'][] = $args;
+    if (empty($GLOBALS['test_get_posts_queue'])) {
+        return [];
+    }
+
+    $next = array_shift($GLOBALS['test_get_posts_queue']);
+    return $next['return'];
+}
+function get_categories($args = []): array
+{
+    $GLOBALS['test_get_categories_requests'][] = $args;
+    if (empty($GLOBALS['test_get_categories_queue'])) {
+        return [];
+    }
+
+    $next = array_shift($GLOBALS['test_get_categories_queue']);
+    return $next['return'];
 }
 
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
-class SpySettingsRepository extends JLG\Sidebar\Settings\SettingsRepository
-{
-    public bool $deleteCalled = false;
-
-    public function __construct()
-    {
-        // Intentionally bypass parent constructor; properties are unused in this spy.
-    }
-
-    public function deleteOptions(): void
-    {
-        $this->deleteCalled = true;
-    }
-
-    public function getDefaultSettings(): array
-    {
-        return [];
-    }
-}
-
-class SpyMenuCache extends JLG\Sidebar\Cache\MenuCache
-{
-    public bool $clearCalled = false;
-
-    public function clear(): void
-    {
-        $this->clearCalled = true;
-    }
-}
+$pluginInstance = plugin();
+$endpoints = new Endpoints($pluginInstance->getSettingsRepository(), $pluginInstance->getMenuCache());
 
 $testsPassed = true;
 
@@ -113,7 +254,6 @@ function assertTrue($condition, string $message): void
     global $testsPassed;
     if ($condition) {
         echo "[PASS] {$message}\n";
-
         return;
     }
 
@@ -126,52 +266,134 @@ function assertSame($expected, $actual, string $message): void
     assertTrue($expected === $actual, $message . ' (expected ' . var_export($expected, true) . ', got ' . var_export($actual, true) . ')');
 }
 
-$settingsSpy = new SpySettingsRepository();
-$cacheSpy = new SpyMenuCache();
-$endpoints = new Endpoints($settingsSpy, $cacheSpy);
-$endpoints->registerHooks();
-
-assertSame(3, count($GLOBALS['registered_actions']), 'All AJAX actions registered');
-$registeredHooks = array_column($GLOBALS['registered_actions'], 'hook');
-assertTrue(in_array('wp_ajax_jlg_get_posts', $registeredHooks, true), 'Posts AJAX action registered');
-assertTrue(in_array('wp_ajax_jlg_get_categories', $registeredHooks, true), 'Categories AJAX action registered');
-assertTrue(in_array('wp_ajax_jlg_reset_settings', $registeredHooks, true), 'Reset AJAX action registered');
-
-$_POST['nonce'] = 'example-nonce';
-$GLOBALS['checked_nonces'] = [];
-$GLOBALS['json_success_payloads'] = [];
-
-try {
-    $endpoints->ajax_reset_settings();
-} catch (WP_Die_Exception $e) {
-    // Expected because wp_send_json_success() aborts execution in WordPress.
+function reset_test_environment(): void
+{
+    $GLOBALS['json_success_payloads'] = [];
+    $GLOBALS['json_error_payloads'] = [];
+    $GLOBALS['checked_nonces'] = [];
+    $GLOBALS['test_get_posts_queue'] = [];
+    $GLOBALS['test_get_posts_requests'] = [];
+    $GLOBALS['test_get_categories_queue'] = [];
+    $GLOBALS['test_get_categories_requests'] = [];
+    $GLOBALS['test_current_user_can'] = true;
+    $_POST = [];
 }
 
-assertTrue($settingsSpy->deleteCalled, 'Settings repository deleteOptions invoked');
-assertTrue($cacheSpy->clearCalled, 'Menu cache cleared');
-assertSame('Réglages réinitialisés.', $GLOBALS['json_success_payloads'][0] ?? null, 'Success message returned');
-assertSame(['jlg_reset_nonce', 'nonce', 'example-nonce'], $GLOBALS['checked_nonces'][0] ?? null, 'Nonce validated before clearing settings');
+function invoke_endpoint(Endpoints $endpoints, string $method): void
+{
+    try {
+        $endpoints->$method();
+    } catch (WP_Die_Exception $e) {
+        // Expected to stop execution in tests.
+    }
+}
 
-$settingsSpyUnauthorized = new SpySettingsRepository();
-$cacheSpyUnauthorized = new SpyMenuCache();
-$unauthorizedEndpoints = new Endpoints($settingsSpyUnauthorized, $cacheSpyUnauthorized);
+reset_test_environment();
 $GLOBALS['test_current_user_can'] = false;
-$GLOBALS['json_error_payloads'] = [];
+invoke_endpoint($endpoints, 'ajax_get_posts');
+assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized posts request rejected');
+assertSame(0, count($GLOBALS['test_get_posts_requests']), 'Unauthorized posts request does not call get_posts');
 
-try {
-    $unauthorizedEndpoints->ajax_reset_settings();
-} catch (WP_Die_Exception $e) {
-    // Expected abort.
-}
+reset_test_environment();
+$_POST = ['nonce' => 'posts-nonce', 'posts_per_page' => '75'];
+invoke_endpoint($endpoints, 'ajax_get_posts');
+assertSame('Le paramètre posts_per_page ne peut pas dépasser 50.', $GLOBALS['json_error_payloads'][0] ?? null, 'Posts per-page cap enforced');
+assertSame(['jlg_ajax_nonce', 'nonce', 'posts-nonce'], $GLOBALS['checked_nonces'][0] ?? null, 'Posts nonce checked before error');
+assertSame(0, count($GLOBALS['test_get_posts_requests']), 'No posts queried when per-page cap exceeded');
 
-assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized request rejected');
-assertTrue(!$settingsSpyUnauthorized->deleteCalled, 'Settings not deleted when unauthorized');
-assertTrue(!$cacheSpyUnauthorized->clearCalled, 'Cache not cleared when unauthorized');
+reset_test_environment();
+$GLOBALS['test_get_posts_queue'] = [
+    ['return' => [
+        (object) ['ID' => 2, 'post_title' => 'Second'],
+        (object) ['ID' => 3, 'post_title' => 'Third'],
+    ]],
+    ['return' => [
+        (object) ['ID' => 5, 'post_title' => 'Fifth'],
+        (object) ['ID' => 4, 'post_title' => 'Fourth'],
+    ]],
+];
+$_POST = [
+    'nonce' => 'posts-success',
+    'page' => '1',
+    'posts_per_page' => '3',
+    'include' => '5,2,4',
+];
+invoke_endpoint($endpoints, 'ajax_get_posts');
+$expectedPosts = [
+    ['id' => 5, 'title' => 'Fifth'],
+    ['id' => 2, 'title' => 'Second'],
+    ['id' => 4, 'title' => 'Fourth'],
+    ['id' => 3, 'title' => 'Third'],
+];
+assertSame($expectedPosts, $GLOBALS['json_success_payloads'][0] ?? null, 'Posts include ordering respected');
+assertSame(3, $GLOBALS['test_get_posts_requests'][0]['posts_per_page'] ?? null, 'Posts query limited to requested page size');
+assertSame(['jlg_ajax_nonce', 'nonce', 'posts-success'], $GLOBALS['checked_nonces'][0] ?? null, 'Posts nonce validated for successful request');
+
+reset_test_environment();
+$GLOBALS['test_current_user_can'] = false;
+invoke_endpoint($endpoints, 'ajax_get_categories');
+assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized categories request rejected');
+assertSame(0, count($GLOBALS['test_get_categories_requests']), 'Unauthorized categories request does not call get_categories');
+
+reset_test_environment();
+$_POST = ['nonce' => 'cats-nonce', 'posts_per_page' => '120'];
+invoke_endpoint($endpoints, 'ajax_get_categories');
+assertSame('Le paramètre posts_per_page ne peut pas dépasser 50.', $GLOBALS['json_error_payloads'][0] ?? null, 'Categories per-page cap enforced');
+assertSame(['jlg_ajax_nonce', 'nonce', 'cats-nonce'], $GLOBALS['checked_nonces'][0] ?? null, 'Categories nonce checked before per-page error');
+assertSame(0, count($GLOBALS['test_get_categories_requests']), 'No categories queried when per-page cap exceeded');
+
+reset_test_environment();
+$GLOBALS['test_get_categories_queue'] = [
+    ['return' => [
+        (object) ['term_id' => 8, 'name' => 'Eight'],
+        (object) ['term_id' => 11, 'name' => 'Eleven'],
+    ]],
+    ['return' => [
+        (object) ['term_id' => 9, 'name' => 'Nine'],
+        (object) ['term_id' => 10, 'name' => 'Ten'],
+    ]],
+];
+$_POST = [
+    'nonce' => 'cats-success',
+    'page' => '2',
+    'posts_per_page' => '40',
+    'include' => ['9', '8', '10'],
+];
+invoke_endpoint($endpoints, 'ajax_get_categories');
+$expectedCategories = [
+    ['id' => 9, 'name' => 'Nine'],
+    ['id' => 8, 'name' => 'Eight'],
+    ['id' => 10, 'name' => 'Ten'],
+    ['id' => 11, 'name' => 'Eleven'],
+];
+assertSame($expectedCategories, $GLOBALS['json_success_payloads'][0] ?? null, 'Categories include ordering respected');
+assertSame(40, $GLOBALS['test_get_categories_requests'][0]['number'] ?? null, 'Categories query limited to requested per-page value');
+assertSame(['jlg_ajax_nonce', 'nonce', 'cats-success'], $GLOBALS['checked_nonces'][0] ?? null, 'Categories nonce validated for successful request');
+
+reset_test_environment();
+$GLOBALS['wp_test_options'] = [
+    'sidebar_jlg_settings' => ['foo' => 'bar'],
+    'sidebar_jlg_cached_locales' => ['default', 'fr_FR'],
+];
+$GLOBALS['wp_test_transients'] = [
+    'sidebar_jlg_full_html_default' => '<div>cached</div>',
+    'sidebar_jlg_full_html_fr_FR' => '<div>cached-fr</div>',
+    'sidebar_jlg_full_html' => '<div>legacy</div>',
+];
+$_POST = ['nonce' => 'reset-nonce'];
+invoke_endpoint($endpoints, 'ajax_reset_settings');
+assertSame('Réglages réinitialisés.', $GLOBALS['json_success_payloads'][0] ?? null, 'Reset settings success message returned');
+assertSame('missing', get_option('sidebar_jlg_settings', 'missing'), 'Settings option deleted during reset');
+assertSame('missing', get_option('sidebar_jlg_cached_locales', 'missing'), 'Cached locales option deleted during reset');
+assertSame(false, get_transient('sidebar_jlg_full_html_default'), 'Default locale cache cleared during reset');
+assertSame(false, get_transient('sidebar_jlg_full_html_fr_FR'), 'Additional locale cache cleared during reset');
+assertSame(false, get_transient('sidebar_jlg_full_html'), 'Legacy cache cleared during reset');
+assertSame(['jlg_reset_nonce', 'nonce', 'reset-nonce'], $GLOBALS['checked_nonces'][0] ?? null, 'Reset nonce validated before clearing settings');
 
 if ($testsPassed) {
-    echo "AJAX Endpoints tests passed.\n";
+    echo "AJAX endpoints tests passed.\n";
     exit(0);
 }
 
-echo "AJAX Endpoints tests failed.\n";
+echo "AJAX endpoints tests failed.\n";
 exit(1);
