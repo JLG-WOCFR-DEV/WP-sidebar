@@ -29,6 +29,10 @@ register_activation_hook(__FILE__, static function () {
     if (!is_dir($iconsDir)) {
         wp_mkdir_p($iconsDir);
     }
+
+    update_option('sidebar_jlg_plugin_version', SIDEBAR_JLG_VERSION);
+
+    plugin()->getMenuCache()->clear();
 });
 
 function plugin(): Plugin

@@ -54,6 +54,8 @@ class Plugin
 
     public function register(): void
     {
+        $this->maybeInvalidateCacheOnVersionChange();
+
         $this->settings->revalidateStoredOptions();
         $this->menuPage->registerHooks();
         $this->renderer->registerHooks();
@@ -73,6 +75,16 @@ class Plugin
 
         foreach ($contentChangeHooks as $hook) {
             add_action($hook, [$this->cache, 'clear'], 10, 0);
+        }
+    }
+
+    private function maybeInvalidateCacheOnVersionChange(): void
+    {
+        $storedVersion = get_option('sidebar_jlg_plugin_version');
+
+        if ($storedVersion !== $this->version) {
+            $this->cache->clear();
+            update_option('sidebar_jlg_plugin_version', $this->version);
         }
     }
 
