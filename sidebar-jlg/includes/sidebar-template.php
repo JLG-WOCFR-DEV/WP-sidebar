@@ -183,9 +183,16 @@ $dynamic_styles .= "}";
             <span class="logo-text"><?php echo esc_html($options['app_name']); ?></span>
         <?php endif; ?>
         
-        <?php if ($options['show_close_button']): ?>
+        <?php if (!empty($options['show_close_button'])): ?>
+            <?php
+            $close_button_markup = '<span class="close-sidebar-fallback" aria-hidden="true">&times;</span>';
+
+            if (isset($allIcons['close_white']) && $allIcons['close_white'] !== '') {
+                $close_button_markup = $allIcons['close_white'];
+            }
+            ?>
             <button class="close-sidebar-btn" aria-label="<?php esc_attr_e('Fermer le menu', 'sidebar-jlg'); ?>">
-                <?php echo $allIcons['close_white']; ?>
+                <?php echo $close_button_markup; ?>
             </button>
         <?php endif; ?>
     </div>
