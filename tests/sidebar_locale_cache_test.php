@@ -159,6 +159,52 @@ assertTrue($first_dynamic_html !== $second_dynamic_html, 'Dynamic HTML regenerat
 assertTrue(!isset($GLOBALS['wp_test_transients'][$dynamic_transient_key]), 'Dynamic sidebar never stores persistent transients');
 assertTrue(empty(get_option('sidebar_jlg_cached_locales', [])), 'Cached locales not tracked when cache is disabled');
 
+// Ensure cache is purged when revalidation updates stored options.
+$invalid_icon_options = $settingsRepository->getDefaultSettings();
+$invalid_icon_options['menu_items'] = [
+    [
+        'label'     => 'Invalid icon',
+        'type'      => 'post',
+        'icon_type' => 'svg_inline',
+        'icon'      => 'custom_missing_icon',
+        'value'     => '42',
+    ],
+];
+
+update_option('sidebar_jlg_settings', $invalid_icon_options);
+
+$GLOBALS['wp_test_transients'] = [
+    'sidebar_jlg_full_html_fr_FR' => '<div>cached</div>',
+    'sidebar_jlg_full_html'       => '<div>cached</div>',
+];
+$GLOBALS['wp_test_options']['sidebar_jlg_cached_locales'] = ['fr_FR'];
+
+$recordedActions = [];
+$GLOBALS['wp_test_function_overrides']['add_action'] = static function ($hook, $callback, $priority = 10, $accepted_args = 1) use (&$recordedActions): void {
+    $recordedActions[$hook][] = $callback;
+};
+$GLOBALS['wp_test_function_overrides']['update_option'] = static function ($name, $value, $autoload = null) use (&$recordedActions) {
+    $GLOBALS['wp_test_options'][$name] = $value;
+
+    if ($name === 'sidebar_jlg_settings' && isset($recordedActions['update_option_sidebar_jlg_settings'])) {
+        foreach ($recordedActions['update_option_sidebar_jlg_settings'] as $callback) {
+            $callback();
+        }
+    }
+
+    return true;
+};
+
+$plugin->register();
+
+$revalidated_options = get_option('sidebar_jlg_settings');
+$first_menu_item = $revalidated_options['menu_items'][0] ?? [];
+
+assertTrue(($first_menu_item['icon'] ?? null) === '', 'Invalid custom icon removed during revalidation');
+assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']), 'French locale transient cleared during revalidation-triggered cache purge');
+assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html']), 'Generic sidebar transient cleared during revalidation-triggered cache purge');
+assertTrue(!isset($GLOBALS['wp_test_options']['sidebar_jlg_cached_locales']), 'Cached locales option removed when cache is cleared during revalidation');
+
 if ($testsPassed) {
     echo "Sidebar locale cache tests passed.\n";
     exit(0);
