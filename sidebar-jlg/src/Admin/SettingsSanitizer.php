@@ -50,6 +50,16 @@ class SettingsSanitizer
         $sanitized['border_width'] = absint($input['border_width'] ?? $existingOptions['border_width']);
         $sanitized['border_color'] = sanitize_text_field($input['border_color'] ?? $existingOptions['border_color']);
         $sanitized['desktop_behavior'] = sanitize_key($input['desktop_behavior'] ?? $existingOptions['desktop_behavior']);
+        $sanitized['overlay_color'] = $this->sanitize_color_with_existing(
+            $input['overlay_color'] ?? null,
+            $existingOptions['overlay_color'] ?? ''
+        );
+        $existingOverlayOpacity = isset($existingOptions['overlay_opacity'])
+            ? (float) $existingOptions['overlay_opacity']
+            : 0.0;
+        $sanitized['overlay_opacity'] = is_numeric($input['overlay_opacity'] ?? null)
+            ? max(0.0, min(1.0, (float) $input['overlay_opacity']))
+            : max(0.0, min(1.0, $existingOverlayOpacity));
         $sanitized['content_margin'] = $this->sanitize_css_dimension(
             $input['content_margin'] ?? $existingOptions['content_margin'],
             $existingOptions['content_margin']
