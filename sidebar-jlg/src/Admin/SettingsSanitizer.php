@@ -20,14 +20,20 @@ class SettingsSanitizer
     {
         $defaults = $this->defaults->all();
         $existingOptions = get_option('sidebar_jlg_settings', $defaults);
+        if (!is_array($existingOptions)) {
+            if (function_exists('error_log')) {
+                error_log('Sidebar JLG settings option was not an array. Resetting to defaults.');
+            }
+            $existingOptions = $defaults;
+        }
         $preparedInput = is_array($input) ? $input : [];
 
         $sanitizedInput = array_merge(
-            $this->sanitize_general_settings($preparedInput, $existingOptions),
-            $this->sanitize_style_settings($preparedInput, $existingOptions),
-            $this->sanitize_effects_settings($preparedInput, $existingOptions),
-            $this->sanitize_menu_settings($preparedInput, $existingOptions),
-            $this->sanitize_social_settings($preparedInput, $existingOptions)
+            $this->sanitize_general_settings($preparedInput, $existingOptions) ?: [],
+            $this->sanitize_style_settings($preparedInput, $existingOptions) ?: [],
+            $this->sanitize_effects_settings($preparedInput, $existingOptions) ?: [],
+            $this->sanitize_menu_settings($preparedInput, $existingOptions) ?: [],
+            $this->sanitize_social_settings($preparedInput, $existingOptions) ?: []
         );
 
         return array_merge($existingOptions, $sanitizedInput);

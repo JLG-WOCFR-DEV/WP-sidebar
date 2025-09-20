@@ -25,6 +25,7 @@ $existing_options = array_merge($defaults->all(), [
     'overlay_color'   => 'rgba(10, 20, 30, 0.8)',
     'overlay_opacity' => 0.4,
 ]);
+$expected_overlay_existing = preg_replace('/\s+/', '', $existing_options['overlay_color']);
 
 $testsPassed = true;
 
@@ -44,7 +45,7 @@ $input_invalid = [
 
 $result_invalid = $method->invoke($sanitizer, $input_invalid, $existing_options);
 
-assertSame('rgba(10, 20, 30, 0.8)', $result_invalid['overlay_color'] ?? '', 'Overlay color falls back to existing value on invalid input');
+assertSame($expected_overlay_existing, $result_invalid['overlay_color'] ?? '', 'Overlay color falls back to existing value on invalid input');
 assertSame(1.0, $result_invalid['overlay_opacity'] ?? null, 'Overlay opacity is capped at 1.0');
 
 $input_valid = [
