@@ -361,6 +361,8 @@ class SettingsSanitizer
             ? (string) $existingValue
             : '';
 
+        $sanitizedExisting = $this->sanitize_rgba_color($existingValue);
+
         $candidate = $value;
         if ($candidate === null) {
             $candidate = $existingValue;
@@ -368,11 +370,15 @@ class SettingsSanitizer
 
         $sanitized = $this->sanitize_rgba_color($candidate);
 
-        if ($sanitized === '' && $existingValue !== '') {
-            return $existingValue;
+        if ($sanitized !== '') {
+            return $sanitized;
         }
 
-        return $sanitized;
+        if ($sanitizedExisting !== '') {
+            return $sanitizedExisting;
+        }
+
+        return '';
     }
 
     private function sanitize_rgba_color($color): string

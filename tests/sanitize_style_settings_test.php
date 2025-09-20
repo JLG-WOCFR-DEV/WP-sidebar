@@ -114,6 +114,13 @@ unset($inputWithoutOpacity['mobile_bg_opacity']);
 $resultExistingClamp = $method->invoke($sanitizer, $inputWithoutOpacity, $existingOpacityOutOfRange);
 assertSame(1.0, $resultExistingClamp['mobile_bg_opacity'], 'Fallback opacity clamps existing value to 1.0');
 
+$existingPayloadOptions = $existing_options;
+$existingPayloadOptions['bg_color'] = 'rgba(10,20,30,0.4);background-image:url(javascript:alert(1))';
+$inputWithoutBgColor = $input;
+unset($inputWithoutBgColor['bg_color']);
+$resultSanitizedPayload = $method->invoke($sanitizer, $inputWithoutBgColor, $existingPayloadOptions);
+assertSame('', $resultSanitizedPayload['bg_color'], 'Existing bg color payload is sanitized to empty string');
+
 if ($testsPassed) {
     echo "All sanitize_style_settings tests passed.\n";
     exit(0);
