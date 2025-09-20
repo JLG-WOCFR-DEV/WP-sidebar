@@ -193,6 +193,47 @@ assertTrue(($GLOBALS['wp_test_shortcode_calls'] ?? 0) === 0, 'Shortcode not exec
 $cached_locales_option = get_option('sidebar_jlg_cached_locales', []);
 assertTrue(in_array('en_US', $cached_locales_option, true), 'Locale cached when search disabled with shortcode method');
 
+$menuCache->clear();
+$GLOBALS['wp_test_transients'] = [];
+delete_option('sidebar_jlg_cached_locales');
+$GLOBALS['wp_test_default_search_calls'] = 0;
+$GLOBALS['wp_test_function_overrides']['get_search_form'] = static function () {
+    $GLOBALS['wp_test_default_search_calls'] = ($GLOBALS['wp_test_default_search_calls'] ?? 0) + 1;
+    echo 'DEFAULT_SEARCH #' . $GLOBALS['wp_test_default_search_calls'];
+
+    return '';
+};
+
+$default_search_settings = $settingsRepository->getDefaultSettings();
+$default_search_settings['social_icons'] = [];
+$default_search_settings['enable_sidebar'] = true;
+$default_search_settings['enable_search'] = true;
+$default_search_settings['search_method'] = 'default';
+
+update_option('sidebar_jlg_settings', $default_search_settings);
+
+$default_search_transient_key = 'sidebar_jlg_full_html_en_US';
+switch_to_locale('en_US');
+ob_start();
+$renderer->render();
+$default_search_first_html = ob_get_clean();
+
+assertContains('DEFAULT_SEARCH #1', $default_search_first_html, 'Default search render outputs first marker');
+assertTrue(!isset($GLOBALS['wp_test_transients'][$default_search_transient_key]), 'Default search render skips transient storage on first render');
+
+ob_start();
+$renderer->render();
+$default_search_second_html = ob_get_clean();
+
+assertContains('DEFAULT_SEARCH #2', $default_search_second_html, 'Default search render outputs second marker');
+
+assertTrue(!isset($GLOBALS['wp_test_transients'][$default_search_transient_key]), 'Default search render skips transient storage on subsequent render');
+assertTrue(($GLOBALS['wp_test_default_search_calls'] ?? 0) === 2, 'Default search callback executed on each render');
+assertTrue(empty(get_option('sidebar_jlg_cached_locales', [])), 'Cached locales not tracked when default search keeps cache disabled');
+
+unset($GLOBALS['wp_test_function_overrides']['get_search_form']);
+unset($GLOBALS['wp_test_default_search_calls']);
+
 if ($testsPassed) {
     echo "Sidebar locale cache tests passed.\n";
     exit(0);
