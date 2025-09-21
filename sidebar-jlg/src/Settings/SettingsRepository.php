@@ -63,9 +63,10 @@ class SettingsRepository
         $merged = wp_parse_args($stored, $defaults);
         $revalidated = $this->revalidateCustomIcons($merged);
 
+        $fallbackBorderColor = $defaults['border_color'] ?? '';
         $normalizedBorderColor = $this->normalizeColorWithExisting(
             $revalidated['border_color'] ?? null,
-            $defaults['border_color'] ?? ''
+            $fallbackBorderColor
         );
 
         if (($revalidated['border_color'] ?? '') !== $normalizedBorderColor) {
