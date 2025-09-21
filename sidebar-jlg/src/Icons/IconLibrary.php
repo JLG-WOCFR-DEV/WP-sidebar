@@ -303,8 +303,6 @@ class IconLibrary
             return null;
         }
 
-        $modifiedDom = false;
-
         $useElements = $dom->getElementsByTagName('use');
 
         foreach ($useElements as $useElement) {
@@ -319,26 +317,10 @@ class IconLibrary
                     continue;
                 }
 
-                if ($this->isSafeUseReference($attributeValue, $uploadsBaseUrl)) {
-                    continue;
+                if (!$this->isSafeUseReference($attributeValue, $uploadsBaseUrl)) {
+                    return null;
                 }
-
-                $useElement->setAttribute($attributeName, '');
-                $modifiedDom = true;
             }
-        }
-
-        if ($modifiedDom) {
-            $updatedSvg = $dom->saveXML($dom->documentElement);
-
-            if (!is_string($updatedSvg) || $updatedSvg === '') {
-                return null;
-            }
-
-            return [
-                'svg' => $updatedSvg,
-                'modified' => true,
-            ];
         }
 
         return [
@@ -360,18 +342,82 @@ class IconLibrary
             return (bool) preg_match('/^#[A-Za-z0-9_][A-Za-z0-9:._-]*$/', $value);
         }
 
-        $validatedUrl = wp_http_validate_url($value);
+        $uploadsInfo = wp_upload_dir();
+        $uploadsBaseDir = isset($uploadsInfo['basedir']) ? (string) $uploadsInfo['basedir'] : '';
+        $uploadsBaseUrlValue = $uploadsBaseUrl !== ''
+            ? $uploadsBaseUrl
+            : (isset($uploadsInfo['baseurl']) ? (string) $uploadsInfo['baseurl'] : '');
 
-        if ($validatedUrl === false) {
+        if ($uploadsBaseDir === '' || $uploadsBaseUrlValue === '') {
             return false;
         }
 
-        $normalizedUploadsBaseUrl = trailingslashit($uploadsBaseUrl);
+        $normalizedUploadsDir = wp_normalize_path($uploadsBaseDir);
 
-        if ($normalizedUploadsBaseUrl === '/') {
+        if ($normalizedUploadsDir === '') {
             return false;
         }
 
-        return str_starts_with($validatedUrl, $normalizedUploadsBaseUrl);
+        $uploadsUrlParts = wp_parse_url($uploadsBaseUrlValue);
+        $referenceParts = wp_parse_url($value);
+
+        if (!is_array($uploadsUrlParts) || !is_array($referenceParts)) {
+            return false;
+        }
+
+        $uploadsScheme = isset($uploadsUrlParts['scheme']) ? strtolower((string) $uploadsUrlParts['scheme']) : '';
+        $uploadsHost = isset($uploadsUrlParts['host']) ? strtolower((string) $uploadsUrlParts['host']) : '';
+        $referenceScheme = isset($referenceParts['scheme']) ? strtolower((string) $referenceParts['scheme']) : '';
+        $referenceHost = isset($referenceParts['host']) ? strtolower((string) $referenceParts['host']) : '';
+
+        if ($uploadsScheme === '' || $uploadsHost === '' || $referenceScheme === '' || $referenceHost === '') {
+            return false;
+        }
+
+        if ($uploadsScheme !== $referenceScheme || $uploadsHost !== $referenceHost) {
+            return false;
+        }
+
+        $uploadsPort = $uploadsUrlParts['port'] ?? null;
+        $referencePort = $referenceParts['port'] ?? null;
+
+        if ($uploadsPort !== $referencePort) {
+            return false;
+        }
+
+        $basePath = isset($uploadsUrlParts['path']) ? (string) $uploadsUrlParts['path'] : '';
+        $normalizedBasePath = wp_normalize_path($basePath);
+        $normalizedBasePath = rtrim($normalizedBasePath, '/');
+
+        $referencePath = isset($referenceParts['path']) ? (string) $referenceParts['path'] : '';
+
+        if ($referencePath === '') {
+            return false;
+        }
+
+        $decodedReferencePath = rawurldecode($referencePath);
+
+        if (preg_match('#(^|/)\.\.(?:/|$)#', $decodedReferencePath)) {
+            return false;
+        }
+
+        $normalizedReferencePath = wp_normalize_path($decodedReferencePath);
+        $expectedPrefix = $normalizedBasePath === '' ? '/' : $normalizedBasePath . '/';
+
+        if (!str_starts_with($normalizedReferencePath, $expectedPrefix)) {
+            return false;
+        }
+
+        $relativePath = substr($normalizedReferencePath, strlen($normalizedBasePath));
+        $relativePath = ltrim((string) $relativePath, '/');
+
+        if ($relativePath === '') {
+            return false;
+        }
+
+        $normalizedUploadsDirWithSlash = trailingslashit($normalizedUploadsDir);
+        $resolvedPath = wp_normalize_path($normalizedUploadsDirWithSlash . $relativePath);
+
+        return str_starts_with($resolvedPath, $normalizedUploadsDirWithSlash);
     }
 }
