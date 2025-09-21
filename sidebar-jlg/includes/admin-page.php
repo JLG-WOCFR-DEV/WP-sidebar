@@ -166,9 +166,9 @@
                         </div>
                         <div class="header-image-options" style="<?php echo $options['header_logo_type'] === 'image' ? '' : 'display:none;'; ?>">
                             <p>
-                                <input type="hidden" name="sidebar_jlg_settings[header_logo_image]" class="header-logo-image-url" value="<?php echo esc_attr($options['header_logo_image']); ?>">
+                                <input type="hidden" name="sidebar_jlg_settings[header_logo_image]" class="header-logo-image-url" value="<?php echo esc_url($options['header_logo_image']); ?>">
                                 <button type="button" class="button upload-logo-button"><?php esc_html_e('Choisir un logo', 'sidebar-jlg'); ?></button>
-                                <span class="logo-preview"><img src="<?php echo esc_attr($options['header_logo_image']); ?>" style="<?php echo empty($options['header_logo_image']) ? 'display:none;' : ''; ?>"></span>
+                                <span class="logo-preview"><img src="<?php echo esc_url($options['header_logo_image']); ?>" style="<?php echo empty($options['header_logo_image']) ? 'display:none;' : ''; ?>"></span>
                             </p>
                             <p><label><?php esc_html_e( 'Largeur du logo', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[header_logo_size]" value="<?php echo esc_attr( $options['header_logo_size'] ); ?>" class="small-text"/> px</p>
                         </div>
