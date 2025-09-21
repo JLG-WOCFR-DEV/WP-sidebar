@@ -56,6 +56,8 @@ class Plugin
     {
         $this->maybeInvalidateCacheOnVersionChange();
 
+        add_action('plugins_loaded', [$this, 'loadTextdomain']);
+
         $this->settings->revalidateStoredOptions();
         $this->menuPage->registerHooks();
         $this->renderer->registerHooks();
@@ -76,6 +78,11 @@ class Plugin
         foreach ($contentChangeHooks as $hook) {
             add_action($hook, [$this->cache, 'clear'], 10, 0);
         }
+    }
+
+    public function loadTextdomain(): void
+    {
+        load_plugin_textdomain('sidebar-jlg', false, dirname(plugin_basename($this->pluginFile)) . '/languages');
     }
 
     private function maybeInvalidateCacheOnVersionChange(): void
