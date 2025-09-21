@@ -111,9 +111,22 @@ class IconLibrary
                 continue;
             }
 
+            $validationResult = $this->validateSanitizedSvg($sanitizedContents, (string) ($uploadDir['baseurl'] ?? ''));
+            if ($validationResult === null) {
+                $this->rejectedCustomIcons[] = $file;
+                continue;
+            }
+
+            $sanitizedContents = $validationResult['svg'];
+
             $normalizedOriginal = $this->normalizeSvgContent($rawContents);
             $normalizedSanitized = $this->normalizeSvgContent($sanitizedContents);
-            if ($normalizedOriginal === '' || $normalizedOriginal !== $normalizedSanitized) {
+            if ($normalizedOriginal === '') {
+                $this->rejectedCustomIcons[] = $file;
+                continue;
+            }
+
+            if ($normalizedOriginal !== $normalizedSanitized && empty($validationResult['modified'])) {
                 $this->rejectedCustomIcons[] = $file;
                 continue;
             }
@@ -254,5 +267,111 @@ class IconLibrary
         $content = preg_replace('/\s+/', '', $content ?? '');
 
         return trim($content ?? '');
+    }
+
+    /**
+     * Analyse un SVG déjà nettoyé via wp_kses et applique des validations supplémentaires.
+     *
+     * Le SVG est rejeté si l'analyse DOM échoue ou si une balise <use> conserve un lien
+     * potentiel vers une ressource non autorisée. Cette méthode centralise les contrôles
+     * post-sanitization afin de faciliter l'ajout de nouvelles règles à l'avenir.
+     *
+     * @return array{
+     *     svg: string,
+     *     modified?: bool
+     * }|null
+     */
+    private function validateSanitizedSvg(string $sanitizedSvg, string $uploadsBaseUrl): ?array
+    {
+        $sanitizedSvg = trim($sanitizedSvg);
+
+        if ($sanitizedSvg === '') {
+            return null;
+        }
+
+        $previousLibxml = libxml_use_internal_errors(true);
+
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = false;
+
+        $loaded = $dom->loadXML($sanitizedSvg, LIBXML_NONET);
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousLibxml);
+
+        if ($loaded === false || $dom->documentElement === null) {
+            return null;
+        }
+
+        $modifiedDom = false;
+
+        $useElements = $dom->getElementsByTagName('use');
+
+        foreach ($useElements as $useElement) {
+            foreach (['href', 'xlink:href'] as $attributeName) {
+                if (!$useElement->hasAttribute($attributeName)) {
+                    continue;
+                }
+
+                $attributeValue = trim($useElement->getAttribute($attributeName));
+
+                if ($attributeValue === '') {
+                    continue;
+                }
+
+                if ($this->isSafeUseReference($attributeValue, $uploadsBaseUrl)) {
+                    continue;
+                }
+
+                $useElement->setAttribute($attributeName, '');
+                $modifiedDom = true;
+            }
+        }
+
+        if ($modifiedDom) {
+            $updatedSvg = $dom->saveXML($dom->documentElement);
+
+            if (!is_string($updatedSvg) || $updatedSvg === '') {
+                return null;
+            }
+
+            return [
+                'svg' => $updatedSvg,
+                'modified' => true,
+            ];
+        }
+
+        return [
+            'svg' => $sanitizedSvg,
+        ];
+    }
+
+    /**
+     * Vérifie qu'une valeur d'attribut href/xlink:href de balise <use> est locale ou provient
+     * de la médiathèque WordPress.
+     */
+    private function isSafeUseReference(string $value, string $uploadsBaseUrl): bool
+    {
+        if ($value === '') {
+            return true;
+        }
+
+        if (str_starts_with($value, '#')) {
+            return (bool) preg_match('/^#[A-Za-z0-9_][A-Za-z0-9:._-]*$/', $value);
+        }
+
+        $validatedUrl = wp_http_validate_url($value);
+
+        if ($validatedUrl === false) {
+            return false;
+        }
+
+        $normalizedUploadsBaseUrl = trailingslashit($uploadsBaseUrl);
+
+        if ($normalizedUploadsBaseUrl === '/') {
+            return false;
+        }
+
+        return str_starts_with($validatedUrl, $normalizedUploadsBaseUrl);
     }
 }
