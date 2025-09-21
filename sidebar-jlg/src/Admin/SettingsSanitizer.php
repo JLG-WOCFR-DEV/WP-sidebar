@@ -42,6 +42,7 @@ class SettingsSanitizer
     private function sanitize_general_settings(array $input, array $existingOptions): array
     {
         $sanitized = [];
+        $defaults = $this->defaults->all();
 
         $sanitized['enable_sidebar'] = !empty($input['enable_sidebar']);
         $sanitized['layout_style'] = sanitize_key($input['layout_style'] ?? $existingOptions['layout_style']);
@@ -54,9 +55,12 @@ class SettingsSanitizer
             $existingOptions['border_radius']
         );
         $sanitized['border_width'] = absint($input['border_width'] ?? $existingOptions['border_width']);
+        $existingBorderColor = array_key_exists('border_color', $existingOptions)
+            ? $existingOptions['border_color']
+            : ($defaults['border_color'] ?? '');
         $sanitized['border_color'] = $this->sanitize_color_with_existing(
             $input['border_color'] ?? null,
-            $existingOptions['border_color'] ?? ''
+            $existingBorderColor
         );
         $sanitized['desktop_behavior'] = sanitize_key($input['desktop_behavior'] ?? $existingOptions['desktop_behavior']);
         $sanitized['overlay_color'] = $this->sanitize_color_with_existing(
