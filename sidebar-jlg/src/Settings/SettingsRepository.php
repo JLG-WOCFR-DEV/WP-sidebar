@@ -62,6 +62,16 @@ class SettingsRepository
         $defaults = $this->getDefaultSettings();
         $merged = wp_parse_args($stored, $defaults);
         $revalidated = $this->revalidateCustomIcons($merged);
+
+        $normalizedBorderColor = $this->normalizeColorWithExisting(
+            $revalidated['border_color'] ?? null,
+            $defaults['border_color'] ?? ''
+        );
+
+        if (($revalidated['border_color'] ?? '') !== $normalizedBorderColor) {
+            $revalidated['border_color'] = $normalizedBorderColor;
+        }
+
         if ($revalidated !== $merged) {
             update_option('sidebar_jlg_settings', $revalidated);
         }
@@ -142,5 +152,79 @@ class SettingsRepository
         }
 
         return $options;
+    }
+
+    private function normalizeColorWithExisting($value, $existingValue): string
+    {
+        $existingValue = (is_string($existingValue) || is_numeric($existingValue))
+            ? (string) $existingValue
+            : '';
+
+        $candidate = $value;
+        if ($candidate === null) {
+            $candidate = $existingValue;
+        }
+
+        $sanitizedCandidate = $this->sanitizeRgbaColor($candidate);
+        if ($sanitizedCandidate !== '') {
+            return $sanitizedCandidate;
+        }
+
+        $sanitizedExisting = $this->sanitizeRgbaColor($existingValue);
+        if ($sanitizedExisting !== '') {
+            return $sanitizedExisting;
+        }
+
+        return '';
+    }
+
+    private function sanitizeRgbaColor($color): string
+    {
+        if (empty($color) || is_array($color)) {
+            return '';
+        }
+
+        $color = trim((string) $color);
+
+        if (0 !== stripos($color, 'rgba')) {
+            $sanitizedHex = sanitize_hex_color($color);
+            return $sanitizedHex ? $sanitizedHex : '';
+        }
+
+        $pattern = '/^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(0|1|0?\.\d+|1\.0+)\s*\)$/i';
+
+        if (!preg_match($pattern, $color, $matches)) {
+            return '';
+        }
+
+        $r = (int) $matches[1];
+        $g = (int) $matches[2];
+        $b = (int) $matches[3];
+        $aValue = (float) $matches[4];
+
+        foreach ([$r, $g, $b] as $component) {
+            if ($component < 0 || $component > 255) {
+                return '';
+            }
+        }
+
+        if ($aValue < 0 || $aValue > 1) {
+            return '';
+        }
+
+        $alpha = $matches[4];
+
+        if ('.' === substr($alpha, 0, 1)) {
+            $alpha = '0' . $alpha;
+        }
+
+        $alpha = rtrim($alpha, '0');
+        $alpha = rtrim($alpha, '.');
+
+        if ('' === $alpha) {
+            $alpha = '0';
+        }
+
+        return sprintf('rgba(%d,%d,%d,%s)', $r, $g, $b, $alpha);
     }
 }

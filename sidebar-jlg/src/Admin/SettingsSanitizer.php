@@ -54,7 +54,10 @@ class SettingsSanitizer
             $existingOptions['border_radius']
         );
         $sanitized['border_width'] = absint($input['border_width'] ?? $existingOptions['border_width']);
-        $sanitized['border_color'] = sanitize_text_field($input['border_color'] ?? $existingOptions['border_color']);
+        $sanitized['border_color'] = $this->sanitize_color_with_existing(
+            $input['border_color'] ?? null,
+            $existingOptions['border_color'] ?? ''
+        );
         $sanitized['desktop_behavior'] = sanitize_key($input['desktop_behavior'] ?? $existingOptions['desktop_behavior']);
         $sanitized['overlay_color'] = $this->sanitize_color_with_existing(
             $input['overlay_color'] ?? null,
