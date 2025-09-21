@@ -338,7 +338,7 @@ class IconLibrary
             return true;
         }
 
-        if (strncmp($value, '#', 1) === 0) {
+        if (strpos($value, '#') === 0) {
             return (bool) preg_match('/^#[A-Za-z0-9_][A-Za-z0-9:._-]*$/', $value);
         }
 
@@ -404,7 +404,7 @@ class IconLibrary
         $normalizedReferencePath = wp_normalize_path($decodedReferencePath);
         $expectedPrefix = $normalizedBasePath === '' ? '/' : $normalizedBasePath . '/';
 
-        if (strncmp($normalizedReferencePath, $expectedPrefix, strlen($expectedPrefix)) !== 0) {
+        if (strpos($normalizedReferencePath, $expectedPrefix) !== 0) {
             return false;
         }
 
@@ -418,6 +418,6 @@ class IconLibrary
         $normalizedUploadsDirWithSlash = trailingslashit($normalizedUploadsDir);
         $resolvedPath = wp_normalize_path($normalizedUploadsDirWithSlash . $relativePath);
 
-        return strncmp($resolvedPath, $normalizedUploadsDirWithSlash, strlen($normalizedUploadsDirWithSlash)) === 0;
+        return strpos($resolvedPath, $normalizedUploadsDirWithSlash) === 0;
     }
 }
