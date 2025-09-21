@@ -41,21 +41,29 @@ function assertSame($expected, $actual, string $message): void
 $input_invalid = [
     'overlay_color'   => 'not-a-color',
     'overlay_opacity' => 1.7,
+    'border_color'    => '#fff; background: url(javascript:alert(1))',
 ];
 
 $result_invalid = $method->invoke($sanitizer, $input_invalid, $existing_options);
 
 assertSame($expected_overlay_existing, $result_invalid['overlay_color'] ?? '', 'Overlay color falls back to existing value on invalid input');
 assertSame(1.0, $result_invalid['overlay_opacity'] ?? null, 'Overlay opacity is capped at 1.0');
+assertSame(
+    $existing_options['border_color'],
+    $result_invalid['border_color'] ?? '',
+    'Border color falls back to existing value when sanitized input is invalid'
+);
 
 $input_valid = [
     'overlay_color'   => '#ABCDEF',
+    'border_color'    => '#EECCDD',
 ];
 
 $result_valid = $method->invoke($sanitizer, $input_valid, $existing_options);
 
 assertSame('#abcdef', $result_valid['overlay_color'] ?? '', 'Overlay color accepts valid hex values');
 assertSame(0.4, $result_valid['overlay_opacity'] ?? null, 'Overlay opacity falls back to existing value when missing');
+assertSame('#eeccdd', $result_valid['border_color'] ?? '', 'Border color accepts valid hex values without modification');
 
 $input_close_on_click = [
     'close_on_link_click' => '1',
