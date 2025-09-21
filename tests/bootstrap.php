@@ -182,6 +182,54 @@ if (!function_exists('trailingslashit')) {
     }
 }
 
+if (!function_exists('wp_normalize_path')) {
+    function wp_normalize_path($path)
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return (string) $result;
+        }
+
+        $path = (string) $path;
+
+        if ($path === '') {
+            return '';
+        }
+
+        $path = str_replace("\\", '/', $path);
+
+        while (strpos($path, '//') !== false) {
+            $path = str_replace('//', '/', $path);
+        }
+
+        if (strlen($path) > 1 && ':' === substr($path, 1, 1)) {
+            $path = ucfirst($path);
+        }
+
+        return $path;
+    }
+}
+
+if (!function_exists('wp_parse_url')) {
+    function wp_parse_url($url, $component = -1)
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        if ($component === -1) {
+            $parts = parse_url((string) $url);
+
+            return $parts === false ? false : $parts;
+        }
+
+        return parse_url((string) $url, $component);
+    }
+}
+
 if (!function_exists('plugin_dir_path')) {
     function plugin_dir_path($file): string
     {
