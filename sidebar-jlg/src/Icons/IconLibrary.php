@@ -58,12 +58,39 @@ class IconLibrary
 
     private function loadCustomIcons(): array
     {
+        $this->customIconSources = [];
+        $this->rejectedCustomIcons = [];
+
         $uploadDir = wp_upload_dir();
-        $iconsDir = trailingslashit($uploadDir['basedir']) . 'sidebar-jlg/icons/';
+
+        if (!is_array($uploadDir)) {
+            return [];
+        }
+
+        $baseDir = $uploadDir['basedir'] ?? '';
+        $errorValue = $uploadDir['error'] ?? null;
+
+        $hasError = false;
+        if ($errorValue !== null) {
+            if (is_wp_error($errorValue)) {
+                $hasError = (string) $errorValue->get_error_message() !== '';
+            } elseif (is_string($errorValue) && $errorValue !== '') {
+                $hasError = true;
+            }
+        }
+
+        if (!is_string($baseDir) || $baseDir === '' || $hasError) {
+            return [];
+        }
+
+        $iconsDir = trailingslashit($baseDir) . 'sidebar-jlg/icons/';
 
         if (!is_dir($iconsDir) || !is_readable($iconsDir)) {
             return [];
         }
+
+        $baseUrl = $uploadDir['baseurl'] ?? '';
+        $baseUrl = is_string($baseUrl) ? $baseUrl : '';
 
         $maxFileSize = 200 * 1024;
         $files = scandir($iconsDir);
@@ -74,8 +101,6 @@ class IconLibrary
 
         $allowedMimes = ['svg' => 'image/svg+xml'];
         $customIcons = [];
-        $this->customIconSources = [];
-        $this->rejectedCustomIcons = [];
 
         foreach ($files as $file) {
             if ($file === '.' || $file === '..' || strpos($file, '.') === 0) {
@@ -111,7 +136,7 @@ class IconLibrary
                 continue;
             }
 
-            $validationResult = $this->validateSanitizedSvg($sanitizedContents, (string) ($uploadDir['baseurl'] ?? ''));
+            $validationResult = $this->validateSanitizedSvg($sanitizedContents, $baseUrl);
             if ($validationResult === null) {
                 $this->rejectedCustomIcons[] = $file;
                 continue;
@@ -144,7 +169,7 @@ class IconLibrary
             $this->customIconSources[$iconName] = [
                 'relative_path' => $relativePath,
                 'encoded_filename' => $encodedFile,
-                'url' => trailingslashit($uploadDir['baseurl']) . 'sidebar-jlg/icons/' . $encodedFile,
+                'url' => trailingslashit($baseUrl) . 'sidebar-jlg/icons/' . $encodedFile,
             ];
 
             $customIcons[$iconName] = $sanitizedContents;
