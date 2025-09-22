@@ -167,7 +167,7 @@ $dynamic_styles .= "}";
 
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-<button class="hamburger-menu" id="hamburger-btn" aria-label="<?php esc_attr_e('Ouvrir le menu', 'sidebar-jlg'); ?>" aria-controls="pro-sidebar" aria-expanded="false">
+<button class="hamburger-menu" id="hamburger-btn" type="button" aria-label="<?php esc_attr_e('Ouvrir le menu', 'sidebar-jlg'); ?>" aria-controls="pro-sidebar" aria-expanded="false">
     <div class="hamburger-icon">
         <div class="icon-1"></div>
         <div class="icon-2"></div>
@@ -191,7 +191,7 @@ $dynamic_styles .= "}";
                 $close_button_markup = $allIcons['close_white'];
             }
             ?>
-            <button class="close-sidebar-btn" aria-label="<?php esc_attr_e('Fermer le menu', 'sidebar-jlg'); ?>">
+            <button class="close-sidebar-btn" type="button" aria-label="<?php esc_attr_e('Fermer le menu', 'sidebar-jlg'); ?>">
                 <?php echo $close_button_markup; ?>
             </button>
         <?php endif; ?>
