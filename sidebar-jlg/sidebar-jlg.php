@@ -25,7 +25,37 @@ require_once __DIR__ . '/autoload.php';
 
 register_activation_hook(__FILE__, static function () {
     $uploadDir = wp_upload_dir();
-    $iconsDir = trailingslashit($uploadDir['basedir']) . 'sidebar-jlg/icons/';
+
+    $baseDir = '';
+    $errorValue = null;
+
+    if (is_array($uploadDir)) {
+        $baseDir = $uploadDir['basedir'] ?? '';
+        $errorValue = $uploadDir['error'] ?? null;
+    }
+
+    $hasError = false;
+    $errorMessage = '';
+
+    if ($errorValue !== null) {
+        if (is_wp_error($errorValue)) {
+            $errorMessage = (string) $errorValue->get_error_message();
+            $hasError = $errorMessage !== '';
+        } elseif (is_string($errorValue) && $errorValue !== '') {
+            $errorMessage = $errorValue;
+            $hasError = true;
+        }
+    }
+
+    if (!is_array($uploadDir) || !is_string($baseDir) || $baseDir === '' || $hasError) {
+        if ($errorMessage !== '' && function_exists('error_log')) {
+            error_log(sprintf('[Sidebar JLG] Activation skipped: %s', $errorMessage));
+        }
+
+        return;
+    }
+
+    $iconsDir = trailingslashit($baseDir) . 'sidebar-jlg/icons/';
     if (!is_dir($iconsDir)) {
         wp_mkdir_p($iconsDir);
     }
