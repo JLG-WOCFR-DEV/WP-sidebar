@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use JLG\Sidebar\Plugin as SidebarPlugin;
 use function JLG\Sidebar\plugin;
 
 require __DIR__ . '/bootstrap.php';
@@ -233,6 +234,82 @@ assertTrue(empty(get_option('sidebar_jlg_cached_locales', [])), 'Cached locales 
 
 unset($GLOBALS['wp_test_function_overrides']['get_search_form']);
 unset($GLOBALS['wp_test_default_search_calls']);
+
+$menuCache->clear();
+$GLOBALS['wp_test_transients'] = [];
+unset($GLOBALS['wp_test_options']['sidebar_jlg_cached_locales']);
+
+$originalAddActionOverride = $GLOBALS['wp_test_function_overrides']['add_action'] ?? null;
+$originalUpdateOptionOverride = $GLOBALS['wp_test_function_overrides']['update_option'] ?? null;
+$registeredHooks = [];
+
+$GLOBALS['wp_test_function_overrides']['add_action'] = static function ($hook, $callback, $priority = 10, $accepted_args = 1) use (&$registeredHooks): void {
+    $registeredHooks[$hook][] = [
+        'callback' => $callback,
+        'accepted_args' => (int) $accepted_args,
+    ];
+};
+
+$GLOBALS['wp_test_function_overrides']['update_option'] = static function ($name, $value, $autoload = null) use (&$registeredHooks): bool {
+    $GLOBALS['wp_test_options'][$name] = $value;
+
+    $hook = 'update_option_' . $name;
+    if (isset($registeredHooks[$hook])) {
+        foreach ($registeredHooks[$hook] as $listener) {
+            $callback = $listener['callback'];
+            $acceptedArgs = $listener['accepted_args'];
+
+            if ($acceptedArgs > 0) {
+                $args = array_slice([$value], 0, $acceptedArgs);
+                call_user_func_array($callback, $args);
+            } else {
+                call_user_func($callback);
+            }
+        }
+    }
+
+    return true;
+};
+
+$GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] = SIDEBAR_JLG_VERSION;
+$GLOBALS['wp_test_options']['sidebar_jlg_cached_locales'] = ['fr_FR'];
+$GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR'] = '<div>cached</div>';
+$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
+    'menu_items' => [
+        [
+            'label' => 'Corrupted item',
+            'type' => 'custom',
+            'icon_type' => 'svg_inline',
+            'icon' => 'custom_missing',
+        ],
+    ],
+];
+
+$revalidatingPlugin = new SidebarPlugin(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php', SIDEBAR_JLG_VERSION);
+$revalidatingPlugin->register();
+
+assertTrue(
+    !isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']),
+    'Cache transient cleared when revalidation updates corrupted options'
+);
+assertTrue(
+    !isset($GLOBALS['wp_test_options']['sidebar_jlg_cached_locales']),
+    'Cached locales option removed when cache cleared via revalidation'
+);
+
+if ($originalAddActionOverride === null) {
+    unset($GLOBALS['wp_test_function_overrides']['add_action']);
+} else {
+    $GLOBALS['wp_test_function_overrides']['add_action'] = $originalAddActionOverride;
+}
+
+if ($originalUpdateOptionOverride === null) {
+    unset($GLOBALS['wp_test_function_overrides']['update_option']);
+} else {
+    $GLOBALS['wp_test_function_overrides']['update_option'] = $originalUpdateOptionOverride;
+}
+
+unset($registeredHooks);
 
 if ($testsPassed) {
     echo "Sidebar locale cache tests passed.\n";
