@@ -3,11 +3,22 @@ jQuery(document).ready(function($) {
     const availableIcons = sidebarJLG.all_icons || {};
     const debugMode = options.debug_mode == '1';
     const ajaxCache = { posts: {}, categories: {} };
+    const searchDebounceDelay = 300;
 
     function logDebug(message, data = '') {
         if (debugMode) {
             console.log(`[Sidebar JLG Debug] ${message}`, data);
         }
+    }
+
+    function debounce(fn, delay) {
+        let timeoutId;
+
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => fn.apply(context, args), delay);
+        };
     }
 
     logDebug('Admin script loaded.', options);
@@ -373,21 +384,29 @@ jQuery(document).ready(function($) {
         return action === 'jlg_get_posts' ? ajaxCache.posts : ajaxCache.categories;
     }
 
-    function buildCacheKey(action, include, page, perPage, postType) {
+    function clearCacheBucket(action) {
+        const bucket = getCacheBucket(action);
+        Object.keys(bucket).forEach(key => delete bucket[key]);
+    }
+
+    function buildCacheKey(action, include, page, perPage, postType, search) {
         const hasInclude = include !== undefined && include !== null && include !== '';
         const includeKey = hasInclude ? (Array.isArray(include) ? include.join(',') : String(include)) : '';
         const normalizedPostType = postType ? String(postType) : '';
-        return [action, includeKey, page, perPage, normalizedPostType].join('|');
+        const normalizedSearch = typeof search === 'string' ? search : '';
+        return [action, includeKey, page, perPage, normalizedPostType, normalizedSearch].join('|');
     }
 
     function requestAjaxData(action, requestData) {
         const bucket = getCacheBucket(action);
+        requestData.search = typeof requestData.search === 'string' ? requestData.search : '';
         const key = buildCacheKey(
             action,
             requestData.include,
             requestData.page,
             requestData.posts_per_page,
-            requestData.post_type
+            requestData.post_type,
+            requestData.search
         );
 
         if (bucket[key]) {
@@ -404,9 +423,13 @@ jQuery(document).ready(function($) {
         return jqxhr;
     }
 
-    function populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action) {
+    function populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action, statusElement) {
         if (!$selectElement.closest('body').length) {
             return;
+        }
+
+        if (statusElement) {
+            statusElement.empty();
         }
 
         if (response.success) {
@@ -434,6 +457,10 @@ jQuery(document).ready(function($) {
                 $selectElement.append(optionElement);
             });
 
+            if (statusElement && optionsArray.length === 0) {
+                statusElement.text('Aucun résultat');
+            }
+
             if (!$selectElement.children().length) {
                 const emptyOption = document.createElement('option');
                 emptyOption.value = '';
@@ -454,10 +481,16 @@ jQuery(document).ready(function($) {
             errorOption.textContent = 'Erreur de chargement';
             errorOption.disabled = true;
             $selectElement.append(errorOption);
+
+            if (statusElement) {
+                statusElement.text('Erreur de chargement');
+            }
         }
+
+        $selectElement.prop('disabled', false);
     }
 
-    function handleAjaxFailure($selectElement, createCurrentOption, action) {
+    function handleAjaxFailure($selectElement, createCurrentOption, action, statusElement) {
         logDebug(`AJAX request failed for ${action}.`);
 
         if (!$selectElement.closest('body').length) {
@@ -476,6 +509,12 @@ jQuery(document).ready(function($) {
         errorOption.textContent = 'Erreur de chargement';
         errorOption.disabled = true;
         $selectElement.append(errorOption);
+
+        if (statusElement) {
+            statusElement.text('Erreur de chargement');
+        }
+
+        $selectElement.prop('disabled', false);
     }
 
     function updateValueField($itemBox, itemData) {
@@ -483,16 +522,50 @@ jQuery(document).ready(function($) {
         const valueWrapper = $itemBox.find('.menu-item-value-wrapper');
         const index = $itemBox.index();
         const value = itemData.value || '';
-        
-        valueWrapper.empty();
-        
+
+        let fieldContainer = valueWrapper.find('.menu-item-field-container');
+        if (!fieldContainer.length) {
+            fieldContainer = $('<div>', { class: 'menu-item-field-container' });
+            const existingChildren = valueWrapper.children().not('.menu-item-search-container');
+            if (existingChildren.length) {
+                fieldContainer.append(existingChildren);
+            }
+            valueWrapper.prepend(fieldContainer);
+        }
+
+        let searchContainer = valueWrapper.find('.menu-item-search-container');
+        if (!searchContainer.length) {
+            searchContainer = $('<div>', { class: 'menu-item-search-container' });
+            const fallbackInput = $('<input>', {
+                type: 'search',
+                class: 'menu-item-search-input',
+                placeholder: 'Rechercher…',
+                'aria-label': 'Rechercher un élément'
+            });
+            const fallbackStatus = $('<div>', {
+                class: 'menu-item-search-status',
+                'aria-live': 'polite'
+            });
+            searchContainer.append(fallbackInput, fallbackStatus).css('display', 'none');
+            valueWrapper.append(searchContainer);
+        }
+
+        const searchInput = searchContainer.find('.menu-item-search-input');
+        const statusElement = searchContainer.find('.menu-item-search-status');
+        searchInput.off('.sidebarSearch');
+
+        fieldContainer.empty();
+
         if (type === 'custom') {
-            valueWrapper.html(`
+            fieldContainer.html(`
                 <p><label>URL</label>
                 <input type="text" class="widefat"
                        name="sidebar_jlg_settings[menu_items][${index}][value]"
                        value="${value}" placeholder="https://..."></p>
             `);
+            searchInput.val('');
+            statusElement.empty();
+            searchContainer.css('display', 'none');
         } else if (type === 'post' || type === 'page' || type === 'category') {
             const isContentType = type === 'post' || type === 'page';
             const action = isContentType ? 'jlg_get_posts' : 'jlg_get_categories';
@@ -542,33 +615,77 @@ jQuery(document).ready(function($) {
             const $paragraph = $('<p>');
             $paragraph.append($label);
             $paragraph.append($selectElement);
-            valueWrapper.append($paragraph);
+            fieldContainer.append($paragraph);
 
-            const page = 1;
+            searchContainer.css('display', 'flex');
+            statusElement.empty();
+
             const postsPerPage = 20;
 
-            const requestData = {
-                action: action,
-                nonce: sidebarJLG.nonce,
-                page: page,
-                posts_per_page: postsPerPage
+            const buildRequestData = (searchTerm, page) => {
+                const normalizedSearchTerm = (searchTerm || '').trim();
+                const requestData = {
+                    action: action,
+                    nonce: sidebarJLG.nonce,
+                    page: page,
+                    posts_per_page: postsPerPage,
+                    search: normalizedSearchTerm
+                };
+
+                if (normalizedValue) {
+                    requestData.include = normalizedValue;
+                }
+
+                if (type === 'page' || type === 'post') {
+                    requestData.post_type = type;
+                }
+
+                return requestData;
             };
 
-            if (normalizedValue) {
-                requestData.include = normalizedValue;
-            }
+            const fetchOptions = (searchTerm, page = 1) => {
+                const requestData = buildRequestData(searchTerm, page);
+                statusElement.text('Chargement...');
+                $selectElement.prop('disabled', true);
+                $selectElement.data('current-search', requestData.search);
+                searchInput.data('current-page', page);
 
-            if (type === 'page' || type === 'post') {
-                requestData.post_type = type;
-            }
+                requestAjaxData(action, requestData)
+                    .done(function(response) {
+                        populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action, statusElement);
+                    })
+                    .fail(function() {
+                        handleAjaxFailure($selectElement, createCurrentOption, action, statusElement);
+                    })
+                    .always(function() {
+                        if (statusElement.text() === 'Chargement...') {
+                            statusElement.empty();
+                        }
+                    });
+            };
 
-            requestAjaxData(action, requestData)
-                .done(function(response) {
-                    populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action);
-                })
-                .fail(function() {
-                    handleAjaxFailure($selectElement, createCurrentOption, action);
-                });
+            const triggerSearch = () => {
+                const term = (searchInput.val() || '').trim();
+                const lastSearch = searchInput.data('last-search') || '';
+                if (term === lastSearch) {
+                    return;
+                }
+                searchInput.data('last-search', term);
+                clearCacheBucket(action);
+                fetchOptions(term, 1);
+            };
+
+            const initialSearchTerm = (searchInput.val() || '').trim();
+            searchInput.data('last-search', initialSearchTerm);
+            fetchOptions(initialSearchTerm, 1);
+
+            const debouncedSearchHandler = debounce(triggerSearch, searchDebounceDelay);
+            searchInput.on('input.sidebarSearch search.sidebarSearch', debouncedSearchHandler);
+        } else {
+            fieldContainer.empty();
+            searchInput.val('');
+            statusElement.empty();
+            searchContainer.css('display', 'none');
         }
     }
 

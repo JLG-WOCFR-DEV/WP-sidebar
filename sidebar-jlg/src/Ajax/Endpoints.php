@@ -39,6 +39,7 @@ class Endpoints
         }
 
         check_ajax_referer('jlg_ajax_nonce', 'nonce');
+        $searchTerm = isset($_POST['search']) ? sanitize_text_field(wp_unslash($_POST['search'])) : '';
         $page = isset($_POST['page']) ? max(1, intval(wp_unslash($_POST['page']))) : 1;
         $maxPerPage = 50;
         $requestedPerPage = isset($_POST['posts_per_page']) ? intval(wp_unslash($_POST['posts_per_page'])) : 20;
@@ -58,11 +59,17 @@ class Endpoints
             $includeIds = array_filter(array_map('absint', $includeSource));
         }
 
-        $posts = get_posts([
+        $queryArgs = [
             'posts_per_page' => $perPage,
             'paged' => $page,
             'post_type' => $postType,
-        ]);
+        ];
+
+        if ($searchTerm !== '') {
+            $queryArgs['s'] = $searchTerm;
+        }
+
+        $posts = get_posts($queryArgs);
 
         $optionsById = [];
         foreach ($posts as $post) {
@@ -113,6 +120,7 @@ class Endpoints
         }
 
         check_ajax_referer('jlg_ajax_nonce', 'nonce');
+        $searchTerm = isset($_POST['search']) ? sanitize_text_field(wp_unslash($_POST['search'])) : '';
         $page = isset($_POST['page']) ? max(1, intval(wp_unslash($_POST['page']))) : 1;
         $maxPerPage = 50;
         $requestedPerPage = isset($_POST['posts_per_page']) ? intval(wp_unslash($_POST['posts_per_page'])) : 20;
@@ -130,11 +138,17 @@ class Endpoints
             $includeIds = array_filter(array_map('absint', $includeSource));
         }
 
-        $categories = get_categories([
+        $categoryArgs = [
             'hide_empty' => false,
             'number' => $perPage,
             'offset' => $offset,
-        ]);
+        ];
+
+        if ($searchTerm !== '') {
+            $categoryArgs['search'] = $searchTerm;
+        }
+
+        $categories = get_categories($categoryArgs);
 
         $optionsById = [];
         foreach ($categories as $category) {

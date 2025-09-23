@@ -420,7 +420,13 @@
                     <option value="category" <# if (data.type === 'category') { #>selected<# } #>>Catégorie</option>
                 </select>
             </p>
-            <div class="menu-item-value-wrapper"></div>
+            <div class="menu-item-value-wrapper">
+                <div class="menu-item-field-container"></div>
+                <div class="menu-item-search-container" style="display:none;">
+                    <input type="search" class="menu-item-search-input" placeholder="<?php esc_attr_e( 'Rechercher…', 'sidebar-jlg' ); ?>" aria-label="<?php esc_attr_e( 'Rechercher un élément', 'sidebar-jlg' ); ?>" />
+                    <div class="menu-item-search-status" aria-live="polite"></div>
+                </div>
+            </div>
             <p><label>Icône</label>
                 <select class="widefat menu-item-icon-type" name="sidebar_jlg_settings[menu_items][{{ data.index }}][icon_type]">
                     <option value="svg_inline" <# if (data.icon_type === 'svg_inline') { #>selected<# } #>>Icône de la bibliothèque</option>
