@@ -63,8 +63,15 @@ ob_start();
                     if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($allIcons[$social['icon']]) ) {
                         $icon_parts = explode('_', $social['icon']);
                         $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
+                        $custom_label = '';
 
-                        echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($icon_label) . '">';
+                        if (isset($social['label']) && is_string($social['label'])) {
+                            $custom_label = trim($social['label']);
+                        }
+
+                        $aria_label = $custom_label !== '' ? $custom_label : $icon_label;
+
+                        echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($aria_label) . '">';
                         echo $allIcons[$social['icon']];
                         echo '</a>';
                     }
@@ -86,8 +93,15 @@ if ($options['social_position'] === 'footer' && !empty($options['social_icons'])
             if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($allIcons[$social['icon']]) ) {
                 $icon_parts = explode('_', $social['icon']);
                 $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
+                $custom_label = '';
 
-                echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($icon_label) . '">';
+                if (isset($social['label']) && is_string($social['label'])) {
+                    $custom_label = trim($social['label']);
+                }
+
+                $aria_label = $custom_label !== '' ? $custom_label : $icon_label;
+
+                echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($aria_label) . '">';
                 echo $allIcons[$social['icon']];
                 echo '</a>';
             }

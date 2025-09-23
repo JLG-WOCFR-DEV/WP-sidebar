@@ -227,6 +227,7 @@ class SettingsSanitizer
 
                 $url = esc_url_raw($item['url'] ?? '');
                 $icon = sanitize_key($item['icon'] ?? '');
+                $label = sanitize_text_field($item['label'] ?? '');
 
                 if ($url === '' || $icon === '' || !isset($availableIcons[$icon])) {
                     continue;
@@ -235,6 +236,7 @@ class SettingsSanitizer
                 $sanitizedSocialIcons[] = [
                     'url' => $url,
                     'icon' => $icon,
+                    'label' => $label,
                 ];
             }
         }

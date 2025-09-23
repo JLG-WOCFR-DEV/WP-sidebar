@@ -435,10 +435,11 @@
     <div class="menu-item-box">
         <div class="menu-item-header">
             <span class="menu-item-handle">::</span>
-            <span class="menu-item-title item-title">{{ data.icon || 'Nouvelle icône' }}</span>
+            <span class="menu-item-title item-title">{{ data.label || data.icon || 'Nouvelle icône' }}</span>
             <button type="button" class="button-link delete-social-icon">Supprimer</button>
         </div>
         <div class="menu-item-content">
+            <p><label>Label</label><input type="text" class="widefat social-label item-label" name="sidebar_jlg_settings[social_icons][{{ data.index }}][label]" value="{{ data.label || '' }}" placeholder="Accessible name"></p>
             <p><label>URL</label><input type="text" class="widefat social-url" name="sidebar_jlg_settings[social_icons][{{ data.index }}][url]" value="{{ data.url }}" placeholder="https://..."></p>
             <p><label>Icône</label>
                 <select class="widefat social-icon-select" name="sidebar_jlg_settings[social_icons][{{ data.index }}][icon]"></select>

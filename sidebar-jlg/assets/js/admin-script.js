@@ -323,8 +323,13 @@ jQuery(document).ready(function($) {
         // Mise à jour du titre en temps réel
         container.on('input', '.item-label', function() {
             const $itemBox = $(this).closest('.menu-item-box');
-            const label = $(this).val();
-            $itemBox.find('.item-title').text(label || config.newTitle);
+            const rawValue = $(this).val();
+            const label = typeof rawValue === 'string' ? rawValue.trim() : '';
+            const fallbackTitle = $(this).data('fallback-title')
+                || $itemBox.data('fallback-title')
+                || config.newTitle;
+            const title = label !== '' ? rawValue : fallbackTitle;
+            $itemBox.find('.item-title').text(title || config.newTitle);
         });
         
         // Gestion des changements d'icônes
@@ -654,24 +659,54 @@ jQuery(document).ready(function($) {
         addButtonId: 'add-social-icon',
         deleteButtonClass: 'delete-social-icon',
         newTitle: 'Nouvelle icône',
-        newItem: (index) => ({ 
-            index, 
-            url: '', 
-            icon: 'facebook_white' 
+        newItem: (index) => ({
+            index,
+            url: '',
+            icon: 'facebook_white',
+            label: ''
         }),
         onAppend: ($itemBox, itemData) => {
             const $select = $itemBox.find('.social-icon-select');
             populateStandardIconsDropdown($select, itemData.icon);
-            
+
             const $preview = $itemBox.find('.icon-preview');
             $preview.html(standardIcons[itemData.icon] || '');
-            
-            $itemBox.find('.item-title').text(itemData.icon.split('_')[0]);
+
+            const $labelInput = $itemBox.find('.social-label');
+            $labelInput.val(itemData.label || '');
+
+            const extractIconTitle = (iconKey) => {
+                if (typeof iconKey !== 'string' || iconKey.trim() === '') {
+                    return 'Nouvelle icône';
+                }
+
+                const parts = iconKey.split('_');
+
+                return parts[0] || 'Nouvelle icône';
+            };
+
+            const syncFallbackTitle = (iconKey) => {
+                const fallbackTitle = extractIconTitle(iconKey);
+                $labelInput.data('fallback-title', fallbackTitle);
+                $itemBox.data('fallback-title', fallbackTitle);
+
+                const currentLabel = ($labelInput.val() || '').toString().trim();
+                if (currentLabel === '') {
+                    $itemBox.find('.item-title').text(fallbackTitle);
+                }
+            };
+
+            const initialIconKey = itemData.icon || $select.val();
+            syncFallbackTitle(initialIconKey);
+
+            if ((($labelInput.val() || '').toString().trim()) !== '') {
+                $itemBox.find('.item-title').text($labelInput.val());
+            }
 
             $select.on('change', function() {
                 const selectedIconKey = $(this).val();
                 $preview.html(standardIcons[selectedIconKey] || '');
-                $itemBox.find('.item-title').text(selectedIconKey.split('_')[0]);
+                syncFallbackTitle(selectedIconKey);
             });
         }
     });
