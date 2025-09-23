@@ -360,6 +360,18 @@ assertSame('post__in', $GLOBALS['test_get_posts_requests'][1]['orderby'] ?? null
 assertSame('post', $GLOBALS['test_get_posts_requests'][1]['post_type'] ?? null, 'Posts include lookup respects post type');
 
 reset_test_environment();
+$GLOBALS['test_get_posts_queue'] = [
+    ['return' => []],
+];
+$_POST = [
+    'nonce' => 'posts-search',
+    'search' => '  Hello <em>World</em>  ',
+    'post_type' => 'post',
+];
+invoke_endpoint($endpoints, 'ajax_get_posts');
+assertSame('Hello World', $GLOBALS['test_get_posts_requests'][0]['s'] ?? null, 'Posts request includes sanitized search term');
+
+reset_test_environment();
 $GLOBALS['test_current_user_can'] = false;
 invoke_endpoint($endpoints, 'ajax_get_categories');
 assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized categories request rejected');
@@ -413,6 +425,17 @@ assertSame(false, $GLOBALS['test_get_categories_requests'][1]['hide_empty'] ?? n
 assertSame([9, 10], array_values($GLOBALS['test_get_categories_requests'][1]['include'] ?? []), 'Categories include lookup requests missing IDs in order');
 assertSame(2, $GLOBALS['test_get_categories_requests'][1]['number'] ?? null, 'Categories include lookup limited to missing IDs');
 assertSame('include', $GLOBALS['test_get_categories_requests'][1]['orderby'] ?? null, 'Categories include lookup orders by requested IDs');
+
+reset_test_environment();
+$GLOBALS['test_get_categories_queue'] = [
+    ['return' => []],
+];
+$_POST = [
+    'nonce' => 'cats-search',
+    'search' => "  Termé <script>alert('x')</script>  ",
+];
+invoke_endpoint($endpoints, 'ajax_get_categories');
+assertSame("Termé alert('x')", $GLOBALS['test_get_categories_requests'][0]['search'] ?? null, 'Categories request includes sanitized search term');
 
 reset_test_environment();
 $GLOBALS['test_current_user_can'] = false;
