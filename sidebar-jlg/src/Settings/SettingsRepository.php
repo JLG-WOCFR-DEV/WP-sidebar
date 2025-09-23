@@ -14,6 +14,23 @@ class SettingsRepository
         'header_padding_top',
     ];
 
+    private const COLOR_OPTION_KEYS = [
+        'bg_color',
+        'bg_color_start',
+        'bg_color_end',
+        'accent_color',
+        'accent_color_start',
+        'accent_color_end',
+        'font_color',
+        'font_color_start',
+        'font_color_end',
+        'font_hover_color',
+        'font_hover_color_start',
+        'font_hover_color_end',
+        'overlay_color',
+        'mobile_bg_color',
+    ];
+
     private DefaultSettings $defaults;
     private IconLibrary $icons;
 
@@ -79,6 +96,18 @@ class SettingsRepository
 
         if (($revalidated['border_color'] ?? '') !== $normalizedBorderColor) {
             $revalidated['border_color'] = $normalizedBorderColor;
+        }
+
+        foreach (self::COLOR_OPTION_KEYS as $colorKey) {
+            $defaultColor = $defaults[$colorKey] ?? '';
+            $normalizedColor = $this->normalizeColorWithExisting(
+                $revalidated[$colorKey] ?? null,
+                $defaultColor
+            );
+
+            if (($revalidated[$colorKey] ?? '') !== $normalizedColor) {
+                $revalidated[$colorKey] = $normalizedColor;
+            }
         }
 
         foreach (self::DIMENSION_OPTION_KEYS as $dimensionKey) {
