@@ -403,10 +403,29 @@ class IconLibrary
             return false;
         }
 
-        $uploadsPort = $uploadsUrlParts['port'] ?? null;
-        $referencePort = $referenceParts['port'] ?? null;
+        $uploadsPort = isset($uploadsUrlParts['port']) ? (int) $uploadsUrlParts['port'] : null;
+        $referencePort = isset($referenceParts['port']) ? (int) $referenceParts['port'] : null;
 
-        if ($uploadsPort !== $referencePort) {
+        $normalizePort = static function (?int $port, string $scheme): ?int {
+            if ($port !== null) {
+                return $port;
+            }
+
+            if ($scheme === 'http') {
+                return 80;
+            }
+
+            if ($scheme === 'https') {
+                return 443;
+            }
+
+            return null;
+        };
+
+        $normalizedUploadsPort = $normalizePort($uploadsPort, $uploadsScheme);
+        $normalizedReferencePort = $normalizePort($referencePort, $referenceScheme);
+
+        if ($normalizedUploadsPort !== $normalizedReferencePort) {
             return false;
         }
 
