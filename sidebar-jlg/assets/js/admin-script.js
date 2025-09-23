@@ -4,6 +4,16 @@ jQuery(document).ready(function($) {
     const debugMode = options.debug_mode == '1';
     const ajaxCache = { posts: {}, categories: {} };
 
+    function debounce(fn, delay = 300) {
+        let timeoutId;
+
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => fn.apply(context, args), delay);
+        };
+    }
+
     function logDebug(message, data = '') {
         if (debugMode) {
             console.log(`[Sidebar JLG Debug] ${message}`, data);
@@ -373,11 +383,20 @@ jQuery(document).ready(function($) {
         return action === 'jlg_get_posts' ? ajaxCache.posts : ajaxCache.categories;
     }
 
-    function buildCacheKey(action, include, page, perPage, postType) {
+    function clearAjaxCache(action) {
+        if (action === 'jlg_get_posts') {
+            ajaxCache.posts = {};
+        } else {
+            ajaxCache.categories = {};
+        }
+    }
+
+    function buildCacheKey(action, include, page, perPage, postType, searchTerm) {
         const hasInclude = include !== undefined && include !== null && include !== '';
         const includeKey = hasInclude ? (Array.isArray(include) ? include.join(',') : String(include)) : '';
         const normalizedPostType = postType ? String(postType) : '';
-        return [action, includeKey, page, perPage, normalizedPostType].join('|');
+        const normalizedSearch = searchTerm ? String(searchTerm) : '';
+        return [action, includeKey, page, perPage, normalizedPostType, normalizedSearch].join('|');
     }
 
     function requestAjaxData(action, requestData) {
@@ -387,11 +406,16 @@ jQuery(document).ready(function($) {
             requestData.include,
             requestData.page,
             requestData.posts_per_page,
-            requestData.post_type
+            requestData.post_type,
+            requestData.search
         );
 
         if (bucket[key]) {
             return bucket[key];
+        }
+
+        if (typeof requestData.search === 'undefined') {
+            requestData.search = '';
         }
 
         const jqxhr = $.post(sidebarJLG.ajax_url, requestData);
@@ -404,9 +428,9 @@ jQuery(document).ready(function($) {
         return jqxhr;
     }
 
-    function populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action) {
+    function populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action, $messageContainer) {
         if (!$selectElement.closest('body').length) {
-            return;
+            return false;
         }
 
         if (response.success) {
@@ -440,6 +464,16 @@ jQuery(document).ready(function($) {
                 emptyOption.textContent = 'Aucun résultat';
                 $selectElement.append(emptyOption);
             }
+
+            if ($messageContainer && $messageContainer.length) {
+                if (optionsArray.length === 0) {
+                    $messageContainer.text('Aucun résultat');
+                } else {
+                    $messageContainer.text('');
+                }
+            }
+
+            return optionsArray.length > 0;
         } else {
             logDebug(`Failed to fetch data for ${action}.`);
             $selectElement.empty();
@@ -454,10 +488,16 @@ jQuery(document).ready(function($) {
             errorOption.textContent = 'Erreur de chargement';
             errorOption.disabled = true;
             $selectElement.append(errorOption);
+
+            if ($messageContainer && $messageContainer.length) {
+                $messageContainer.text('Erreur de chargement');
+            }
+
+            return false;
         }
     }
 
-    function handleAjaxFailure($selectElement, createCurrentOption, action) {
+    function handleAjaxFailure($selectElement, createCurrentOption, action, $messageContainer) {
         logDebug(`AJAX request failed for ${action}.`);
 
         if (!$selectElement.closest('body').length) {
@@ -476,23 +516,45 @@ jQuery(document).ready(function($) {
         errorOption.textContent = 'Erreur de chargement';
         errorOption.disabled = true;
         $selectElement.append(errorOption);
+
+        if ($messageContainer && $messageContainer.length) {
+            $messageContainer.text('Erreur de chargement');
+        }
     }
 
     function updateValueField($itemBox, itemData) {
         const type = $itemBox.find('.menu-item-type').val();
         const valueWrapper = $itemBox.find('.menu-item-value-wrapper');
+        const valueFields = valueWrapper.find('.menu-item-value-fields');
+        let searchContainer = $itemBox.data('menuSearchContainer');
+
+        if (!searchContainer || !searchContainer.length) {
+            searchContainer = valueWrapper.find('.menu-item-search-container');
+            $itemBox.data('menuSearchContainer', searchContainer);
+        }
+
+        const searchInput = searchContainer.find('.menu-item-search-input');
+        const messageContainer = valueWrapper.find('.menu-item-async-message');
         const index = $itemBox.index();
         const value = itemData.value || '';
-        
-        valueWrapper.empty();
-        
+
+        searchContainer.detach();
+        valueFields.empty();
+        messageContainer.text('');
+        searchContainer.find('select').remove();
+        searchInput.off('.menuSearch');
+        searchInput.val('');
+        searchContainer.hide();
+
         if (type === 'custom') {
-            valueWrapper.html(`
+            valueFields.html(`
                 <p><label>URL</label>
                 <input type="text" class="widefat"
                        name="sidebar_jlg_settings[menu_items][${index}][value]"
                        value="${value}" placeholder="https://..."></p>
             `);
+            valueFields.append(searchContainer);
+            return;
         } else if (type === 'post' || type === 'page' || type === 'category') {
             const isContentType = type === 'post' || type === 'page';
             const action = isContentType ? 'jlg_get_posts' : 'jlg_get_categories';
@@ -501,6 +563,11 @@ jQuery(document).ready(function($) {
                 post: 'Article',
                 page: 'Page',
                 category: 'Catégorie'
+            };
+            const placeholderMap = {
+                post: 'Rechercher un article…',
+                page: 'Rechercher une page…',
+                category: 'Rechercher une catégorie…'
             };
             const labelText = labelMap[type] || 'Élément';
             const $label = $('<label>').text(labelText);
@@ -524,51 +591,101 @@ jQuery(document).ready(function($) {
                 return option;
             };
 
-            const initialCurrentOption = createCurrentOption();
+            const searchState = (() => {
+                const storedState = searchContainer.data('searchState') || {};
+                if (storedState.type !== type) {
+                    return { type, term: '', page: 1 };
+                }
+                return {
+                    type,
+                    term: typeof storedState.term === 'string' ? storedState.term : '',
+                    page: Number.isInteger(storedState.page) && storedState.page > 0 ? storedState.page : 1
+                };
+            })();
 
-            if (initialCurrentOption) {
-                $selectElement.append(initialCurrentOption);
-            }
+            searchContainer.data('searchState', searchState);
+            searchInput.val(searchState.term || '');
+            searchInput.attr('placeholder', placeholderMap[type] || 'Rechercher…');
 
-            const loadingOption = document.createElement('option');
-            loadingOption.value = '';
-            loadingOption.textContent = 'Chargement...';
-            loadingOption.disabled = true;
-            if (!initialCurrentOption) {
-                loadingOption.selected = true;
-            }
-            $selectElement.append(loadingOption);
-
-            const $paragraph = $('<p>');
+            const $paragraph = $('<p>').addClass('menu-item-search-row');
             $paragraph.append($label);
-            $paragraph.append($selectElement);
-            valueWrapper.append($paragraph);
 
-            const page = 1;
+            searchContainer.prepend($selectElement);
+            searchContainer.show();
+            $paragraph.append(searchContainer);
+            valueFields.append($paragraph);
+
             const postsPerPage = 20;
+            let currentRequestToken = 0;
 
-            const requestData = {
-                action: action,
-                nonce: sidebarJLG.nonce,
-                page: page,
-                posts_per_page: postsPerPage
+            const loadOptions = (searchTerm, requestedPage = 1) => {
+                const trimmedSearch = typeof searchTerm === 'string' ? searchTerm.trim() : '';
+                searchState.term = trimmedSearch;
+                searchState.page = requestedPage;
+                searchState.type = type;
+                searchContainer.data('searchState', searchState);
+
+                const requestData = {
+                    action: action,
+                    nonce: sidebarJLG.nonce,
+                    page: requestedPage,
+                    posts_per_page: postsPerPage,
+                    search: trimmedSearch
+                };
+
+                if (normalizedValue) {
+                    requestData.include = normalizedValue;
+                }
+
+                if (type === 'page' || type === 'post') {
+                    requestData.post_type = type;
+                }
+
+                messageContainer.text('Chargement...');
+                $selectElement.prop('disabled', true);
+
+                const requestToken = ++currentRequestToken;
+
+                requestAjaxData(action, requestData)
+                    .done(function(response) {
+                        if (requestToken !== currentRequestToken) {
+                            return;
+                        }
+
+                        populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action, messageContainer);
+                        $selectElement.prop('disabled', false);
+                    })
+                    .fail(function() {
+                        if (requestToken !== currentRequestToken) {
+                            return;
+                        }
+
+                        handleAjaxFailure($selectElement, createCurrentOption, action, messageContainer);
+                        $selectElement.prop('disabled', false);
+                    });
             };
 
-            if (normalizedValue) {
-                requestData.include = normalizedValue;
-            }
+            const debouncedSearchHandler = debounce(function() {
+                clearAjaxCache(action);
+                loadOptions($(this).val(), 1);
+            }, 300);
 
-            if (type === 'page' || type === 'post') {
-                requestData.post_type = type;
-            }
+            searchInput.on('input.menuSearch', debouncedSearchHandler);
+            searchInput.on('keydown.menuSearch', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                }
+            });
 
-            requestAjaxData(action, requestData)
-                .done(function(response) {
-                    populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action);
-                })
-                .fail(function() {
-                    handleAjaxFailure($selectElement, createCurrentOption, action);
-                });
+            loadOptions(searchState.term || '', searchState.page || 1);
+        } else {
+            valueFields.html(`
+                <p><label>Valeur</label>
+                <input type="text" class="widefat"
+                       name="sidebar_jlg_settings[menu_items][${index}][value]"
+                       value="${value}"></p>
+            `);
+            valueFields.append(searchContainer);
         }
     }
 

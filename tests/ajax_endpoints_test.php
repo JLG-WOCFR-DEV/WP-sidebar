@@ -360,6 +360,23 @@ assertSame('post__in', $GLOBALS['test_get_posts_requests'][1]['orderby'] ?? null
 assertSame('post', $GLOBALS['test_get_posts_requests'][1]['post_type'] ?? null, 'Posts include lookup respects post type');
 
 reset_test_environment();
+$GLOBALS['test_get_posts_queue'] = [
+    ['return' => []],
+];
+$_POST = [
+    'nonce' => 'posts-search',
+    'page' => '2',
+    'post_type' => 'page',
+    'search' => '  <b>Focus</b>  ',
+];
+invoke_endpoint($endpoints, 'ajax_get_posts');
+assertSame('Focus', $GLOBALS['test_get_posts_requests'][0]['s'] ?? null, 'Posts search parameter sanitized');
+assertSame(2, $GLOBALS['test_get_posts_requests'][0]['paged'] ?? null, 'Posts search respects requested page');
+assertSame('page', $GLOBALS['test_get_posts_requests'][0]['post_type'] ?? null, 'Posts search respects requested post type');
+assertSame(1, count($GLOBALS['test_get_posts_requests']), 'Posts search performs a single query without include lookup');
+assertSame([], $GLOBALS['json_success_payloads'][0] ?? null, 'Posts search request returns results array');
+
+reset_test_environment();
 $GLOBALS['test_current_user_can'] = false;
 invoke_endpoint($endpoints, 'ajax_get_categories');
 assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized categories request rejected');
@@ -413,6 +430,23 @@ assertSame(false, $GLOBALS['test_get_categories_requests'][1]['hide_empty'] ?? n
 assertSame([9, 10], array_values($GLOBALS['test_get_categories_requests'][1]['include'] ?? []), 'Categories include lookup requests missing IDs in order');
 assertSame(2, $GLOBALS['test_get_categories_requests'][1]['number'] ?? null, 'Categories include lookup limited to missing IDs');
 assertSame('include', $GLOBALS['test_get_categories_requests'][1]['orderby'] ?? null, 'Categories include lookup orders by requested IDs');
+
+reset_test_environment();
+$GLOBALS['test_get_categories_queue'] = [
+    ['return' => []],
+];
+$_POST = [
+    'nonce' => 'cats-search',
+    'page' => '3',
+    'posts_per_page' => '2',
+    'search' => '  chats ',
+];
+invoke_endpoint($endpoints, 'ajax_get_categories');
+assertSame('chats', $GLOBALS['test_get_categories_requests'][0]['search'] ?? null, 'Categories search parameter sanitized');
+assertSame(2, $GLOBALS['test_get_categories_requests'][0]['number'] ?? null, 'Categories search respects per-page value');
+assertSame(4, $GLOBALS['test_get_categories_requests'][0]['offset'] ?? null, 'Categories search computes offset from page');
+assertSame(1, count($GLOBALS['test_get_categories_requests']), 'Categories search performs a single query');
+assertSame([], $GLOBALS['json_success_payloads'][0] ?? null, 'Categories search request returns results array');
 
 reset_test_environment();
 $GLOBALS['test_current_user_can'] = false;
