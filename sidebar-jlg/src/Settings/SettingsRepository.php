@@ -6,6 +6,14 @@ use JLG\Sidebar\Icons\IconLibrary;
 
 class SettingsRepository
 {
+    private const DIMENSION_OPTION_KEYS = [
+        'content_margin',
+        'floating_vertical_margin',
+        'border_radius',
+        'hamburger_top_position',
+        'header_padding_top',
+    ];
+
     private DefaultSettings $defaults;
     private IconLibrary $icons;
 
@@ -73,15 +81,7 @@ class SettingsRepository
             $revalidated['border_color'] = $normalizedBorderColor;
         }
 
-        $dimensionDefaults = [
-            'content_margin',
-            'floating_vertical_margin',
-            'border_radius',
-            'hamburger_top_position',
-            'header_padding_top',
-        ];
-
-        foreach ($dimensionDefaults as $dimensionKey) {
+        foreach (self::DIMENSION_OPTION_KEYS as $dimensionKey) {
             $defaultValue = $defaults[$dimensionKey] ?? '';
             $normalizedValue = $this->normalizeCssDimension($revalidated[$dimensionKey] ?? null, $defaultValue);
 
