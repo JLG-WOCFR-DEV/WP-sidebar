@@ -232,9 +232,18 @@ class SettingsSanitizer
                     continue;
                 }
 
+                $label = '';
+                if (isset($item['label'])) {
+                    $rawLabel = $item['label'];
+                    if (is_scalar($rawLabel)) {
+                        $label = sanitize_text_field((string) $rawLabel);
+                    }
+                }
+
                 $sanitizedSocialIcons[] = [
                     'url' => $url,
                     'icon' => $icon,
+                    'label' => $label,
                 ];
             }
         }

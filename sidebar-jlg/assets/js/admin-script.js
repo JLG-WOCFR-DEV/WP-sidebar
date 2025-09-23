@@ -227,10 +227,42 @@ jQuery(document).ready(function($) {
         const template = wp.template(config.templateId);
         const items = options[config.dataKey] || [];
 
+        function refreshItemTitle($itemBox) {
+            if (!$itemBox || !$itemBox.length) {
+                return;
+            }
+
+            let fallbackTitle = $itemBox.data('fallbackTitle');
+            if (typeof fallbackTitle !== 'string') {
+                fallbackTitle = '';
+            } else {
+                fallbackTitle = fallbackTitle.trim();
+            }
+
+            if (fallbackTitle === '') {
+                fallbackTitle = (config.newTitle || '').trim();
+                $itemBox.data('fallbackTitle', fallbackTitle);
+            }
+
+            const $labelField = $itemBox.find('.item-label');
+            let labelValue = '';
+
+            if ($labelField.length) {
+                const rawLabel = $labelField.val();
+                if (typeof rawLabel === 'string') {
+                    labelValue = rawLabel.trim();
+                } else if (Array.isArray(rawLabel)) {
+                    labelValue = rawLabel.join(' ').trim();
+                }
+            }
+
+            $itemBox.find('.item-title').text(labelValue || fallbackTitle);
+        }
+
         // Fonction critique : réindexation correcte des champs
         function reindexFields() {
             logDebug(`Réindexation de ${config.dataKey}`);
-            
+
             container.children('.menu-item-box').each(function(newIndex) {
                 $(this).find('input, select, textarea').each(function() {
                     const $field = $(this);
@@ -284,6 +316,7 @@ jQuery(document).ready(function($) {
             if (config.onAppend) {
                 config.onAppend($newItem, item);
             }
+            refreshItemTitle($newItem);
         });
 
         // Gestionnaire d'ajout avec réindexation
@@ -291,14 +324,16 @@ jQuery(document).ready(function($) {
             const newIndex = container.children('.menu-item-box').length;
             const newItem = config.newItem(newIndex);
             newItem.index = newIndex;
-            
+
             const $newElement = $(template(newItem));
             container.append($newElement);
-            
+
             if (config.onAppend) {
                 config.onAppend($newElement, newItem);
             }
-            
+
+            refreshItemTitle($newElement);
+
             // Réindexation après ajout
             setTimeout(function() {
                 reindexFields();
@@ -310,7 +345,7 @@ jQuery(document).ready(function($) {
         container.on('click', `.${config.deleteButtonClass}`, function() {
             const $box = $(this).closest('.menu-item-box');
             const label = $box.find('.item-label').val() || $box.find('.item-title').text();
-            
+
             if (confirm(`Supprimer "${label}" ?`)) {
                 $box.fadeOut(200, function() {
                     $(this).remove();
@@ -323,8 +358,7 @@ jQuery(document).ready(function($) {
         // Mise à jour du titre en temps réel
         container.on('input', '.item-label', function() {
             const $itemBox = $(this).closest('.menu-item-box');
-            const label = $(this).val();
-            $itemBox.find('.item-title').text(label || config.newTitle);
+            refreshItemTitle($itemBox);
         });
         
         // Gestion des changements d'icônes
@@ -654,24 +688,39 @@ jQuery(document).ready(function($) {
         addButtonId: 'add-social-icon',
         deleteButtonClass: 'delete-social-icon',
         newTitle: 'Nouvelle icône',
-        newItem: (index) => ({ 
-            index, 
-            url: '', 
-            icon: 'facebook_white' 
+        newItem: (index) => ({
+            index,
+            label: '',
+            url: '',
+            icon: 'facebook_white'
         }),
         onAppend: ($itemBox, itemData) => {
             const $select = $itemBox.find('.social-icon-select');
             populateStandardIconsDropdown($select, itemData.icon);
-            
+
             const $preview = $itemBox.find('.icon-preview');
             $preview.html(standardIcons[itemData.icon] || '');
-            
-            $itemBox.find('.item-title').text(itemData.icon.split('_')[0]);
+
+            const defaultTitle = 'Nouvelle icône';
+            const iconKey = typeof itemData.icon === 'string' ? itemData.icon : '';
+            const fallbackTitle = iconKey ? iconKey.split('_')[0] : defaultTitle;
+            $itemBox.data('fallbackTitle', (fallbackTitle || defaultTitle).trim());
 
             $select.on('change', function() {
                 const selectedIconKey = $(this).val();
                 $preview.html(standardIcons[selectedIconKey] || '');
-                $itemBox.find('.item-title').text(selectedIconKey.split('_')[0]);
+                const updatedFallback = typeof selectedIconKey === 'string' && selectedIconKey !== ''
+                    ? selectedIconKey.split('_')[0]
+                    : defaultTitle;
+                const normalizedFallback = (updatedFallback || defaultTitle).trim();
+                $itemBox.data('fallbackTitle', normalizedFallback);
+
+                const $labelField = $itemBox.find('.item-label');
+                const currentLabelValue = $labelField.length && typeof $labelField.val() === 'string'
+                    ? $labelField.val().trim()
+                    : '';
+
+                $itemBox.find('.item-title').text(currentLabelValue || normalizedFallback);
             });
         }
     });
@@ -757,6 +806,7 @@ jQuery(document).ready(function($) {
             
             $('#social-icons-container .menu-item-box').each(function(i) {
                 console.log(`Social ${i}:`, {
+                    label: $(this).find('.item-label').val(),
                     url: $(this).find('.social-url').val(),
                     icon: $(this).find('.social-icon-select').val()
                 });
