@@ -73,6 +73,23 @@ class SettingsRepository
             $revalidated['border_color'] = $normalizedBorderColor;
         }
 
+        $dimensionDefaults = [
+            'content_margin',
+            'floating_vertical_margin',
+            'border_radius',
+            'hamburger_top_position',
+            'header_padding_top',
+        ];
+
+        foreach ($dimensionDefaults as $dimensionKey) {
+            $defaultValue = $defaults[$dimensionKey] ?? '';
+            $normalizedValue = $this->normalizeCssDimension($revalidated[$dimensionKey] ?? null, $defaultValue);
+
+            if (($revalidated[$dimensionKey] ?? '') !== $normalizedValue) {
+                $revalidated[$dimensionKey] = $normalizedValue;
+            }
+        }
+
         if ($revalidated !== $merged) {
             update_option('sidebar_jlg_settings', $revalidated);
         }
@@ -227,5 +244,126 @@ class SettingsRepository
         }
 
         return sprintf('rgba(%d,%d,%d,%s)', $r, $g, $b, $alpha);
+    }
+
+    private function normalizeCssDimension($value, $fallback): string
+    {
+        $fallback = is_string($fallback) || is_numeric($fallback) ? (string) $fallback : '';
+        $sanitizedFallback = sanitize_text_field($fallback);
+
+        $value = is_string($value) || is_numeric($value) ? (string) $value : '';
+        $value = trim($value);
+
+        if ($value === '') {
+            return $sanitizedFallback;
+        }
+
+        $value = sanitize_text_field($value);
+
+        static $cache = null;
+        if ($cache === null) {
+            $allowedUnits = ['px', 'rem', 'em', '%', 'vh', 'vw', 'vmin', 'vmax', 'ch'];
+            $unitPattern = '(?:' . implode('|', array_map(static function ($unit) {
+                return preg_quote($unit, '/');
+            }, $allowedUnits)) . ')';
+
+            $cache = [
+                'numeric_pattern'   => '/^-?(?:\d+|\d*\.\d+)(?:' . $unitPattern . ')$/i',
+                'dimension_pattern' => '/^[-+]?(?:\d+|\d*\.\d+)(?:' . $unitPattern . ')?$/i',
+            ];
+        }
+
+        $numericPattern = $cache['numeric_pattern'];
+        $dimensionPattern = $cache['dimension_pattern'];
+
+        if (preg_match($numericPattern, $value)) {
+            return $value;
+        }
+
+        if ($this->isValidCalcExpression($value, $dimensionPattern)) {
+            return $value;
+        }
+
+        if (preg_match('/^0(?:\.0+)?$/', $value)) {
+            return '0';
+        }
+
+        return $sanitizedFallback;
+    }
+
+    private function isValidCalcExpression(string $value, string $dimensionPattern): bool
+    {
+        if (!preg_match('/^calc\((.*)\)$/i', $value, $matches)) {
+            return false;
+        }
+
+        $expression = trim($matches[1]);
+
+        if ($expression === '') {
+            return false;
+        }
+
+        if (!preg_match('/^[0-9+\-*\/().%a-z\s]+$/i', $expression)) {
+            return false;
+        }
+
+        $expression = preg_replace('/\s+/', '', $expression);
+
+        if ($expression === '') {
+            return false;
+        }
+
+        $length = strlen($expression);
+        $tokens = [];
+        $current = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $expression[$i];
+
+            if (strpos('+-*/()', $char) !== false) {
+                if ($current !== '') {
+                    $tokens[] = $current;
+                    $current = '';
+                }
+
+                $tokens[] = $char;
+                continue;
+            }
+
+            $current .= $char;
+        }
+
+        if ($current !== '') {
+            $tokens[] = $current;
+        }
+
+        $balance = 0;
+        $prevToken = '';
+
+        foreach ($tokens as $token) {
+            if ($token === '(') {
+                $balance++;
+            } elseif ($token === ')') {
+                $balance--;
+
+                if ($balance < 0) {
+                    return false;
+                }
+            }
+
+            if (in_array($token, ['+', '-', '*', '/'], true)) {
+                if ($prevToken === '' || in_array($prevToken, ['+', '-', '*', '/', '('], true)) {
+                    return false;
+                }
+            } elseif (!in_array($token, ['(', ')'], true)) {
+                if (!preg_match($dimensionPattern, $token) && !preg_match('/^\d+(?:\.\d+)?$/', $token)) {
+                    return false;
+                }
+            }
+
+            $prevToken = $token;
+        }
+
+        return $balance === 0 && !in_array($prevToken, ['+', '-', '*', '/'], true);
     }
 }
