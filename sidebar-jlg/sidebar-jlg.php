@@ -57,7 +57,24 @@ register_activation_hook(__FILE__, static function () {
 
     $iconsDir = trailingslashit($baseDir) . 'sidebar-jlg/icons/';
     if (!is_dir($iconsDir)) {
-        wp_mkdir_p($iconsDir);
+        $created = wp_mkdir_p($iconsDir);
+
+        if (!$created) {
+            $message = __('Sidebar JLG n\'a pas pu créer le dossier d\'icônes. Vérifiez les permissions du dossier uploads puis réactivez le plugin.', 'sidebar-jlg');
+
+            if (function_exists('error_log')) {
+                error_log('[Sidebar JLG] Activation failed: unable to create icons directory.');
+            }
+
+            if (!function_exists('set_transient')) {
+                return;
+            }
+
+            $expiration = defined('HOUR_IN_SECONDS') ? HOUR_IN_SECONDS : 3600;
+            set_transient('sidebar_jlg_activation_error', $message, $expiration);
+
+            return;
+        }
     }
 
     update_option('sidebar_jlg_plugin_version', SIDEBAR_JLG_VERSION);

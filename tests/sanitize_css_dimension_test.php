@@ -1,9 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use JLG\Sidebar\Admin\SettingsSanitizer;
-use JLG\Sidebar\Icons\IconLibrary;
-use JLG\Sidebar\Settings\DefaultSettings;
+use JLG\Sidebar\Settings\ValueNormalizer;
 
 require __DIR__ . '/bootstrap.php';
 
@@ -12,14 +10,6 @@ $GLOBALS['wp_test_function_overrides']['wp_check_filetype'] = static function ($
 };
 
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
-
-$defaults = new DefaultSettings();
-$icons = new IconLibrary(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php');
-$sanitizer = new SettingsSanitizer($defaults, $icons);
-
-$reflection = new ReflectionClass(SettingsSanitizer::class);
-$method = $reflection->getMethod('sanitize_css_dimension');
-$method->setAccessible(true);
 
 $tests = [
     'valid_px' => [
@@ -76,7 +66,7 @@ $tests = [
 
 $allPassed = true;
 foreach ($tests as $name => $test) {
-    $result = $method->invoke($sanitizer, $test['input'], $test['fallback']);
+    $result = ValueNormalizer::normalizeCssDimension($test['input'], $test['fallback']);
     if ($result === $test['expected']) {
         echo sprintf("[PASS] %s\n", $name);
         continue;

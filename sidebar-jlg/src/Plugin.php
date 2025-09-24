@@ -57,6 +57,7 @@ class Plugin
         $this->maybeInvalidateCacheOnVersionChange();
 
         add_action('plugins_loaded', [$this, 'loadTextdomain']);
+        add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
         add_action('update_option_sidebar_jlg_settings', [$this->cache, 'clear'], 10, 0);
 
         $this->settings->revalidateStoredOptions();
@@ -122,5 +123,24 @@ class Plugin
     public function getMenuCache(): MenuCache
     {
         return $this->cache;
+    }
+
+    public function renderActivationErrorNotice(): void
+    {
+        if (!function_exists('get_transient')) {
+            return;
+        }
+
+        $message = get_transient('sidebar_jlg_activation_error');
+
+        if ($message === false || $message === '') {
+            return;
+        }
+
+        printf('<div class="notice notice-error"><p>%s</p></div>', esc_html($message));
+
+        if (function_exists('delete_transient')) {
+            delete_transient('sidebar_jlg_activation_error');
+        }
     }
 }
