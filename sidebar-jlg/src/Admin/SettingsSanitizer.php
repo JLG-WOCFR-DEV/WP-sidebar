@@ -27,6 +27,7 @@ class SettingsSanitizer
             }
             $existingOptions = $defaults;
         }
+        $existingOptions = wp_parse_args($existingOptions, $defaults);
         $preparedInput = is_array($input) ? $input : [];
 
         $sanitizedInput = array_merge(
