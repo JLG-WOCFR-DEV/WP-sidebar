@@ -260,7 +260,11 @@ function get_categories($args = []): array
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
 $pluginInstance = plugin();
-$endpoints = new Endpoints($pluginInstance->getSettingsRepository(), $pluginInstance->getMenuCache());
+$endpoints = new Endpoints(
+    $pluginInstance->getSettingsRepository(),
+    $pluginInstance->getMenuCache(),
+    $pluginInstance->getIconLibrary()
+);
 
 $testsPassed = true;
 
@@ -477,6 +481,31 @@ assertSame(false, get_transient('sidebar_jlg_full_html_default'), 'Default local
 assertSame(false, get_transient('sidebar_jlg_full_html_fr_FR'), 'Additional locale cache cleared during reset');
 assertSame(false, get_transient('sidebar_jlg_full_html'), 'Legacy cache cleared during reset');
 assertSame(['jlg_reset_nonce', 'nonce', 'reset-nonce'], $GLOBALS['checked_nonces'][0] ?? null, 'Reset nonce validated before clearing settings');
+
+reset_test_environment();
+$GLOBALS['test_current_user_can'] = false;
+invoke_endpoint($endpoints, 'ajax_get_icon_svg');
+assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized icon request rejected');
+assertSame([], $GLOBALS['checked_nonces'], 'Unauthorized icon request skips nonce validation');
+
+reset_test_environment();
+$_POST = ['nonce' => 'icons-empty'];
+invoke_endpoint($endpoints, 'ajax_get_icon_svg');
+assertSame('Aucune icône demandée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Icon request without keys returns error');
+assertSame(['jlg_ajax_nonce', 'nonce', 'icons-empty'], $GLOBALS['checked_nonces'][0] ?? null, 'Icon nonce validated before missing request error');
+
+reset_test_environment();
+$_POST = ['nonce' => 'icons-missing', 'icons' => ['unknown']];
+invoke_endpoint($endpoints, 'ajax_get_icon_svg');
+assertSame('Icône introuvable.', $GLOBALS['json_error_payloads'][0] ?? null, 'Icon request with unknown key returns error');
+assertSame(['jlg_ajax_nonce', 'nonce', 'icons-missing'], $GLOBALS['checked_nonces'][0] ?? null, 'Icon nonce validated before unknown icon error');
+
+reset_test_environment();
+$_POST = ['nonce' => 'icons-success', 'icons' => ['home_white', 'custom_missing', 'HOME_WHITE']];
+invoke_endpoint($endpoints, 'ajax_get_icon_svg');
+$iconPayload = $GLOBALS['json_success_payloads'][0] ?? [];
+assertTrue(isset($iconPayload['home_white']), 'Icon response includes sanitized key');
+assertSame(1, count($iconPayload), 'Icon response excludes duplicates and unknown values');
 
 if ($testsPassed) {
     echo "AJAX endpoints tests passed.\n";

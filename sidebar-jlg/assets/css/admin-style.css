@@ -41,6 +41,10 @@ input:checked + .jlg-slider:before { transform: translateX(26px); }
 #icon-library-modal #icon-grid { flex-grow: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 10px; }
 #icon-library-modal #icon-grid button { padding: 10px; border: 1px solid #ddd; background: #f9f9f9; cursor: pointer; }
 #icon-library-modal #icon-grid button:hover { background: #eee; }
+#icon-library-modal #icon-grid button .icon-preview { display: block; min-height: 24px; line-height: 0; margin-bottom: 6px; }
+#icon-library-modal #icon-grid button .icon-preview svg,
+#icon-library-modal #icon-grid button .icon-preview img { width: 24px; height: 24px; display: inline-block; }
+#icon-library-modal #icon-grid button .icon-label { display: block; font-size: 11px; word-break: break-word; }
 
 /* Style pour le bouton de réinitialisation */
 .button-danger {

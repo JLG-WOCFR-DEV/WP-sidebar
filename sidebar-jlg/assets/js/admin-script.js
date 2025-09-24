@@ -1,9 +1,38 @@
 jQuery(document).ready(function($) {
-    const options = sidebarJLG.options;
-    const availableIcons = sidebarJLG.all_icons || {};
+    const options = sidebarJLG.options || {};
+    const ajaxUrl = sidebarJLG.ajax_url || '';
+    const ajaxNonce = sidebarJLG.nonce || '';
+    const iconFetchAction = typeof sidebarJLG.icon_fetch_action === 'string' ? sidebarJLG.icon_fetch_action : 'jlg_get_icon_svg';
+    const iconManifest = Array.isArray(sidebarJLG.icons_manifest) ? sidebarJLG.icons_manifest : [];
     const debugMode = options.debug_mode == '1';
     const ajaxCache = { posts: {}, categories: {} };
     const searchDebounceDelay = 300;
+    const iconCache = {};
+    const pendingIconRequests = {};
+    const iconEntryByExactKey = {};
+    const iconKeyLookup = {};
+
+    iconManifest.forEach(icon => {
+        if (!icon || typeof icon.key !== 'string') {
+            return;
+        }
+
+        const key = icon.key;
+        iconEntryByExactKey[key] = icon;
+
+        if (key === '') {
+            return;
+        }
+
+        if (!iconKeyLookup[key]) {
+            iconKeyLookup[key] = key;
+        }
+
+        const sanitized = sanitizeIconKey(key);
+        if (sanitized && !iconKeyLookup[sanitized]) {
+            iconKeyLookup[sanitized] = key;
+        }
+    });
 
     function logDebug(message, data = '') {
         if (debugMode) {
@@ -162,27 +191,131 @@ jQuery(document).ready(function($) {
         return iconName.toLowerCase().replace(/[^a-z0-9_\-]/g, '');
     }
 
+    function resolveIconKey(rawKey) {
+        if (typeof rawKey !== 'string') {
+            return '';
+        }
+
+        const trimmed = rawKey.trim();
+
+        if (trimmed === '') {
+            return '';
+        }
+
+        return iconKeyLookup[trimmed] || iconKeyLookup[sanitizeIconKey(trimmed)] || '';
+    }
+
+    function getIconEntry(rawKey) {
+        const resolved = resolveIconKey(rawKey);
+
+        if (!resolved) {
+            return null;
+        }
+
+        return iconEntryByExactKey[resolved] || null;
+    }
+
+    function ensureIconsFetched(rawKeys = []) {
+        const normalizedKeys = Array.from(new Set(rawKeys.map(resolveIconKey).filter(key => key && !iconCache[key])));
+
+        if (normalizedKeys.length === 0 || !ajaxUrl || !iconFetchAction) {
+            return Promise.resolve(iconCache);
+        }
+
+        const requestId = normalizedKeys.slice().sort().join(',');
+
+        if (pendingIconRequests[requestId]) {
+            return pendingIconRequests[requestId];
+        }
+
+        const payload = {
+            action: iconFetchAction,
+            nonce: ajaxNonce,
+            icons: normalizedKeys
+        };
+
+        const request = $.post(ajaxUrl, payload)
+            .then(response => {
+                if (!response || !response.success || typeof response.data !== 'object') {
+                    throw new Error('Invalid icon response');
+                }
+
+                Object.keys(response.data).forEach(iconKey => {
+                    const markup = response.data[iconKey];
+                    if (typeof markup === 'string') {
+                        iconCache[iconKey] = markup;
+                    }
+                });
+
+                return response.data;
+            })
+            .catch(error => {
+                logDebug('Icon fetch failed.', { keys: normalizedKeys, error });
+                return {};
+            })
+            .finally(() => {
+                delete pendingIconRequests[requestId];
+            });
+
+        pendingIconRequests[requestId] = request;
+        return request;
+    }
+
+    let iconPreviewRequestCounter = 0;
+
     function populateIconGrid() {
         const grid = $('#icon-grid');
         grid.empty();
 
-        Object.keys(availableIcons).forEach(iconName => {
-            const svgMarkup = availableIcons[iconName];
+        const keysToFetch = [];
 
-            if (typeof svgMarkup !== 'string' || svgMarkup.trim() === '') {
+        iconManifest.forEach(icon => {
+            if (!icon || typeof icon.key !== 'string' || icon.key === '') {
                 return;
             }
 
+            const iconName = icon.key;
+            const labelSource = typeof icon.label === 'string' && icon.label.trim() !== '' ? icon.label : iconName;
+            const labelText = labelSource;
+
             const $button = $('<button>', {
                 type: 'button',
-                'data-icon-name': iconName,
                 title: iconName
             });
 
-            $button.append(svgMarkup);
-            $button.append($('<span></span>').text(iconName));
+            $button.attr('data-icon-name', iconName);
+            $button.attr('data-icon-search', (iconName + ' ' + labelText).toLowerCase());
+
+            const $preview = $('<span>', {
+                class: 'icon-preview',
+                'aria-hidden': 'true'
+            });
+            const $label = $('<span>', {
+                class: 'icon-label'
+            }).text(labelText);
+
+            $button.append($preview);
+            $button.append($label);
             grid.append($button);
+
+            if (iconCache[iconName]) {
+                $preview.html(iconCache[iconName]);
+            } else {
+                keysToFetch.push(iconName);
+            }
         });
+
+        if (keysToFetch.length > 0) {
+            ensureIconsFetched(keysToFetch).then(() => {
+                grid.find('button').each(function() {
+                    const iconName = $(this).attr('data-icon-name');
+                    const markup = iconCache[iconName];
+                    if (markup) {
+                        $(this).find('.icon-preview').html(markup);
+                    }
+                });
+            });
+        }
     }
 
     function updateIconPreview(input, $preview) {
@@ -198,14 +331,34 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        const sanitizedKey = sanitizeIconKey(iconValue);
-        const iconMarkup = availableIcons[iconValue] || availableIcons[sanitizedKey];
+        const entry = getIconEntry(iconValue);
 
-        if (iconMarkup) {
-            $preview.html(iconMarkup);
-        } else {
+        if (!entry) {
             $preview.empty();
+            return;
         }
+
+        const resolvedKey = entry.key;
+        const requestId = ++iconPreviewRequestCounter;
+        $preview.data('iconRequestId', requestId);
+
+        if (iconCache[resolvedKey]) {
+            $preview.html(iconCache[resolvedKey]);
+            return;
+        }
+
+        ensureIconsFetched([resolvedKey]).then(() => {
+            if ($preview.data('iconRequestId') !== requestId) {
+                return;
+            }
+
+            const markup = iconCache[resolvedKey];
+            if (markup) {
+                $preview.html(markup);
+            } else {
+                $preview.empty();
+            }
+        });
     }
 
     $('body').on('click', '.choose-icon', function() { 
@@ -217,14 +370,15 @@ jQuery(document).ready(function($) {
     
     modal.on('click', '.modal-close, .modal-backdrop', () => modal.hide());
     $('#icon-grid').on('click', 'button', function() {
-        const iconName = $(this).data('icon-name');
+        const iconName = $(this).attr('data-icon-name');
         currentIconInput.val(iconName).trigger('change');
         modal.hide();
     });
     $('#icon-search').on('input', function() {
         const searchTerm = $(this).val().toLowerCase();
         $('#icon-grid button').each(function() {
-            $(this).toggle($(this).data('icon-name').includes(searchTerm));
+            const haystack = ($(this).attr('data-icon-search') || '').toLowerCase();
+            $(this).toggle(haystack.includes(searchTerm));
         });
     });
 
@@ -821,11 +975,9 @@ jQuery(document).ready(function($) {
     });
 
     // --- Builder pour les icônes sociales ---
-    const standardIcons = availableIcons;
-    
     function populateStandardIconsDropdown($select, selectedValue) {
         $select.empty();
-        
+
         // Ajouter les icônes standard
         const socialIcons = [
             'facebook_white', 'facebook_black',
@@ -839,30 +991,33 @@ jQuery(document).ready(function($) {
             'whatsapp_white', 'whatsapp_black',
             'telegram_white', 'telegram_black'
         ];
-        
+
         socialIcons.forEach(key => {
-            if (standardIcons[key]) {
-                const name = key.replace('_', ' (').replace('white', 'Blanc').replace('black', 'Noir') + ')';
-                const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+            const entry = getIconEntry(key);
+            if (entry) {
+                const labelSource = entry.label || key;
+                const capitalizedName = labelSource.charAt(0).toUpperCase() + labelSource.slice(1);
                 $select.append($('<option>', {
-                    value: key,
+                    value: entry.key,
                     text: capitalizedName,
-                    selected: key === selectedValue
+                    selected: entry.key === selectedValue
                 }));
             }
         });
-        
+
         // Ajouter les icônes personnalisées
-        Object.keys(standardIcons).forEach(key => {
-            if (key.startsWith('custom_')) {
-                const name = key.replace('custom_', '').replace(/_/g, ' ');
-                const capitalizedName = 'Personnalisé: ' + name.charAt(0).toUpperCase() + name.slice(1);
-                $select.append($('<option>', {
-                    value: key,
-                    text: capitalizedName,
-                    selected: key === selectedValue
-                }));
+        iconManifest.forEach(icon => {
+            if (!icon || !icon.is_custom || typeof icon.key !== 'string') {
+                return;
             }
+
+            const customLabel = icon.label || icon.key.replace('custom_', '').replace(/_/g, ' ');
+            const formatted = customLabel.charAt(0).toUpperCase() + customLabel.slice(1);
+            $select.append($('<option>', {
+                value: icon.key,
+                text: 'Personnalisé: ' + formatted,
+                selected: icon.key === selectedValue
+            }));
         });
     }
 

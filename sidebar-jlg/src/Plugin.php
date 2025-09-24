@@ -49,7 +49,7 @@ class Plugin
             $pluginFile,
             $version
         );
-        $this->ajax = new Endpoints($this->settings, $this->cache);
+        $this->ajax = new Endpoints($this->settings, $this->cache, $this->icons);
     }
 
     public function register(): void

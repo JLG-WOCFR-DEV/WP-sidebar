@@ -6,6 +6,43 @@ $allIcons = $allIcons ?? [];
 
 ob_start();
 ?>
+<?php
+if (!function_exists('sidebar_jlg_render_social_icons')) {
+    function sidebar_jlg_render_social_icons(array $socialIcons, array $allIcons, string $orientation): string
+    {
+        if (empty($socialIcons)) {
+            return '';
+        }
+
+        ob_start();
+        ?>
+        <div class="social-icons <?php echo esc_attr($orientation); ?>">
+            <?php foreach ($socialIcons as $social) :
+                if (empty($social['icon']) || empty($social['url']) || !isset($allIcons[$social['icon']])) {
+                    continue;
+                }
+
+                $iconParts = explode('_', $social['icon']);
+                $iconLabel = (isset($iconParts[0]) && $iconParts[0] !== '') ? $iconParts[0] : 'unknown';
+                $customLabel = '';
+
+                if (isset($social['label']) && is_string($social['label'])) {
+                    $customLabel = trim($social['label']);
+                }
+
+                $ariaLabel = $customLabel !== '' ? $customLabel : $iconLabel;
+                ?>
+                <a href="<?php echo esc_url($social['url']); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr($ariaLabel); ?>">
+                    <?php echo wp_kses_post($allIcons[$social['icon']]); ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        <?php
+
+        return trim((string) ob_get_clean());
+    }
+}
+?>
 <nav class="sidebar-navigation" role="navigation" aria-label="<?php esc_attr_e('Navigation principale', 'sidebar-jlg'); ?>">
     <ul class="sidebar-menu">
         <?php
@@ -55,30 +92,11 @@ ob_start();
         }
         
         if ($options['social_position'] === 'in-menu' && !empty($options['social_icons']) && is_array($options['social_icons'])) {
-            echo '<li class="menu-separator" aria-hidden="true"><hr></li>';
-            echo '<li class="social-icons-wrapper">';
-            if ( ! empty( $options['social_icons'] ) && is_array( $options['social_icons'] ) ) {
-                echo '<div class="social-icons ' . esc_attr($options['social_orientation']) . '">';
-                foreach($options['social_icons'] as $social) {
-                    if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($allIcons[$social['icon']]) ) {
-                        $icon_parts = explode('_', $social['icon']);
-                        $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
-                        $custom_label = '';
-
-                        if (isset($social['label']) && is_string($social['label'])) {
-                            $custom_label = trim($social['label']);
-                        }
-
-                        $aria_label = $custom_label !== '' ? $custom_label : $icon_label;
-
-                        echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($aria_label) . '">';
-                        echo wp_kses_post($allIcons[$social['icon']]);
-                        echo '</a>';
-                    }
-                }
-                echo '</div>';
+            $menuSocialIcons = sidebar_jlg_render_social_icons($options['social_icons'], $allIcons, $options['social_orientation']);
+            if ($menuSocialIcons !== '') {
+                echo '<li class="menu-separator" aria-hidden="true"><hr></li>';
+                echo '<li class="social-icons-wrapper">' . $menuSocialIcons . '</li>';
             }
-            echo '</li>';
         }
         ?>
     </ul>
@@ -86,29 +104,10 @@ ob_start();
 
 <?php
 if ($options['social_position'] === 'footer' && !empty($options['social_icons']) && is_array($options['social_icons'])) {
-    echo '<div class="sidebar-footer">';
-    if ( ! empty( $options['social_icons'] ) && is_array( $options['social_icons'] ) ) {
-        echo '<div class="social-icons ' . esc_attr($options['social_orientation']) . '">';
-        foreach($options['social_icons'] as $social) {
-            if ( ! empty( $social['icon'] ) && ! empty( $social['url'] ) && isset($allIcons[$social['icon']]) ) {
-                $icon_parts = explode('_', $social['icon']);
-                $icon_label = (isset($icon_parts[0]) && $icon_parts[0] !== '') ? $icon_parts[0] : 'unknown';
-                $custom_label = '';
-
-                if (isset($social['label']) && is_string($social['label'])) {
-                    $custom_label = trim($social['label']);
-                }
-
-                $aria_label = $custom_label !== '' ? $custom_label : $icon_label;
-
-                echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($aria_label) . '">';
-                echo wp_kses_post($allIcons[$social['icon']]);
-                echo '</a>';
-            }
-        }
-        echo '</div>';
+    $footerSocialIcons = sidebar_jlg_render_social_icons($options['social_icons'], $allIcons, $options['social_orientation']);
+    if ($footerSocialIcons !== '') {
+        echo '<div class="sidebar-footer">' . $footerSocialIcons . '</div>';
     }
-    echo '</div>';
 }
 
 $sidebar_content_html = ob_get_clean();
