@@ -84,19 +84,16 @@ class MenuPage
             true
         );
 
-        $options = get_option('sidebar_jlg_settings', $this->settings->getDefaultSettings());
-        if (!is_array($options)) {
-            $options = [];
-        }
-
         $defaults = $this->settings->getDefaultSettings();
+        $options = $this->settings->getOptionsWithRevalidation();
 
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('jlg_ajax_nonce'),
             'reset_nonce' => wp_create_nonce('jlg_reset_nonce'),
             'options' => wp_parse_args($options, $defaults),
-            'all_icons' => $this->icons->getAllIcons(),
+            'icons_manifest' => $this->icons->getIconManifest(),
+            'icon_fetch_action' => 'jlg_get_icon_svg',
         ]);
     }
 
@@ -104,12 +101,7 @@ class MenuPage
     {
         $colorPicker = $this->colorPicker;
         $defaults = $this->settings->getDefaultSettings();
-        $optionsFromDb = get_option('sidebar_jlg_settings');
-        if (!is_array($optionsFromDb)) {
-            $optionsFromDb = [];
-        }
-
-        $options = wp_parse_args($optionsFromDb, $defaults);
+        $options = $this->settings->getOptionsWithRevalidation();
         $allIcons = $this->icons->getAllIcons();
 
         require plugin_dir_path($this->pluginFile) . 'includes/admin-page.php';

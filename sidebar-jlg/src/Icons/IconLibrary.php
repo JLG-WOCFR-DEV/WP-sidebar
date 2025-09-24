@@ -28,6 +28,30 @@ class IconLibrary
         return $this->allIcons;
     }
 
+    public function getIconManifest(): array
+    {
+        $icons = $this->getAllIcons();
+        $manifest = [];
+
+        foreach ($icons as $key => $_svg) {
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+
+            $readable = str_replace(['_', '-'], ' ', $key);
+            $readable = trim($readable);
+            $label = $readable === '' ? $key : ucwords($readable);
+
+            $manifest[] = [
+                'key' => $key,
+                'label' => $label,
+                'is_custom' => strpos($key, 'custom_') === 0,
+            ];
+        }
+
+        return $manifest;
+    }
+
     public function getCustomIconSource(string $iconKey): ?array
     {
         $this->getAllIcons();
@@ -83,14 +107,20 @@ class IconLibrary
             return [];
         }
 
+        $baseUrl = $uploadDir['baseurl'] ?? '';
+        $baseUrl = is_string($baseUrl) ? $baseUrl : '';
+
+        $uploadsContext = $this->createUploadsContext($baseDir, $baseUrl);
+
+        if ($uploadsContext === null) {
+            return [];
+        }
+
         $iconsDir = trailingslashit($baseDir) . 'sidebar-jlg/icons/';
 
         if (!is_dir($iconsDir) || !is_readable($iconsDir)) {
             return [];
         }
-
-        $baseUrl = $uploadDir['baseurl'] ?? '';
-        $baseUrl = is_string($baseUrl) ? $baseUrl : '';
 
         $maxFileSize = 200 * 1024;
         $files = scandir($iconsDir);
@@ -136,7 +166,7 @@ class IconLibrary
                 continue;
             }
 
-            $validationResult = $this->validateSanitizedSvg($sanitizedContents, $baseUrl);
+            $validationResult = $this->validateSanitizedSvg($sanitizedContents, $uploadsContext);
             if ($validationResult === null) {
                 $this->rejectedCustomIcons[] = $file;
                 continue;
@@ -176,6 +206,43 @@ class IconLibrary
         }
 
         return $customIcons;
+    }
+
+    private function createUploadsContext(string $baseDir, string $baseUrl): ?array
+    {
+        $normalizedUploadsDir = $this->normalizePathValue($baseDir);
+
+        if ($normalizedUploadsDir === '') {
+            return null;
+        }
+
+        $uploadsUrlParts = function_exists('wp_parse_url') ? wp_parse_url($baseUrl) : parse_url($baseUrl);
+
+        if (!is_array($uploadsUrlParts)) {
+            return null;
+        }
+
+        $uploadsScheme = isset($uploadsUrlParts['scheme']) ? strtolower((string) $uploadsUrlParts['scheme']) : '';
+        $uploadsHost = isset($uploadsUrlParts['host']) ? strtolower((string) $uploadsUrlParts['host']) : '';
+
+        if ($uploadsScheme === '' || $uploadsHost === '') {
+            return null;
+        }
+
+        $uploadsPort = isset($uploadsUrlParts['port']) ? (int) $uploadsUrlParts['port'] : null;
+        $basePath = isset($uploadsUrlParts['path']) ? (string) $uploadsUrlParts['path'] : '';
+        $normalizedBasePath = $this->normalizePathValue($basePath);
+        $normalizedBasePath = rtrim($normalizedBasePath, '/');
+
+        return [
+            'base_url' => $baseUrl,
+            'normalized_basedir' => $normalizedUploadsDir,
+            'url_parts' => $uploadsUrlParts,
+            'scheme' => $uploadsScheme,
+            'host' => $uploadsHost,
+            'port' => $uploadsPort,
+            'normalized_base_path' => $normalizedBasePath,
+        ];
     }
 
     private function getAllowedSvgElements(): array
@@ -306,7 +373,10 @@ class IconLibrary
      *     modified?: bool
      * }|null
      */
-    private function validateSanitizedSvg(string $sanitizedSvg, string $uploadsBaseUrl): ?array
+    /**
+     * @param array{base_url: string, normalized_basedir: string, url_parts: array, scheme: string, host: string, port: ?int, normalized_base_path: string} $uploadsContext
+     */
+    private function validateSanitizedSvg(string $sanitizedSvg, array $uploadsContext): ?array
     {
         $sanitizedSvg = trim($sanitizedSvg);
 
@@ -342,7 +412,7 @@ class IconLibrary
                     continue;
                 }
 
-                if (!$this->isSafeUseReference($attributeValue, $uploadsBaseUrl)) {
+                if (!$this->isSafeUseReference($attributeValue, $uploadsContext)) {
                     return null;
                 }
             }
@@ -371,7 +441,10 @@ class IconLibrary
      * Vérifie qu'une valeur d'attribut href/xlink:href de balise <use> est locale ou provient
      * de la médiathèque WordPress.
      */
-    private function isSafeUseReference(string $value, string $uploadsBaseUrl): bool
+    /**
+     * @param array{base_url: string, normalized_basedir: string, url_parts: array, scheme: string, host: string, port: ?int, normalized_base_path: string} $uploadsContext
+     */
+    private function isSafeUseReference(string $value, array $uploadsContext): bool
     {
         if ($value === '') {
             return true;
@@ -381,37 +454,24 @@ class IconLibrary
             return (bool) preg_match('/^#[A-Za-z0-9_][A-Za-z0-9:._-]*$/', $value);
         }
 
-        $uploadsInfo = wp_upload_dir();
-        $uploadsBaseDir = isset($uploadsInfo['basedir']) ? (string) $uploadsInfo['basedir'] : '';
-        $uploadsBaseUrlValue = $uploadsBaseUrl !== ''
-            ? $uploadsBaseUrl
-            : (isset($uploadsInfo['baseurl']) ? (string) $uploadsInfo['baseurl'] : '');
+        $uploadsBaseUrlValue = isset($uploadsContext['base_url']) ? (string) $uploadsContext['base_url'] : '';
+        $normalizedUploadsDir = isset($uploadsContext['normalized_basedir']) ? (string) $uploadsContext['normalized_basedir'] : '';
+        $uploadsUrlParts = $uploadsContext['url_parts'] ?? null;
+        $uploadsScheme = isset($uploadsContext['scheme']) ? (string) $uploadsContext['scheme'] : '';
+        $uploadsHost = isset($uploadsContext['host']) ? (string) $uploadsContext['host'] : '';
+        $uploadsPort = $uploadsContext['port'] ?? null;
+        $normalizedBasePath = isset($uploadsContext['normalized_base_path']) ? (string) $uploadsContext['normalized_base_path'] : '';
 
-        if ($uploadsBaseDir === '' || $uploadsBaseUrlValue === '') {
+        if ($uploadsBaseUrlValue === '' || $normalizedUploadsDir === '' || !is_array($uploadsUrlParts) || $uploadsScheme === '' || $uploadsHost === '') {
             return false;
         }
 
-        $normalizedUploadsDir = wp_normalize_path($uploadsBaseDir);
-
-        if ($normalizedUploadsDir === '') {
-            return false;
-        }
-
-        $uploadsUrlParts = wp_parse_url($uploadsBaseUrlValue);
-        $referenceParts = wp_parse_url($value);
+        $referenceParts = function_exists('wp_parse_url') ? wp_parse_url($value) : parse_url($value);
 
         if (!is_array($uploadsUrlParts) || !is_array($referenceParts)) {
             return false;
         }
 
-        $uploadsScheme = isset($uploadsUrlParts['scheme']) ? strtolower((string) $uploadsUrlParts['scheme']) : '';
-        $uploadsHost = isset($uploadsUrlParts['host']) ? strtolower((string) $uploadsUrlParts['host']) : '';
-
-        if ($uploadsScheme === '' || $uploadsHost === '') {
-            return false;
-        }
-
-        $uploadsPort = isset($uploadsUrlParts['port']) ? (int) $uploadsUrlParts['port'] : null;
         $referenceScheme = isset($referenceParts['scheme']) ? strtolower((string) $referenceParts['scheme']) : '';
         $referenceHost = isset($referenceParts['host']) ? strtolower((string) $referenceParts['host']) : '';
         $referencePort = isset($referenceParts['port']) ? (int) $referenceParts['port'] : null;
@@ -426,10 +486,6 @@ class IconLibrary
             }
 
             if ($referencePath === '' || strpos($referencePath, '/') !== 0) {
-                $basePath = isset($uploadsUrlParts['path']) ? (string) $uploadsUrlParts['path'] : '';
-                $normalizedBasePath = wp_normalize_path($basePath);
-                $normalizedBasePath = rtrim($normalizedBasePath, '/');
-
                 if ($normalizedBasePath === '') {
                     $referencePath = '/' . ltrim($referencePath, '/');
                 } else {
@@ -469,10 +525,6 @@ class IconLibrary
             return false;
         }
 
-        $basePath = isset($uploadsUrlParts['path']) ? (string) $uploadsUrlParts['path'] : '';
-        $normalizedBasePath = wp_normalize_path($basePath);
-        $normalizedBasePath = rtrim($normalizedBasePath, '/');
-
         if ($referencePath === '') {
             return false;
         }
@@ -483,7 +535,7 @@ class IconLibrary
             return false;
         }
 
-        $normalizedReferencePath = wp_normalize_path($decodedReferencePath);
+        $normalizedReferencePath = $this->normalizePathValue($decodedReferencePath);
         $expectedPrefix = $normalizedBasePath === '' ? '/' : $normalizedBasePath . '/';
 
         if (strpos($normalizedReferencePath, $expectedPrefix) !== 0) {
@@ -498,8 +550,24 @@ class IconLibrary
         }
 
         $normalizedUploadsDirWithSlash = trailingslashit($normalizedUploadsDir);
-        $resolvedPath = wp_normalize_path($normalizedUploadsDirWithSlash . $relativePath);
+        $resolvedPath = $this->normalizePathValue($normalizedUploadsDirWithSlash . $relativePath);
 
         return strpos($resolvedPath, $normalizedUploadsDirWithSlash) === 0;
+    }
+
+    private function normalizePathValue(string $path): string
+    {
+        if (function_exists('wp_normalize_path')) {
+            return (string) wp_normalize_path($path);
+        }
+
+        if ($path === '') {
+            return '';
+        }
+
+        $normalized = str_replace('\\', '/', $path);
+        $normalized = preg_replace('#/+#', '/', $normalized);
+
+        return is_string($normalized) ? $normalized : '';
     }
 }

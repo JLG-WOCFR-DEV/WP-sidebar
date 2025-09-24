@@ -3,6 +3,7 @@
 namespace JLG\Sidebar\Ajax;
 
 use JLG\Sidebar\Cache\MenuCache;
+use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
 use function __;
 
@@ -10,11 +11,13 @@ class Endpoints
 {
     private SettingsRepository $settings;
     private MenuCache $cache;
+    private IconLibrary $icons;
 
-    public function __construct(SettingsRepository $settings, MenuCache $cache)
+    public function __construct(SettingsRepository $settings, MenuCache $cache, IconLibrary $icons)
     {
         $this->settings = $settings;
         $this->cache = $cache;
+        $this->icons = $icons;
     }
 
     public function registerHooks(): void
@@ -22,6 +25,7 @@ class Endpoints
         add_action('wp_ajax_jlg_get_posts', [$this, 'ajax_get_posts']);
         add_action('wp_ajax_jlg_get_categories', [$this, 'ajax_get_categories']);
         add_action('wp_ajax_jlg_reset_settings', [$this, 'ajax_reset_settings']);
+        add_action('wp_ajax_jlg_get_icon_svg', [$this, 'ajax_get_icon_svg']);
     }
 
     /**
@@ -200,6 +204,65 @@ class Endpoints
         $this->settings->deleteOptions();
         $this->cache->clear();
         wp_send_json_success(__('Réglages réinitialisés.', 'sidebar-jlg'));
+    }
+
+    public function ajax_get_icon_svg(): void
+    {
+        $capability = $this->get_ajax_capability();
+
+        if (!current_user_can($capability)) {
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
+        }
+
+        check_ajax_referer('jlg_ajax_nonce', 'nonce');
+
+        $requested = [];
+
+        if (isset($_POST['icons'])) {
+            $rawIcons = wp_unslash($_POST['icons']);
+            if (is_array($rawIcons)) {
+                $requested = array_merge($requested, $rawIcons);
+            } elseif (is_string($rawIcons)) {
+                $requested = array_merge($requested, explode(',', $rawIcons));
+            }
+        }
+
+        if (isset($_POST['icon'])) {
+            $requested[] = wp_unslash($_POST['icon']);
+        }
+
+        $sanitized = array_unique(array_filter(array_map(static function ($value) {
+            if (!is_string($value)) {
+                return '';
+            }
+
+            return sanitize_key($value);
+        }, $requested)));
+
+        if (empty($sanitized)) {
+            wp_send_json_error(__('Aucune icône demandée.', 'sidebar-jlg'));
+        }
+
+        $available = $this->icons->getAllIcons();
+        $response = [];
+
+        foreach ($sanitized as $iconKey) {
+            if (!isset($available[$iconKey])) {
+                continue;
+            }
+
+            $markup = $available[$iconKey];
+
+            if (is_string($markup) && $markup !== '') {
+                $response[$iconKey] = $markup;
+            }
+        }
+
+        if (empty($response)) {
+            wp_send_json_error(__('Icône introuvable.', 'sidebar-jlg'));
+        }
+
+        wp_send_json_success($response);
     }
 
     private function get_ajax_capability(): string
