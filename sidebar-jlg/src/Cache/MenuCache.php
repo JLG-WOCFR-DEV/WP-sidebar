@@ -4,6 +4,7 @@ namespace JLG\Sidebar\Cache;
 
 class MenuCache
 {
+    private const CACHE_TTL = 86400;
     private string $optionName = 'sidebar_jlg_cached_locales';
 
     public function getLocaleForCache(): string
@@ -37,7 +38,7 @@ class MenuCache
 
     public function set(string $locale, string $html): void
     {
-        set_transient($this->getTransientKey($locale), $html);
+        set_transient($this->getTransientKey($locale), $html, self::CACHE_TTL);
         $this->rememberLocale($locale);
     }
 
@@ -59,6 +60,11 @@ class MenuCache
         if (!empty($cachedLocales)) {
             delete_option($this->optionName);
         }
+    }
+
+    public function forgetLocaleIndex(): void
+    {
+        delete_option($this->optionName);
     }
 
     public function rememberLocale(string $locale): void

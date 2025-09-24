@@ -39,6 +39,8 @@ foreach ( $cached_locales as $locale ) {
 //    ainsi que le transient générique existant.
 delete_option( 'sidebar_jlg_cached_locales' );
 delete_transient( 'sidebar_jlg_full_html' );
+delete_option( 'sidebar_jlg_custom_icon_index' );
+delete_transient( 'sidebar_jlg_custom_icons_cache' );
 
 // Note pour l'avenir : 
 // Si le plugin devait créer des tables de base de données personnalisées ou d'autres options,

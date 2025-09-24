@@ -4,6 +4,10 @@ namespace JLG\Sidebar\Icons;
 
 class IconLibrary
 {
+    private const CUSTOM_ICON_CACHE_KEY = 'sidebar_jlg_custom_icons_cache';
+    private const CUSTOM_ICON_INDEX_OPTION = 'sidebar_jlg_custom_icon_index';
+    private const CUSTOM_ICON_CACHE_TTL = 86400;
+
     private ?array $allIcons = null;
     private array $rejectedCustomIcons = [];
     private array $customIconSources = [];
@@ -119,18 +123,21 @@ class IconLibrary
         $iconsDir = trailingslashit($baseDir) . 'sidebar-jlg/icons/';
 
         if (!is_dir($iconsDir) || !is_readable($iconsDir)) {
+            $this->resetCustomIconCacheArtifacts();
+
             return [];
         }
 
-        $maxFileSize = 200 * 1024;
         $files = scandir($iconsDir);
 
         if (!is_array($files)) {
+            $this->resetCustomIconCacheArtifacts();
+
             return [];
         }
 
-        $allowedMimes = ['svg' => 'image/svg+xml'];
-        $customIcons = [];
+        $currentIndex = [];
+        $candidateFiles = [];
 
         foreach ($files as $file) {
             if ($file === '.' || $file === '..' || strpos($file, '.') === 0) {
@@ -142,7 +149,41 @@ class IconLibrary
                 continue;
             }
 
-            $fileType = wp_check_filetype($filePath, $allowedMimes);
+            $mtime = filemtime($filePath);
+            $size = filesize($filePath);
+
+            $currentIndex[$file] = [
+                'mtime' => $mtime === false ? 0 : (int) $mtime,
+                'size' => $size === false ? 0 : (int) $size,
+            ];
+
+            $candidateFiles[$file] = $filePath;
+        }
+
+        ksort($currentIndex);
+        ksort($candidateFiles);
+
+        $storedIndex = get_option(self::CUSTOM_ICON_INDEX_OPTION, []);
+        if (is_array($storedIndex) && $storedIndex === $currentIndex) {
+            $cached = get_transient(self::CUSTOM_ICON_CACHE_KEY);
+            if (is_array($cached)
+                && isset($cached['icons'], $cached['sources'])
+                && is_array($cached['icons'])
+                && is_array($cached['sources'])
+            ) {
+                $this->customIconSources = $cached['sources'];
+                $this->rejectedCustomIcons = is_array($cached['rejected'] ?? null) ? $cached['rejected'] : [];
+
+                return $cached['icons'];
+            }
+        }
+
+        $maxFileSize = 200 * 1024;
+        $allowedMimes = ['svg' => 'image/svg+xml'];
+        $customIcons = [];
+
+        foreach ($candidateFiles as $file => $filePath) {
+            $fileType = wp_check_filetype_and_ext($filePath, $file, $allowedMimes);
             if (empty($fileType['ext']) || $fileType['ext'] !== 'svg' || empty($fileType['type'])) {
                 $this->rejectedCustomIcons[] = $file;
                 continue;
@@ -204,6 +245,15 @@ class IconLibrary
 
             $customIcons[$iconName] = $sanitizedContents;
         }
+
+        $cachePayload = [
+            'icons' => $customIcons,
+            'sources' => $this->customIconSources,
+            'rejected' => array_values(array_unique($this->rejectedCustomIcons)),
+        ];
+
+        set_transient(self::CUSTOM_ICON_CACHE_KEY, $cachePayload, self::CUSTOM_ICON_CACHE_TTL);
+        update_option(self::CUSTOM_ICON_INDEX_OPTION, $currentIndex, 'no');
 
         return $customIcons;
     }
@@ -359,6 +409,12 @@ class IconLibrary
         $content = preg_replace('/\s+/', '', $content ?? '');
 
         return trim($content ?? '');
+    }
+
+    private function resetCustomIconCacheArtifacts(): void
+    {
+        delete_transient(self::CUSTOM_ICON_CACHE_KEY);
+        delete_option(self::CUSTOM_ICON_INDEX_OPTION);
     }
 
     /**

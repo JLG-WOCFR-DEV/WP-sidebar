@@ -591,15 +591,43 @@ if (!function_exists('wp_check_filetype')) {
             return $result;
         }
 
-        $extension = pathinfo((string) $file, PATHINFO_EXTENSION);
+        $extension = strtolower(pathinfo((string) $file, PATHINFO_EXTENSION));
 
         if ($extension === '') {
             return ['ext' => '', 'type' => ''];
         }
 
+        if (isset($allowed[$extension])) {
+            return ['ext' => $extension, 'type' => $allowed[$extension]];
+        }
+
+        return ['ext' => '', 'type' => ''];
+    }
+}
+
+if (!function_exists('wp_check_filetype_and_ext')) {
+    function wp_check_filetype_and_ext($file, $filename, $mimes = null)
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        $checked = wp_check_filetype($filename, is_array($mimes) ? $mimes : []);
+
+        if (!isset($checked['ext'])) {
+            $checked['ext'] = '';
+        }
+
+        if (!isset($checked['type'])) {
+            $checked['type'] = '';
+        }
+
         return [
-            'ext'  => $extension,
-            'type' => $allowed[$extension] ?? 'image/' . $extension,
+            'ext' => $checked['ext'],
+            'type' => $checked['type'],
+            'proper_filename' => false,
         ];
     }
 }

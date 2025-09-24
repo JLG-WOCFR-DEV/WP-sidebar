@@ -57,7 +57,13 @@ class SidebarRenderer
             true
         );
 
-        wp_localize_script('sidebar-jlg-public-js', 'sidebarSettings', $options);
+        $localizedOptions = [
+            'animation_type' => $options['animation_type'] ?? 'slide-left',
+            'close_on_link_click' => $options['close_on_link_click'] ?? '',
+            'debug_mode' => (string) ($options['debug_mode'] ?? '0'),
+        ];
+
+        wp_localize_script('sidebar-jlg-public-js', 'sidebarSettings', $localizedOptions);
     }
 
     public function render(): void
@@ -84,6 +90,7 @@ class SidebarRenderer
             $html = $this->cache->get($currentLocale);
         } else {
             $this->cache->delete($currentLocale);
+            $this->cache->forgetLocaleIndex();
         }
 
         if (!$cacheEnabled || false === $html) {
