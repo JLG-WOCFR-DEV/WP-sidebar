@@ -85,11 +85,17 @@ class MenuPage
         );
 
         $options = get_option('sidebar_jlg_settings', $this->settings->getDefaultSettings());
+        if (!is_array($options)) {
+            $options = [];
+        }
+
+        $defaults = $this->settings->getDefaultSettings();
+
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('jlg_ajax_nonce'),
             'reset_nonce' => wp_create_nonce('jlg_reset_nonce'),
-            'options' => wp_parse_args($options, $this->settings->getDefaultSettings()),
+            'options' => wp_parse_args($options, $defaults),
             'all_icons' => $this->icons->getAllIcons(),
         ]);
     }
@@ -99,6 +105,10 @@ class MenuPage
         $colorPicker = $this->colorPicker;
         $defaults = $this->settings->getDefaultSettings();
         $optionsFromDb = get_option('sidebar_jlg_settings');
+        if (!is_array($optionsFromDb)) {
+            $optionsFromDb = [];
+        }
+
         $options = wp_parse_args($optionsFromDb, $defaults);
         $allIcons = $this->icons->getAllIcons();
 

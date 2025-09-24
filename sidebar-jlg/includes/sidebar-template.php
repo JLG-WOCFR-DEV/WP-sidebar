@@ -41,7 +41,7 @@ ob_start();
                     if ( ! empty( $item['icon_type'] ) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL) ) {
                         echo '<span class="menu-icon svg-icon"><img src="' . esc_url( $item['icon'] ) . '" alt=""></span>';
                     } elseif ( isset( $allIcons[ $item['icon'] ] ) ) {
-                        $icon_markup = $allIcons[ $item['icon'] ];
+                        $icon_markup = wp_kses_post( $allIcons[ $item['icon'] ] );
 
                         if ( strpos( $item['icon'], 'custom_' ) === 0 ) {
                             echo '<span class="menu-icon svg-icon">' . $icon_markup . '</span>';
@@ -72,7 +72,7 @@ ob_start();
                         $aria_label = $custom_label !== '' ? $custom_label : $icon_label;
 
                         echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($aria_label) . '">';
-                        echo $allIcons[$social['icon']];
+                        echo wp_kses_post($allIcons[$social['icon']]);
                         echo '</a>';
                     }
                 }
@@ -102,7 +102,7 @@ if ($options['social_position'] === 'footer' && !empty($options['social_icons'])
                 $aria_label = $custom_label !== '' ? $custom_label : $icon_label;
 
                 echo '<a href="' . esc_url($social['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr($aria_label) . '">';
-                echo $allIcons[$social['icon']];
+                echo wp_kses_post($allIcons[$social['icon']]);
                 echo '</a>';
             }
         }
@@ -202,7 +202,9 @@ $dynamic_styles .= "}";
             $close_button_markup = '<span class="close-sidebar-fallback" aria-hidden="true">&times;</span>';
 
             if (isset($allIcons['close_white']) && $allIcons['close_white'] !== '') {
-                $close_button_markup = $allIcons['close_white'];
+                $close_button_markup = wp_kses_post($allIcons['close_white']);
+            } else {
+                $close_button_markup = wp_kses_post($close_button_markup);
             }
             ?>
             <button class="close-sidebar-btn" type="button" aria-label="<?php esc_attr_e('Fermer le menu', 'sidebar-jlg'); ?>">

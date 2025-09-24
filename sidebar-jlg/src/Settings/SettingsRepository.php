@@ -34,11 +34,14 @@ class SettingsRepository
 
     private DefaultSettings $defaults;
     private IconLibrary $icons;
+    private ?array $optionsCache = null;
+    private ?array $optionsCacheRaw = null;
 
     public function __construct(DefaultSettings $defaults, IconLibrary $icons)
     {
         $this->defaults = $defaults;
         $this->icons = $icons;
+        $this->registerCacheInvalidationHooks();
     }
 
     public function getDefaultSettings(): array
@@ -48,15 +51,22 @@ class SettingsRepository
 
     public function getOptions(): array
     {
-        $optionsFromDb = get_option('sidebar_jlg_settings', []);
+        $optionsFromDb = $this->getStoredOptions();
+        if ($this->optionsCache !== null && $this->optionsCacheRaw === $optionsFromDb) {
+            return $this->optionsCache;
+        }
+
         $options = wp_parse_args($optionsFromDb, $this->getDefaultSettings());
+
+        $this->optionsCacheRaw = $optionsFromDb;
+        $this->optionsCache = $options;
 
         return $options;
     }
 
     public function getOptionsWithRevalidation(): array
     {
-        $optionsFromDb = get_option('sidebar_jlg_settings', []);
+        $optionsFromDb = $this->getStoredOptions();
         $defaults = $this->getDefaultSettings();
         $options = wp_parse_args($optionsFromDb, $defaults);
 
@@ -65,17 +75,23 @@ class SettingsRepository
             update_option('sidebar_jlg_settings', $revalidated);
         }
 
-        return wp_parse_args($revalidated, $defaults);
+        $finalOptions = wp_parse_args($revalidated, $defaults);
+        $this->optionsCacheRaw = $revalidated;
+        $this->optionsCache = $finalOptions;
+
+        return $finalOptions;
     }
 
     public function saveOptions(array $options): void
     {
         update_option('sidebar_jlg_settings', $options);
+        $this->invalidateCache();
     }
 
     public function deleteOptions(): void
     {
         delete_option('sidebar_jlg_settings');
+        $this->invalidateCache();
     }
 
     public function revalidateStoredOptions(): void
@@ -122,6 +138,7 @@ class SettingsRepository
 
         if ($revalidated !== $merged) {
             update_option('sidebar_jlg_settings', $revalidated);
+            $this->invalidateCache();
         }
     }
 
@@ -200,6 +217,33 @@ class SettingsRepository
         }
 
         return $options;
+    }
+
+    private function getStoredOptions(): array
+    {
+        $optionsFromDb = get_option('sidebar_jlg_settings', []);
+
+        if (!is_array($optionsFromDb)) {
+            return [];
+        }
+
+        return $optionsFromDb;
+    }
+
+    public function invalidateCache(): void
+    {
+        $this->optionsCache = null;
+        $this->optionsCacheRaw = null;
+    }
+
+    private function registerCacheInvalidationHooks(): void
+    {
+        if (!function_exists('add_action')) {
+            return;
+        }
+
+        add_action('update_option_sidebar_jlg_settings', [$this, 'invalidateCache'], 0, 0);
+        add_action('delete_option_sidebar_jlg_settings', [$this, 'invalidateCache'], 0, 0);
     }
 
 }
