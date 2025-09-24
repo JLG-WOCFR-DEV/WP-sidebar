@@ -457,7 +457,17 @@ jQuery(document).ready(function($) {
         return jqxhr;
     }
 
-    function populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action, statusElement) {
+    function populateSelectOptions(
+        $selectElement,
+        type,
+        response,
+        normalizedValue,
+        createCurrentOption,
+        action,
+        statusElement,
+        previousOptions = [],
+        previousValue = ''
+    ) {
         if (!$selectElement.closest('body').length) {
             return;
         }
@@ -503,8 +513,70 @@ jQuery(document).ready(function($) {
             }
         } else {
             logDebug(`Failed to fetch data for ${action}.`);
+            const hasPreviousOptions = Array.isArray(previousOptions) && previousOptions.length > 0;
+
             $selectElement.empty();
 
+            if (hasPreviousOptions) {
+                previousOptions.forEach(optionClone => {
+                    if (optionClone && optionClone.length) {
+                        $selectElement.append(optionClone);
+                    }
+                });
+
+                if (previousValue !== undefined && previousValue !== null && previousValue !== '') {
+                    $selectElement.val(previousValue);
+                }
+            } else {
+                const currentOption = createCurrentOption();
+                if (currentOption) {
+                    $selectElement.append(currentOption);
+                }
+
+                const errorOption = document.createElement('option');
+                errorOption.value = '';
+                errorOption.textContent = 'Erreur de chargement';
+                errorOption.disabled = true;
+                $selectElement.append(errorOption);
+            }
+
+            if (statusElement) {
+                statusElement.text('Erreur de chargement. Vérifiez votre connexion puis réessayez.');
+            }
+        }
+
+        $selectElement.prop('disabled', false);
+    }
+
+    function handleAjaxFailure(
+        $selectElement,
+        createCurrentOption,
+        action,
+        statusElement,
+        previousOptions = [],
+        previousValue = ''
+    ) {
+        logDebug(`AJAX request failed for ${action}.`);
+
+        if (!$selectElement.closest('body').length) {
+            return;
+        }
+
+        const hasPreviousOptions = Array.isArray(previousOptions) && previousOptions.length > 0;
+
+        $selectElement.empty();
+
+        if (hasPreviousOptions) {
+            previousOptions.forEach(optionClone => {
+                if (optionClone && optionClone.length) {
+                    $selectElement.append(optionClone);
+                }
+            });
+
+            if (previousValue !== undefined && previousValue !== null && previousValue !== '') {
+                $selectElement.val(previousValue);
+            }
+        } else {
             const currentOption = createCurrentOption();
             if (currentOption) {
                 $selectElement.append(currentOption);
@@ -515,37 +587,10 @@ jQuery(document).ready(function($) {
             errorOption.textContent = 'Erreur de chargement';
             errorOption.disabled = true;
             $selectElement.append(errorOption);
-
-            if (statusElement) {
-                statusElement.text('Erreur de chargement');
-            }
         }
-
-        $selectElement.prop('disabled', false);
-    }
-
-    function handleAjaxFailure($selectElement, createCurrentOption, action, statusElement) {
-        logDebug(`AJAX request failed for ${action}.`);
-
-        if (!$selectElement.closest('body').length) {
-            return;
-        }
-
-        $selectElement.empty();
-
-        const currentOption = createCurrentOption();
-        if (currentOption) {
-            $selectElement.append(currentOption);
-        }
-
-        const errorOption = document.createElement('option');
-        errorOption.value = '';
-        errorOption.textContent = 'Erreur de chargement';
-        errorOption.disabled = true;
-        $selectElement.append(errorOption);
 
         if (statusElement) {
-            statusElement.text('Erreur de chargement');
+            statusElement.text('Erreur de chargement. Vérifiez votre connexion puis réessayez.');
         }
 
         $selectElement.prop('disabled', false);
@@ -641,6 +686,7 @@ jQuery(document).ready(function($) {
             loadingOption.value = '';
             loadingOption.textContent = 'Chargement...';
             loadingOption.disabled = true;
+            loadingOption.dataset.loadingOption = '1';
             if (!initialCurrentOption) {
                 loadingOption.selected = true;
             }
@@ -684,12 +730,34 @@ jQuery(document).ready(function($) {
                 $selectElement.data('current-search', requestData.search);
                 searchInput.data('current-page', page);
 
+                const previousOptions = $selectElement.children().not('[data-loading-option="1"]').map(function() {
+                    return $(this).clone();
+                }).get();
+                const previousValue = $selectElement.val();
+
                 requestAjaxData(action, requestData)
                     .done(function(response) {
-                        populateSelectOptions($selectElement, type, response, normalizedValue, createCurrentOption, action, statusElement);
+                        populateSelectOptions(
+                            $selectElement,
+                            type,
+                            response,
+                            normalizedValue,
+                            createCurrentOption,
+                            action,
+                            statusElement,
+                            previousOptions,
+                            previousValue
+                        );
                     })
                     .fail(function() {
-                        handleAjaxFailure($selectElement, createCurrentOption, action, statusElement);
+                        handleAjaxFailure(
+                            $selectElement,
+                            createCurrentOption,
+                            action,
+                            statusElement,
+                            previousOptions,
+                            previousValue
+                        );
                     })
                     .always(function() {
                         if (statusElement.text() === 'Chargement...') {
