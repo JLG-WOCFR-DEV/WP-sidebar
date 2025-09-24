@@ -348,9 +348,23 @@ class IconLibrary
             }
         }
 
-        return [
-            'svg' => $sanitizedSvg,
+        $exportedSvg = $dom->saveXML($dom->documentElement);
+
+        if (!is_string($exportedSvg)) {
+            return null;
+        }
+
+        $exportedSvg = trim($exportedSvg);
+
+        $result = [
+            'svg' => $exportedSvg,
         ];
+
+        if ($this->normalizeSvgContent($sanitizedSvg) !== $this->normalizeSvgContent($exportedSvg)) {
+            $result['modified'] = true;
+        }
+
+        return $result;
     }
 
     /**

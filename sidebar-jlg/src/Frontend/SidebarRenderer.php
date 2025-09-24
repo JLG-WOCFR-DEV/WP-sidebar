@@ -70,7 +70,7 @@ class SidebarRenderer
         $currentLocale = $this->cache->getLocaleForCache();
         $transientKey = $this->cache->getTransientKey($currentLocale);
 
-        $cacheEnabled = \apply_filters(
+        $cacheEnabled = (bool) \apply_filters(
             'sidebar_jlg_cache_enabled',
             !$this->is_sidebar_output_dynamic($options),
             $options,
