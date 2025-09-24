@@ -406,19 +406,45 @@ class IconLibrary
 
         $uploadsScheme = isset($uploadsUrlParts['scheme']) ? strtolower((string) $uploadsUrlParts['scheme']) : '';
         $uploadsHost = isset($uploadsUrlParts['host']) ? strtolower((string) $uploadsUrlParts['host']) : '';
-        $referenceScheme = isset($referenceParts['scheme']) ? strtolower((string) $referenceParts['scheme']) : '';
-        $referenceHost = isset($referenceParts['host']) ? strtolower((string) $referenceParts['host']) : '';
 
-        if ($uploadsScheme === '' || $uploadsHost === '' || $referenceScheme === '' || $referenceHost === '') {
-            return false;
-        }
-
-        if ($uploadsScheme !== $referenceScheme || $uploadsHost !== $referenceHost) {
+        if ($uploadsScheme === '' || $uploadsHost === '') {
             return false;
         }
 
         $uploadsPort = isset($uploadsUrlParts['port']) ? (int) $uploadsUrlParts['port'] : null;
+        $referenceScheme = isset($referenceParts['scheme']) ? strtolower((string) $referenceParts['scheme']) : '';
+        $referenceHost = isset($referenceParts['host']) ? strtolower((string) $referenceParts['host']) : '';
         $referencePort = isset($referenceParts['port']) ? (int) $referenceParts['port'] : null;
+        $referencePath = isset($referenceParts['path']) ? (string) $referenceParts['path'] : '';
+
+        if ($referenceScheme === '' && $referenceHost === '') {
+            $referenceScheme = $uploadsScheme;
+            $referenceHost = $uploadsHost;
+
+            if (!array_key_exists('port', $referenceParts)) {
+                $referencePort = $uploadsPort;
+            }
+
+            if ($referencePath === '' || strpos($referencePath, '/') !== 0) {
+                $basePath = isset($uploadsUrlParts['path']) ? (string) $uploadsUrlParts['path'] : '';
+                $normalizedBasePath = wp_normalize_path($basePath);
+                $normalizedBasePath = rtrim($normalizedBasePath, '/');
+
+                if ($normalizedBasePath === '') {
+                    $referencePath = '/' . ltrim($referencePath, '/');
+                } else {
+                    $referencePath = $normalizedBasePath . '/' . ltrim($referencePath, '/');
+                }
+            }
+        } else {
+            if ($referenceScheme === '' || $referenceHost === '') {
+                return false;
+            }
+
+            if ($uploadsScheme !== $referenceScheme || $uploadsHost !== $referenceHost) {
+                return false;
+            }
+        }
 
         $normalizePort = static function (?int $port, string $scheme): ?int {
             if ($port !== null) {
@@ -446,8 +472,6 @@ class IconLibrary
         $basePath = isset($uploadsUrlParts['path']) ? (string) $uploadsUrlParts['path'] : '';
         $normalizedBasePath = wp_normalize_path($basePath);
         $normalizedBasePath = rtrim($normalizedBasePath, '/');
-
-        $referencePath = isset($referenceParts['path']) ? (string) $referenceParts['path'] : '';
 
         if ($referencePath === '') {
             return false;
