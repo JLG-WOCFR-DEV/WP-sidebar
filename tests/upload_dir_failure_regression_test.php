@@ -53,6 +53,10 @@ try {
 
 assertTrue($activationException === null, 'Activation callback completes without throwing');
 
+$transientMessage = get_transient('sidebar_jlg_activation_error');
+assertTrue(is_string($transientMessage) && $transientMessage !== '', 'Activation failure message is stored in a transient');
+assertTrue(strpos((string) $transientMessage, 'Uploads directory is unavailable') !== false, 'Transient message includes upload error details');
+
 $iconLibrary = new IconLibrary(__FILE__);
 $allIcons = $iconLibrary->getAllIcons();
 

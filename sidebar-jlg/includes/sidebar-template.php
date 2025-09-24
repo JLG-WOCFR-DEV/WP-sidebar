@@ -1,47 +1,12 @@
 <?php
+use JLG\Sidebar\Frontend\Templating;
+
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 $options = $options ?? [];
 $allIcons = $allIcons ?? [];
 
 ob_start();
-?>
-<?php
-if (!function_exists('sidebar_jlg_render_social_icons')) {
-    function sidebar_jlg_render_social_icons(array $socialIcons, array $allIcons, string $orientation): string
-    {
-        if (empty($socialIcons)) {
-            return '';
-        }
-
-        ob_start();
-        ?>
-        <div class="social-icons <?php echo esc_attr($orientation); ?>">
-            <?php foreach ($socialIcons as $social) :
-                if (empty($social['icon']) || empty($social['url']) || !isset($allIcons[$social['icon']])) {
-                    continue;
-                }
-
-                $iconParts = explode('_', $social['icon']);
-                $iconLabel = (isset($iconParts[0]) && $iconParts[0] !== '') ? $iconParts[0] : 'unknown';
-                $customLabel = '';
-
-                if (isset($social['label']) && is_string($social['label'])) {
-                    $customLabel = trim($social['label']);
-                }
-
-                $ariaLabel = $customLabel !== '' ? $customLabel : $iconLabel;
-                ?>
-                <a href="<?php echo esc_url($social['url']); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr($ariaLabel); ?>">
-                    <?php echo wp_kses_post($allIcons[$social['icon']]); ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
-        <?php
-
-        return trim((string) ob_get_clean());
-    }
-}
 ?>
 <nav class="sidebar-navigation" role="navigation" aria-label="<?php esc_attr_e('Navigation principale', 'sidebar-jlg'); ?>">
     <ul class="sidebar-menu">
@@ -92,7 +57,7 @@ if (!function_exists('sidebar_jlg_render_social_icons')) {
         }
         
         if ($options['social_position'] === 'in-menu' && !empty($options['social_icons']) && is_array($options['social_icons'])) {
-            $menuSocialIcons = sidebar_jlg_render_social_icons($options['social_icons'], $allIcons, $options['social_orientation']);
+            $menuSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $options['social_orientation']);
             if ($menuSocialIcons !== '') {
                 echo '<li class="menu-separator" aria-hidden="true"><hr></li>';
                 echo '<li class="social-icons-wrapper">' . $menuSocialIcons . '</li>';
@@ -104,7 +69,7 @@ if (!function_exists('sidebar_jlg_render_social_icons')) {
 
 <?php
 if ($options['social_position'] === 'footer' && !empty($options['social_icons']) && is_array($options['social_icons'])) {
-    $footerSocialIcons = sidebar_jlg_render_social_icons($options['social_icons'], $allIcons, $options['social_orientation']);
+    $footerSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $options['social_orientation']);
     if ($footerSocialIcons !== '') {
         echo '<div class="sidebar-footer">' . $footerSocialIcons . '</div>';
     }
