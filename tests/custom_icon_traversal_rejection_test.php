@@ -73,13 +73,28 @@ function assertFalse($condition, string $message): void
     assertTrue(!$condition, $message);
 }
 
+function assertArrayContainsSubstring(string $needle, array $haystack, string $message): void
+{
+    foreach ($haystack as $value) {
+        if (is_string($value) && strpos($value, $needle) !== false) {
+            assertTrue(true, $message);
+
+            return;
+        }
+    }
+
+    assertTrue(false, $message);
+}
+
 function assertContains(string $needle, array $haystack, string $message): void
 {
     assertTrue(in_array($needle, $haystack, true), $message);
 }
 
 assertFalse(isset($allIcons['custom_bad']), 'Malicious icon is rejected from the library');
-assertContains('bad.svg', $rejected, 'Malicious icon is reported as rejected');
+assertArrayContainsSubstring('bad.svg', $rejected, 'Malicious icon filename is reported as rejected');
+assertArrayContainsSubstring('unsupported use reference', $rejected, 'Malicious icon rejection includes the use-reference failure reason');
+assertArrayContainsSubstring('disallowed traversal path', $rejected, 'Malicious icon rejection details reference the unsafe location');
 
 @unlink($iconsDir . '/bad.svg');
 @unlink($evilSvgPath);

@@ -65,11 +65,36 @@ class IconLibrary
 
     public function consumeRejectedCustomIcons(): array
     {
-        $icons = array_unique($this->rejectedCustomIcons);
-        sort($icons, SORT_STRING);
+        if (empty($this->rejectedCustomIcons)) {
+            return [];
+        }
+
+        $messages = [];
+
+        foreach ($this->rejectedCustomIcons as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            $file = isset($entry['file']) ? (string) $entry['file'] : '';
+            if ($file === '') {
+                continue;
+            }
+
+            $reasonKey = isset($entry['reason']) && is_string($entry['reason'])
+                ? $entry['reason']
+                : 'unknown';
+            $context = isset($entry['context']) && is_array($entry['context'])
+                ? $entry['context']
+                : [];
+
+            $messages[] = $this->formatRejectedIconMessage($file, $reasonKey, $context);
+        }
+
+        sort($messages, SORT_STRING);
         $this->rejectedCustomIcons = [];
 
-        return $icons;
+        return $messages;
     }
 
     private function loadStandardIcons(): array
@@ -172,7 +197,14 @@ class IconLibrary
                 && is_array($cached['sources'])
             ) {
                 $this->customIconSources = $cached['sources'];
-                $this->rejectedCustomIcons = is_array($cached['rejected'] ?? null) ? $cached['rejected'] : [];
+                $this->rejectedCustomIcons = [];
+                if (isset($cached['rejected']) && is_array($cached['rejected'])) {
+                    foreach ($cached['rejected'] as $rejectedEntry) {
+                        if (is_array($rejectedEntry)) {
+                            $this->restoreRejectedCustomIcon($rejectedEntry);
+                        }
+                    }
+                }
 
                 return $cached['icons'];
             }
@@ -185,31 +217,44 @@ class IconLibrary
         foreach ($candidateFiles as $file => $filePath) {
             $fileType = wp_check_filetype_and_ext($filePath, $file, $allowedMimes);
             if (empty($fileType['ext']) || $fileType['ext'] !== 'svg' || empty($fileType['type'])) {
-                $this->rejectedCustomIcons[] = $file;
+                $this->recordRejectedCustomIcon($file, 'invalid_type', [
+                    'ext' => $fileType['ext'] ?? '',
+                    'type' => $fileType['type'] ?? '',
+                ]);
                 continue;
             }
 
             $fileSize = filesize($filePath);
-            if ($fileSize === false || $fileSize > $maxFileSize) {
-                $this->rejectedCustomIcons[] = $file;
+            if ($fileSize === false) {
+                $this->recordRejectedCustomIcon($file, 'filesize_unreadable');
+                continue;
+            }
+
+            if ($fileSize > $maxFileSize) {
+                $this->recordRejectedCustomIcon($file, 'file_too_large', [
+                    'max_bytes' => $maxFileSize,
+                ]);
                 continue;
             }
 
             $rawContents = file_get_contents($filePath);
             if ($rawContents === false) {
-                $this->rejectedCustomIcons[] = $file;
+                $this->recordRejectedCustomIcon($file, 'read_error');
                 continue;
             }
 
             $sanitizedContents = wp_kses($rawContents, $this->getAllowedSvgElements());
             if (empty($sanitizedContents)) {
-                $this->rejectedCustomIcons[] = $file;
+                $this->recordRejectedCustomIcon($file, 'empty_after_sanitize');
                 continue;
             }
 
-            $validationResult = $this->validateSanitizedSvg($sanitizedContents, $uploadsContext);
+            $validationFailure = null;
+            $validationResult = $this->validateSanitizedSvg($sanitizedContents, $uploadsContext, $validationFailure);
             if ($validationResult === null) {
-                $this->rejectedCustomIcons[] = $file;
+                $this->recordRejectedCustomIcon($file, 'validation_failed', [
+                    'detail' => $validationFailure,
+                ]);
                 continue;
             }
 
@@ -218,18 +263,18 @@ class IconLibrary
             $normalizedOriginal = $this->normalizeSvgContent($rawContents);
             $normalizedSanitized = $this->normalizeSvgContent($sanitizedContents);
             if ($normalizedOriginal === '') {
-                $this->rejectedCustomIcons[] = $file;
+                $this->recordRejectedCustomIcon($file, 'empty_original');
                 continue;
             }
 
             if ($normalizedOriginal !== $normalizedSanitized && empty($validationResult['modified'])) {
-                $this->rejectedCustomIcons[] = $file;
+                $this->recordRejectedCustomIcon($file, 'mismatched_sanitization');
                 continue;
             }
 
             $iconKey = sanitize_key(pathinfo($file, PATHINFO_FILENAME));
             if ($iconKey === '') {
-                $this->rejectedCustomIcons[] = $file;
+                $this->recordRejectedCustomIcon($file, 'empty_icon_key');
                 continue;
             }
 
@@ -249,13 +294,195 @@ class IconLibrary
         $cachePayload = [
             'icons' => $customIcons,
             'sources' => $this->customIconSources,
-            'rejected' => array_values(array_unique($this->rejectedCustomIcons)),
+            'rejected' => array_values($this->rejectedCustomIcons),
         ];
 
         set_transient(self::CUSTOM_ICON_CACHE_KEY, $cachePayload, self::CUSTOM_ICON_CACHE_TTL);
         update_option(self::CUSTOM_ICON_INDEX_OPTION, $currentIndex, 'no');
 
         return $customIcons;
+    }
+
+    private function recordRejectedCustomIcon(string $file, string $reasonKey, array $context = []): void
+    {
+        $this->storeRejectedCustomIcon($file, $reasonKey, $context, true);
+    }
+
+    private function restoreRejectedCustomIcon(array $entry): void
+    {
+        if (!isset($entry['file'], $entry['reason'])) {
+            return;
+        }
+
+        $file = (string) $entry['file'];
+        $reason = (string) $entry['reason'];
+        $context = isset($entry['context']) && is_array($entry['context']) ? $entry['context'] : [];
+
+        $this->storeRejectedCustomIcon($file, $reason, $context, false);
+    }
+
+    private function storeRejectedCustomIcon(string $file, string $reasonKey, array $context, bool $log): void
+    {
+        $file = (string) $file;
+        $reasonKey = (string) $reasonKey;
+
+        if ($file === '' || $reasonKey === '') {
+            return;
+        }
+
+        $hashSource = $file . '|' . $reasonKey . '|' . serialize($context);
+        $hash = md5($hashSource);
+
+        $entry = [
+            'file' => $file,
+            'reason' => $reasonKey,
+        ];
+
+        if ($context !== []) {
+            $entry['context'] = $context;
+        }
+
+        $alreadyRecorded = isset($this->rejectedCustomIcons[$hash]);
+
+        $this->rejectedCustomIcons[$hash] = $entry;
+
+        if ($log && !$alreadyRecorded && function_exists('error_log')) {
+            $message = sprintf(
+                '[Sidebar JLG] Rejected SVG "%s": %s',
+                $file,
+                $this->getRejectionReasonMessage($reasonKey, $context)
+            );
+            error_log($message);
+        }
+    }
+
+    private function formatRejectedIconMessage(string $file, string $reasonKey, array $context): string
+    {
+        $fileLabel = sanitize_text_field($file);
+        $reasonMessage = $this->getRejectionReasonMessage($reasonKey, $context);
+
+        if ($reasonMessage === '') {
+            return $fileLabel;
+        }
+
+        return sprintf('%s (%s)', $fileLabel, $reasonMessage);
+    }
+
+    private function getRejectionReasonMessage(string $reasonKey, array $context): string
+    {
+        switch ($reasonKey) {
+            case 'invalid_type':
+                $detectedParts = [];
+                if (!empty($context['ext'])) {
+                    $detectedParts[] = '.' . sanitize_key((string) $context['ext']);
+                }
+                if (!empty($context['type'])) {
+                    $detectedParts[] = sanitize_text_field((string) $context['type']);
+                }
+
+                if (empty($detectedParts)) {
+                    return __('invalid MIME type or extension', 'sidebar-jlg');
+                }
+
+                return sprintf(
+                    __('invalid MIME type or extension (%s)', 'sidebar-jlg'),
+                    implode(', ', $detectedParts)
+                );
+            case 'filesize_unreadable':
+                return __('file size could not be determined', 'sidebar-jlg');
+            case 'file_too_large':
+                $maxBytes = isset($context['max_bytes']) ? (int) $context['max_bytes'] : 0;
+                if ($maxBytes > 0) {
+                    $maxKb = (int) ceil($maxBytes / 1024);
+
+                    return sprintf(
+                        __('file exceeds the maximum size of %d KB', 'sidebar-jlg'),
+                        max(1, $maxKb)
+                    );
+                }
+
+                return __('file exceeds the maximum allowed size', 'sidebar-jlg');
+            case 'read_error':
+                return __('file could not be read', 'sidebar-jlg');
+            case 'empty_after_sanitize':
+                return __('SVG markup was empty after sanitization', 'sidebar-jlg');
+            case 'validation_failed':
+                $detail = $context['detail'] ?? null;
+                $detailCode = '';
+                $detailInfo = null;
+
+                if (is_array($detail)) {
+                    $detailCode = isset($detail['code']) ? (string) $detail['code'] : '';
+                    $detailInfo = $detail['info'] ?? null;
+                } elseif (is_string($detail)) {
+                    $detailCode = $detail;
+                }
+
+                switch ($detailCode) {
+                    case 'unsafe_use_reference':
+                        $suffix = '';
+                        $infoCode = '';
+                        if (is_array($detailInfo)) {
+                            $infoCode = isset($detailInfo['code']) ? (string) $detailInfo['code'] : '';
+                        } elseif (is_string($detailInfo)) {
+                            $infoCode = $detailInfo;
+                        }
+
+                        switch ($infoCode) {
+                            case 'outside_basedir':
+                            case 'outside_uploads':
+                                $suffix = __(' pointing outside of the uploads directory', 'sidebar-jlg');
+                                break;
+                            case 'path_traversal':
+                                $suffix = __(' using a disallowed traversal path', 'sidebar-jlg');
+                                break;
+                            case 'invalid_fragment_identifier':
+                                $suffix = __(' with an invalid fragment identifier', 'sidebar-jlg');
+                                break;
+                            case 'invalid_url':
+                                $suffix = __(' with an invalid URL', 'sidebar-jlg');
+                                break;
+                            case 'host_mismatch':
+                                $suffix = __(' referencing a different domain', 'sidebar-jlg');
+                                break;
+                            case 'port_mismatch':
+                                $suffix = __(' referencing a different port', 'sidebar-jlg');
+                                break;
+                            case 'empty_path':
+                                $suffix = __(' with an empty path value', 'sidebar-jlg');
+                                break;
+                            case 'uploads_context_missing':
+                                $suffix = __(' because the uploads directory context is unavailable', 'sidebar-jlg');
+                                break;
+                            case 'empty_relative_path':
+                                $suffix = __(' with an empty relative path value', 'sidebar-jlg');
+                                break;
+                            default:
+                                $suffix = '';
+                                break;
+                        }
+
+                        return __('unsupported use reference found', 'sidebar-jlg') . $suffix;
+                    case 'dom_import_failed':
+                        return __('SVG markup could not be parsed safely', 'sidebar-jlg');
+                    case 'dom_export_failed':
+                        return __('SVG markup could not be re-exported after validation', 'sidebar-jlg');
+                    case 'empty_markup':
+                        return __('SVG markup was empty after sanitization', 'sidebar-jlg');
+                    default:
+                        return __('failed validation checks', 'sidebar-jlg');
+                }
+            case 'empty_original':
+                return __('original SVG markup was empty', 'sidebar-jlg');
+            case 'mismatched_sanitization':
+                return __('sanitized SVG differed from the original markup', 'sidebar-jlg');
+            case 'empty_icon_key':
+                return __('filename produced an empty identifier', 'sidebar-jlg');
+            case 'unknown':
+                return __('was rejected', 'sidebar-jlg');
+        }
+
+        return __('was rejected', 'sidebar-jlg');
     }
 
     private function createUploadsContext(string $baseDir, string $baseUrl): ?array
@@ -432,11 +659,13 @@ class IconLibrary
     /**
      * @param array{base_url: string, normalized_basedir: string, url_parts: array, scheme: string, host: string, port: ?int, normalized_base_path: string} $uploadsContext
      */
-    private function validateSanitizedSvg(string $sanitizedSvg, array $uploadsContext): ?array
+    private function validateSanitizedSvg(string $sanitizedSvg, array $uploadsContext, ?array &$failureContext = null): ?array
     {
+        $failureContext = null;
         $sanitizedSvg = trim($sanitizedSvg);
 
         if ($sanitizedSvg === '') {
+            $failureContext = ['code' => 'empty_markup'];
             return null;
         }
 
@@ -451,6 +680,7 @@ class IconLibrary
         libxml_use_internal_errors($previousLibxml);
 
         if ($loaded === false || $dom->documentElement === null) {
+            $failureContext = ['code' => 'dom_import_failed'];
             return null;
         }
 
@@ -468,7 +698,12 @@ class IconLibrary
                     continue;
                 }
 
-                if (!$this->isSafeUseReference($attributeValue, $uploadsContext)) {
+                $useFailure = null;
+                if (!$this->isSafeUseReference($attributeValue, $uploadsContext, $useFailure)) {
+                    $failureContext = [
+                        'code' => 'unsafe_use_reference',
+                        'info' => $useFailure,
+                    ];
                     return null;
                 }
             }
@@ -477,6 +712,7 @@ class IconLibrary
         $exportedSvg = $dom->saveXML($dom->documentElement);
 
         if (!is_string($exportedSvg)) {
+            $failureContext = ['code' => 'dom_export_failed'];
             return null;
         }
 
@@ -500,14 +736,21 @@ class IconLibrary
     /**
      * @param array{base_url: string, normalized_basedir: string, url_parts: array, scheme: string, host: string, port: ?int, normalized_base_path: string} $uploadsContext
      */
-    private function isSafeUseReference(string $value, array $uploadsContext): bool
+    private function isSafeUseReference(string $value, array $uploadsContext, ?array &$failureContext = null): bool
     {
+        $failureContext = null;
         if ($value === '') {
             return true;
         }
 
         if (strpos($value, '#') === 0) {
-            return (bool) preg_match('/^#[A-Za-z0-9_][A-Za-z0-9:._-]*$/', $value);
+            if ((bool) preg_match('/^#[A-Za-z0-9_][A-Za-z0-9:._-]*$/', $value)) {
+                return true;
+            }
+
+            $failureContext = ['code' => 'invalid_fragment_identifier'];
+
+            return false;
         }
 
         $uploadsBaseUrlValue = isset($uploadsContext['base_url']) ? (string) $uploadsContext['base_url'] : '';
@@ -519,12 +762,14 @@ class IconLibrary
         $normalizedBasePath = isset($uploadsContext['normalized_base_path']) ? (string) $uploadsContext['normalized_base_path'] : '';
 
         if ($uploadsBaseUrlValue === '' || $normalizedUploadsDir === '' || !is_array($uploadsUrlParts) || $uploadsScheme === '' || $uploadsHost === '') {
+            $failureContext = ['code' => 'uploads_context_missing'];
             return false;
         }
 
         $referenceParts = function_exists('wp_parse_url') ? wp_parse_url($value) : parse_url($value);
 
         if (!is_array($uploadsUrlParts) || !is_array($referenceParts)) {
+            $failureContext = ['code' => 'invalid_url'];
             return false;
         }
 
@@ -550,10 +795,12 @@ class IconLibrary
             }
         } else {
             if ($referenceScheme === '' || $referenceHost === '') {
+                $failureContext = ['code' => 'invalid_url'];
                 return false;
             }
 
             if ($uploadsScheme !== $referenceScheme || $uploadsHost !== $referenceHost) {
+                $failureContext = ['code' => 'host_mismatch'];
                 return false;
             }
         }
@@ -578,16 +825,19 @@ class IconLibrary
         $normalizedReferencePort = $normalizePort($referencePort, $referenceScheme);
 
         if ($normalizedUploadsPort !== $normalizedReferencePort) {
+            $failureContext = ['code' => 'port_mismatch'];
             return false;
         }
 
         if ($referencePath === '') {
+            $failureContext = ['code' => 'empty_path'];
             return false;
         }
 
         $decodedReferencePath = rawurldecode($referencePath);
 
         if (preg_match('#(^|/)\.\.(?:/|$)#', $decodedReferencePath)) {
+            $failureContext = ['code' => 'path_traversal'];
             return false;
         }
 
@@ -595,6 +845,7 @@ class IconLibrary
         $expectedPrefix = $normalizedBasePath === '' ? '/' : $normalizedBasePath . '/';
 
         if (strpos($normalizedReferencePath, $expectedPrefix) !== 0) {
+            $failureContext = ['code' => 'outside_uploads'];
             return false;
         }
 
@@ -602,13 +853,20 @@ class IconLibrary
         $relativePath = ltrim((string) $relativePath, '/');
 
         if ($relativePath === '') {
+            $failureContext = ['code' => 'empty_relative_path'];
             return false;
         }
 
         $normalizedUploadsDirWithSlash = trailingslashit($normalizedUploadsDir);
         $resolvedPath = $this->normalizePathValue($normalizedUploadsDirWithSlash . $relativePath);
 
-        return strpos($resolvedPath, $normalizedUploadsDirWithSlash) === 0;
+        if (strpos($resolvedPath, $normalizedUploadsDirWithSlash) !== 0) {
+            $failureContext = ['code' => 'outside_basedir'];
+
+            return false;
+        }
+
+        return true;
     }
 
     private function normalizePathValue(string $path): string

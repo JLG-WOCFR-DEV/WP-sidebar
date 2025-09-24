@@ -172,7 +172,11 @@ class SettingsSanitizer
                     continue;
                 }
 
+                $allowedItemTypes = ['custom', 'post', 'page', 'category'];
                 $itemType = sanitize_key($item['type'] ?? '');
+                if (!in_array($itemType, $allowedItemTypes, true)) {
+                    $itemType = 'custom';
+                }
                 $iconType = sanitize_key($item['icon_type'] ?? '');
                 $iconType = ($iconType === 'svg_url') ? 'svg_url' : 'svg_inline';
 

@@ -20,6 +20,7 @@ $GLOBALS['wp_test_translations'] = $GLOBALS['wp_test_translations'] ?? [
     ],
 ];
 $GLOBALS['wp_test_function_overrides'] = $GLOBALS['wp_test_function_overrides'] ?? [];
+$GLOBALS['wp_test_inline_styles'] = $GLOBALS['wp_test_inline_styles'] ?? [];
 
 if (!function_exists('wp_test_call_override')) {
     function wp_test_call_override(string $function, array $args, ?bool &$handled = null)
@@ -264,6 +265,36 @@ if (!function_exists('wp_enqueue_style')) {
         if ($handled) {
             return;
         }
+    }
+}
+
+if (!function_exists('wp_add_inline_style')) {
+    function wp_add_inline_style($handle, $data): void
+    {
+        $handled = false;
+        wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return;
+        }
+
+        if (!isset($GLOBALS['wp_test_inline_styles'][$handle]) || !is_array($GLOBALS['wp_test_inline_styles'][$handle])) {
+            $GLOBALS['wp_test_inline_styles'][$handle] = [];
+        }
+
+        $GLOBALS['wp_test_inline_styles'][$handle][] = (string) $data;
+    }
+}
+
+if (!function_exists('wp_test_get_inline_styles')) {
+    function wp_test_get_inline_styles(string $handle): string
+    {
+        $styles = $GLOBALS['wp_test_inline_styles'][$handle] ?? [];
+
+        if (!is_array($styles)) {
+            $styles = [$styles];
+        }
+
+        return implode("\n", array_map('strval', $styles));
     }
 }
 

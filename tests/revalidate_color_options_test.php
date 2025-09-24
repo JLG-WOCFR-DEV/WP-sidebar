@@ -136,18 +136,22 @@ assertSame($expectedFontHoverColor, $storedAfterRevalidation['font_hover_color']
 assertSame($expectedOverlayColor, $storedAfterRevalidation['overlay_color'] ?? null, 'Overlay color falls back to default when stored value is empty');
 assertSame($expectedMobileBgColor, $storedAfterRevalidation['mobile_bg_color'] ?? null, 'Mobile background color falls back to default when stored value is empty');
 
+$GLOBALS['wp_test_inline_styles'] = [];
+$renderer->enqueueAssets();
+$inlineStyles = wp_test_get_inline_styles('sidebar-jlg-public-css');
+
 ob_start();
 $renderer->render();
-$html = ob_get_clean();
+ob_end_clean();
 
-assertContains('--sidebar-bg-color: ' . $expectedBgColorStart . ';', $html, 'Rendered CSS uses default background gradient start color after revalidation');
-assertContains('linear-gradient(180deg, ' . $expectedBgColorStart . ' 0%, ' . $expectedBgColorEnd . ' 100%)', $html, 'Rendered CSS uses default background gradient colors after revalidation');
-assertContains('--primary-accent-color: ' . $expectedAccentColorStart . ';', $html, 'Rendered CSS uses default accent gradient start color after revalidation');
-assertContains('linear-gradient(90deg, ' . $expectedAccentColorStart . ' 0%, ' . $expectedAccentColorEnd . ' 100%)', $html, 'Rendered CSS uses default accent gradient colors after revalidation');
-assertContains('--sidebar-text-color: ' . $expectedFontColor . ';', $html, 'Rendered CSS uses default font color after revalidation');
-assertContains('--sidebar-text-hover-color: ' . $expectedFontHoverColor . ';', $html, 'Rendered CSS uses default font hover color after revalidation');
-assertContains('--overlay-color: ' . $expectedOverlayColor . ';', $html, 'Rendered CSS uses default overlay color after revalidation');
-assertContains('--mobile-bg-color: ' . $expectedMobileBgColor . ';', $html, 'Rendered CSS uses default mobile background color after revalidation');
+assertContains('--sidebar-bg-color: ' . $expectedBgColorStart . ';', $inlineStyles, 'Rendered CSS uses default background gradient start color after revalidation');
+assertContains('linear-gradient(180deg, ' . $expectedBgColorStart . ' 0%, ' . $expectedBgColorEnd . ' 100%)', $inlineStyles, 'Rendered CSS uses default background gradient colors after revalidation');
+assertContains('--primary-accent-color: ' . $expectedAccentColorStart . ';', $inlineStyles, 'Rendered CSS uses default accent gradient start color after revalidation');
+assertContains('linear-gradient(90deg, ' . $expectedAccentColorStart . ' 0%, ' . $expectedAccentColorEnd . ' 100%)', $inlineStyles, 'Rendered CSS uses default accent gradient colors after revalidation');
+assertContains('--sidebar-text-color: ' . $expectedFontColor . ';', $inlineStyles, 'Rendered CSS uses default font color after revalidation');
+assertContains('--sidebar-text-hover-color: ' . $expectedFontHoverColor . ';', $inlineStyles, 'Rendered CSS uses default font hover color after revalidation');
+assertContains('--overlay-color: ' . $expectedOverlayColor . ';', $inlineStyles, 'Rendered CSS uses default overlay color after revalidation');
+assertContains('--mobile-bg-color: ' . $expectedMobileBgColor . ';', $inlineStyles, 'Rendered CSS uses default mobile background color after revalidation');
 
 if (!$testsPassed) {
     exit(1);
