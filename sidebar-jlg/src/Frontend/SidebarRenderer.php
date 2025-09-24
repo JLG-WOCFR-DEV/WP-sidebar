@@ -90,6 +90,14 @@ class SidebarRenderer
             $allIcons = $this->icons->getAllIcons();
             $templatePath = plugin_dir_path($this->pluginFile) . 'includes/sidebar-template.php';
 
+            if (!is_readable($templatePath)) {
+                if (function_exists('error_log')) {
+                    error_log('[Sidebar JLG] Sidebar template not found or unreadable at ' . $templatePath);
+                }
+
+                return;
+            }
+
             ob_start();
             $optionsForTemplate = $options;
             $allIconsForTemplate = $allIcons;
