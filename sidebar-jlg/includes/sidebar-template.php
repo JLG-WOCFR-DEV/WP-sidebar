@@ -111,73 +111,7 @@ if ($options['social_position'] === 'footer' && !empty($options['social_icons'])
 }
 
 $sidebar_content_html = ob_get_clean();
-
-$dynamic_styles = ":root {";
-$dynamic_styles .= "--sidebar-width-desktop: " . esc_attr($options['width_desktop']) . "px;";
-$dynamic_styles .= "--sidebar-width-tablet: " . esc_attr($options['width_tablet']) . "px;";
-
-if (($options['bg_color_type'] ?? 'solid') === 'gradient') {
-    $dynamic_styles .= "--sidebar-bg-image: linear-gradient(180deg, " . esc_attr($options['bg_color_start']) . " 0%, " . esc_attr($options['bg_color_end']) . " 100%);";
-    $dynamic_styles .= "--sidebar-bg-color: " . esc_attr($options['bg_color_start']) . ";";
-} else {
-    $dynamic_styles .= "--sidebar-bg-image: none;";
-    $dynamic_styles .= "--sidebar-bg-color: " . esc_attr($options['bg_color']) . ";";
-}
-
-if (($options['accent_color_type'] ?? 'solid') === 'gradient') {
-    $dynamic_styles .= "--primary-accent-image: linear-gradient(90deg, " . esc_attr($options['accent_color_start']) . " 0%, " . esc_attr($options['accent_color_end']) . " 100%);";
-    $dynamic_styles .= "--primary-accent-color: " . esc_attr($options['accent_color_start']) . ";";
-} else {
-    $dynamic_styles .= "--primary-accent-image: none;";
-    $dynamic_styles .= "--primary-accent-color: " . esc_attr($options['accent_color']) . ";";
-}
-
-$dynamic_styles .= "--sidebar-font-size: " . esc_attr($options['font_size']) . "px;";
-$dynamic_styles .= "--sidebar-text-color: " . esc_attr($options['font_color']) . ";";
-$dynamic_styles .= "--sidebar-text-hover-color: " . esc_attr($options['font_hover_color']) . ";";
-$dynamic_styles .= "--transition-speed: " . esc_attr($options['animation_speed']) . "ms;";
-$dynamic_styles .= "--header-padding-top: " . esc_attr($options['header_padding_top']) . ";";
-$dynamic_styles .= "--header-alignment-desktop: " . esc_attr($options['header_alignment_desktop']) . ";";
-$dynamic_styles .= "--header-alignment-mobile: " . esc_attr($options['header_alignment_mobile']) . ";";
-$dynamic_styles .= "--header-logo-size: " . esc_attr($options['header_logo_size']) . "px;";
-$dynamic_styles .= "--hamburger-top-position: " . esc_attr($options['hamburger_top_position']) . ";";
-$content_margin_value = $options['content_margin'] ?? '';
-if (is_string($content_margin_value) || is_numeric($content_margin_value)) {
-    $content_margin_value = (string) $content_margin_value;
-    $content_margin_trimmed = trim($content_margin_value);
-
-    if (preg_match('/^calc\((.*)\)$/i', $content_margin_trimmed, $matches)) {
-        $content_margin_value = $matches[1];
-    } else {
-        $content_margin_value = $content_margin_trimmed;
-    }
-} else {
-    $content_margin_value = '';
-}
-
-$dynamic_styles .= "--content-margin: calc(var(--sidebar-width-desktop) + " . esc_attr($content_margin_value) . ");";
-$dynamic_styles .= "--floating-vertical-margin: " . esc_attr($options['floating_vertical_margin']) . ";";
-$dynamic_styles .= "--border-radius: " . esc_attr($options['border_radius']) . ";";
-$dynamic_styles .= "--border-width: " . esc_attr($options['border_width']) . "px;";
-$dynamic_styles .= "--border-color: " . esc_attr($options['border_color']) . ";";
-$dynamic_styles .= "--overlay-color: " . esc_attr($options['overlay_color']) . ";";
-$dynamic_styles .= "--overlay-opacity: " . esc_attr($options['overlay_opacity']) . ";";
-$dynamic_styles .= "--mobile-bg-color: " . esc_attr($options['mobile_bg_color']) . ";";
-$dynamic_styles .= "--mobile-bg-opacity: " . esc_attr($options['mobile_bg_opacity']) . ";";
-$dynamic_styles .= "--mobile-blur: " . esc_attr($options['mobile_blur']) . "px;";
-$dynamic_styles .= "--menu-alignment-desktop: " . esc_attr($options['menu_alignment_desktop']) . ";";
-$dynamic_styles .= "--menu-alignment-mobile: " . esc_attr($options['menu_alignment_mobile']) . ";";
-$dynamic_styles .= "--search-alignment: " . esc_attr($options['search_alignment']) . ";";
-$social_icon_size_factor = ($options['social_icon_size'] ?? 100) / 100;
-$dynamic_styles .= "--social-icon-size-factor: " . esc_attr($social_icon_size_factor) . ";";
-if ($options['hover_effect_desktop'] === 'neon' || $options['hover_effect_mobile'] === 'neon') {
-    $dynamic_styles .= "--neon-blur: " . esc_attr($options['neon_blur']) . "px;";
-    $dynamic_styles .= "--neon-spread: " . esc_attr($options['neon_spread']) . "px;";
-}
-$dynamic_styles .= "}";
 ?>
-<style type="text/css"><?php echo $dynamic_styles; ?></style>
-
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
 <button class="hamburger-menu" id="hamburger-btn" type="button" aria-label="<?php esc_attr_e('Ouvrir le menu', 'sidebar-jlg'); ?>" aria-controls="pro-sidebar" aria-expanded="false">
