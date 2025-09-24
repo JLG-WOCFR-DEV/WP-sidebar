@@ -52,6 +52,18 @@ register_activation_hook(__FILE__, static function () {
             error_log(sprintf('[Sidebar JLG] Activation skipped: %s', $errorMessage));
         }
 
+        if (function_exists('set_transient')) {
+            $expiration = defined('HOUR_IN_SECONDS') ? HOUR_IN_SECONDS : 3600;
+
+            $message = __('Sidebar JLG n\'a pas pu accéder au dossier uploads. Vérifiez les permissions du dossier uploads puis réactivez le plugin.', 'sidebar-jlg');
+
+            if ($errorMessage !== '') {
+                $message .= ' ' . sprintf(__('Détails : %s', 'sidebar-jlg'), $errorMessage);
+            }
+
+            set_transient('sidebar_jlg_activation_error', $message, $expiration);
+        }
+
         return;
     }
 
