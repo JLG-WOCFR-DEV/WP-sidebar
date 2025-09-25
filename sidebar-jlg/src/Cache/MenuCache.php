@@ -33,7 +33,23 @@ class MenuCache
 
     public function get(string $locale)
     {
-        return get_transient($this->getTransientKey($locale));
+        $value = get_transient($this->getTransientKey($locale));
+
+        if ($value === false) {
+            return false;
+        }
+
+        if (!is_string($value)) {
+            $this->delete($locale);
+
+            if (function_exists('error_log')) {
+                error_log('[Sidebar JLG] Invalid sidebar cache payload cleared for locale ' . $this->normalizeLocale($locale));
+            }
+
+            return false;
+        }
+
+        return $value;
     }
 
     public function set(string $locale, string $html): void

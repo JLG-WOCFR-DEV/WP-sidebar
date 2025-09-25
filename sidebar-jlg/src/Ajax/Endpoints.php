@@ -9,6 +9,8 @@ use function __;
 
 class Endpoints
 {
+    private const MAX_ICONS_PER_REQUEST = 20;
+
     private SettingsRepository $settings;
     private MenuCache $cache;
     private IconLibrary $icons;
@@ -77,7 +79,10 @@ class Endpoints
 
         $optionsById = [];
         foreach ($posts as $post) {
-            $optionsById[$post->ID] = ['id' => $post->ID, 'title' => $post->post_title];
+            $optionsById[$post->ID] = [
+                'id' => $post->ID,
+                'title' => wp_strip_all_tags($post->post_title, true),
+            ];
         }
         wp_reset_postdata();
 
@@ -94,7 +99,10 @@ class Endpoints
                 ]);
 
                 foreach ($additionalPosts as $post) {
-                    $optionsById[$post->ID] = ['id' => $post->ID, 'title' => $post->post_title];
+                    $optionsById[$post->ID] = [
+                        'id' => $post->ID,
+                        'title' => wp_strip_all_tags($post->post_title, true),
+                    ];
                 }
                 wp_reset_postdata();
             }
@@ -156,7 +164,10 @@ class Endpoints
 
         $optionsById = [];
         foreach ($categories as $category) {
-            $optionsById[$category->term_id] = ['id' => $category->term_id, 'name' => $category->name];
+            $optionsById[$category->term_id] = [
+                'id' => $category->term_id,
+                'name' => wp_strip_all_tags($category->name, true),
+            ];
         }
 
         if (!empty($includeIds)) {
@@ -172,7 +183,10 @@ class Endpoints
                 ]);
 
                 foreach ($additionalCategories as $category) {
-                    $optionsById[$category->term_id] = ['id' => $category->term_id, 'name' => $category->name];
+                    $optionsById[$category->term_id] = [
+                        'id' => $category->term_id,
+                        'name' => wp_strip_all_tags($category->name, true),
+                    ];
                 }
             }
 
@@ -238,6 +252,23 @@ class Endpoints
 
             return sanitize_key($value);
         }, $requested)));
+
+        $iconCount = count($sanitized);
+
+        if ($iconCount > self::MAX_ICONS_PER_REQUEST) {
+            if (function_exists('error_log')) {
+                error_log(sprintf('[Sidebar JLG] Icon SVG request rejected: %d icons requested (limit: %d).', $iconCount, self::MAX_ICONS_PER_REQUEST));
+            }
+
+            do_action('sidebar_jlg_icon_request_limit_exceeded', $iconCount, $sanitized);
+
+            wp_send_json_error(
+                sprintf(
+                    __('Vous ne pouvez demander que %d icônes à la fois.', 'sidebar-jlg'),
+                    self::MAX_ICONS_PER_REQUEST
+                )
+            );
+        }
 
         if (empty($sanitized)) {
             wp_send_json_error(__('Aucune icône demandée.', 'sidebar-jlg'));
