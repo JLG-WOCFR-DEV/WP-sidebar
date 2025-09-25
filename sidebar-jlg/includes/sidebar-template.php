@@ -43,7 +43,7 @@ ob_start();
                     if ( ! empty( $item['icon_type'] ) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL) ) {
                         echo '<span class="menu-icon svg-icon"><img src="' . esc_url( $item['icon'] ) . '" alt=""></span>';
                     } elseif ( isset( $allIcons[ $item['icon'] ] ) ) {
-                        $icon_markup = wp_kses_post( $allIcons[ $item['icon'] ] );
+                        $icon_markup = (string) $allIcons[ $item['icon'] ];
 
                         if ( strpos( $item['icon'], 'custom_' ) === 0 ) {
                             echo '<span class="menu-icon svg-icon">' . $icon_markup . '</span>';
@@ -100,7 +100,7 @@ $sidebar_content_html = ob_get_clean();
             $close_button_markup = '<span class="close-sidebar-fallback" aria-hidden="true">&times;</span>';
 
             if (isset($allIcons['close_white']) && $allIcons['close_white'] !== '') {
-                $close_button_markup = wp_kses_post($allIcons['close_white']);
+                $close_button_markup = (string) $allIcons['close_white'];
             } else {
                 $close_button_markup = wp_kses_post($close_button_markup);
             }

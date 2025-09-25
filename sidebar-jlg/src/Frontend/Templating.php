@@ -30,7 +30,7 @@ class Templating
                 '<a href="%1$s" target="_blank" rel="noopener noreferrer" aria-label="%2$s">%3$s</a>',
                 esc_url($social['url']),
                 esc_attr($ariaLabel),
-                wp_kses_post($allIcons[$social['icon']])
+                (string) $allIcons[$social['icon']]
             );
         }
 

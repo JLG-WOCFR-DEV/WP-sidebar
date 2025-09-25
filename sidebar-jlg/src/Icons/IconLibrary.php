@@ -32,6 +32,64 @@ class IconLibrary
         return $this->allIcons;
     }
 
+    /**
+     * @param array{base_url: string, normalized_basedir: string, url_parts: array, scheme: string, host: string, port: ?int, normalized_base_path: string}|null $uploadsContext
+     * @param array{reason: string, context?: array}|null $failure
+     * @return array{svg: string, modified?: true}|null
+     */
+    public function sanitizeSvgMarkup(string $svgMarkup, ?array $uploadsContext = null, ?array &$failure = null): ?array
+    {
+        $failure = null;
+
+        $sanitizedContents = wp_kses($svgMarkup, $this->getAllowedSvgElements());
+
+        if (empty($sanitizedContents)) {
+            $failure = ['reason' => 'empty_after_sanitize'];
+
+            return null;
+        }
+
+        $validationFailure = null;
+        $validationResult = $this->validateSanitizedSvg($sanitizedContents, $uploadsContext, $validationFailure);
+
+        if ($validationResult === null) {
+            $failure = [
+                'reason' => 'validation_failed',
+                'context' => ['detail' => $validationFailure],
+            ];
+
+            return null;
+        }
+
+        $normalizedOriginal = $this->normalizeSvgContent($svgMarkup);
+
+        if ($normalizedOriginal === '') {
+            $failure = ['reason' => 'empty_original'];
+
+            return null;
+        }
+
+        $sanitizedSvg = $validationResult['svg'];
+        $normalizedSanitized = $this->normalizeSvgContent($sanitizedSvg);
+
+        if (
+            $normalizedOriginal !== $normalizedSanitized
+            && empty($validationResult['modified'])
+        ) {
+            $failure = ['reason' => 'mismatched_sanitization'];
+
+            return null;
+        }
+
+        $result = ['svg' => $sanitizedSvg];
+
+        if (!empty($validationResult['modified'])) {
+            $result['modified'] = true;
+        }
+
+        return $result;
+    }
+
     public function getIconManifest(): array
     {
         $icons = $this->getAllIcons();
@@ -101,12 +159,34 @@ class IconLibrary
     {
         $iconsFile = $this->pluginDir . 'assets/icons/standard-icons.php';
 
-        if (file_exists($iconsFile)) {
-            $icons = require $iconsFile;
-            return is_array($icons) ? $icons : [];
+        if (!file_exists($iconsFile)) {
+            return [];
         }
 
-        return [];
+        $icons = require $iconsFile;
+
+        if (!is_array($icons)) {
+            return [];
+        }
+
+        $sanitizedIcons = [];
+
+        foreach ($icons as $key => $markup) {
+            if (!is_string($key) || $key === '' || !is_string($markup) || $markup === '') {
+                continue;
+            }
+
+            $sanitizationFailure = null;
+            $sanitizationResult = $this->sanitizeSvgMarkup($markup, null, $sanitizationFailure);
+
+            if ($sanitizationResult === null) {
+                continue;
+            }
+
+            $sanitizedIcons[$key] = $sanitizationResult['svg'];
+        }
+
+        return $sanitizedIcons;
     }
 
     private function loadCustomIcons(): array
@@ -243,34 +323,27 @@ class IconLibrary
                 continue;
             }
 
-            $sanitizedContents = wp_kses($rawContents, $this->getAllowedSvgElements());
-            if (empty($sanitizedContents)) {
-                $this->recordRejectedCustomIcon($file, 'empty_after_sanitize');
+            $sanitizationFailure = null;
+            $sanitizationResult = $this->sanitizeSvgMarkup($rawContents, $uploadsContext, $sanitizationFailure);
+
+            if ($sanitizationResult === null) {
+                $reasonKey = 'unknown';
+                $context = [];
+
+                if (is_array($sanitizationFailure)) {
+                    if (!empty($sanitizationFailure['reason'])) {
+                        $reasonKey = (string) $sanitizationFailure['reason'];
+                    }
+                    if (!empty($sanitizationFailure['context']) && is_array($sanitizationFailure['context'])) {
+                        $context = $sanitizationFailure['context'];
+                    }
+                }
+
+                $this->recordRejectedCustomIcon($file, $reasonKey, $context);
                 continue;
             }
 
-            $validationFailure = null;
-            $validationResult = $this->validateSanitizedSvg($sanitizedContents, $uploadsContext, $validationFailure);
-            if ($validationResult === null) {
-                $this->recordRejectedCustomIcon($file, 'validation_failed', [
-                    'detail' => $validationFailure,
-                ]);
-                continue;
-            }
-
-            $sanitizedContents = $validationResult['svg'];
-
-            $normalizedOriginal = $this->normalizeSvgContent($rawContents);
-            $normalizedSanitized = $this->normalizeSvgContent($sanitizedContents);
-            if ($normalizedOriginal === '') {
-                $this->recordRejectedCustomIcon($file, 'empty_original');
-                continue;
-            }
-
-            if ($normalizedOriginal !== $normalizedSanitized && empty($validationResult['modified'])) {
-                $this->recordRejectedCustomIcon($file, 'mismatched_sanitization');
-                continue;
-            }
+            $sanitizedContents = $sanitizationResult['svg'];
 
             $iconKey = sanitize_key(pathinfo($file, PATHINFO_FILENAME));
             if ($iconKey === '') {
@@ -651,15 +724,11 @@ class IconLibrary
      * potentiel vers une ressource non autorisée. Cette méthode centralise les contrôles
      * post-sanitization afin de faciliter l'ajout de nouvelles règles à l'avenir.
      *
-     * @return array{
-     *     svg: string,
-     *     modified?: bool
-     * }|null
+     * @param array{base_url: string, normalized_basedir: string, url_parts: array, scheme: string, host: string, port: ?int, normalized_base_path: string}|null $uploadsContext
+     * @param array{code: string, info?: mixed}|null $failureContext
+     * @return array{svg: string, modified?: bool}|null
      */
-    /**
-     * @param array{base_url: string, normalized_basedir: string, url_parts: array, scheme: string, host: string, port: ?int, normalized_base_path: string} $uploadsContext
-     */
-    private function validateSanitizedSvg(string $sanitizedSvg, array $uploadsContext, ?array &$failureContext = null): ?array
+    private function validateSanitizedSvg(string $sanitizedSvg, ?array $uploadsContext, ?array &$failureContext = null): ?array
     {
         $failureContext = null;
         $sanitizedSvg = trim($sanitizedSvg);
@@ -732,11 +801,11 @@ class IconLibrary
     /**
      * Vérifie qu'une valeur d'attribut href/xlink:href de balise <use> est locale ou provient
      * de la médiathèque WordPress.
+     *
+     * @param array{base_url: string, normalized_basedir: string, url_parts: array, scheme: string, host: string, port: ?int, normalized_base_path: string}|null $uploadsContext
+     * @param array{code: string}|null $failureContext
      */
-    /**
-     * @param array{base_url: string, normalized_basedir: string, url_parts: array, scheme: string, host: string, port: ?int, normalized_base_path: string} $uploadsContext
-     */
-    private function isSafeUseReference(string $value, array $uploadsContext, ?array &$failureContext = null): bool
+    private function isSafeUseReference(string $value, ?array $uploadsContext, ?array &$failureContext = null): bool
     {
         $failureContext = null;
         if ($value === '') {
@@ -749,6 +818,12 @@ class IconLibrary
             }
 
             $failureContext = ['code' => 'invalid_fragment_identifier'];
+
+            return false;
+        }
+
+        if ($uploadsContext === null) {
+            $failureContext = ['code' => 'uploads_context_missing'];
 
             return false;
         }
