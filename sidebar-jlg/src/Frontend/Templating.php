@@ -10,31 +10,61 @@ class Templating
             return '';
         }
 
-        ob_start();
-        ?>
-        <div class="social-icons <?php echo esc_attr($orientation); ?>">
-            <?php foreach ($socialIcons as $social) :
-                if (empty($social['icon']) || empty($social['url']) || !isset($allIcons[$social['icon']])) {
-                    continue;
-                }
+        $iconsMarkup = [];
 
-                $iconParts = explode('_', $social['icon']);
-                $iconLabel = (isset($iconParts[0]) && $iconParts[0] !== '') ? $iconParts[0] : 'unknown';
-                $customLabel = '';
+        foreach ($socialIcons as $social) {
+            if (empty($social['icon']) || empty($social['url']) || !isset($allIcons[$social['icon']])) {
+                continue;
+            }
 
-                if (isset($social['label']) && is_string($social['label'])) {
-                    $customLabel = trim($social['label']);
-                }
+            $customLabel = '';
 
-                $ariaLabel = $customLabel !== '' ? $customLabel : $iconLabel;
-                ?>
-                <a href="<?php echo esc_url($social['url']); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr($ariaLabel); ?>">
-                    <?php echo wp_kses_post($allIcons[$social['icon']]); ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
-        <?php
+            if (isset($social['label']) && is_string($social['label'])) {
+                $customLabel = trim($social['label']);
+            }
 
-        return trim((string) ob_get_clean());
+            $defaultLabel = self::humanizeIconKey((string) $social['icon']);
+            $ariaLabel = $customLabel !== '' ? $customLabel : $defaultLabel;
+
+            $iconsMarkup[] = sprintf(
+                '<a href="%1$s" target="_blank" rel="noopener noreferrer" aria-label="%2$s">%3$s</a>',
+                esc_url($social['url']),
+                esc_attr($ariaLabel),
+                wp_kses_post($allIcons[$social['icon']])
+            );
+        }
+
+        if ($iconsMarkup === []) {
+            return '';
+        }
+
+        $classes = 'social-icons';
+        $orientationClass = trim($orientation);
+        if ($orientationClass !== '') {
+            $classes .= ' ' . $orientationClass;
+        }
+
+        return sprintf(
+            '<div class="%1$s">%2$s</div>',
+            esc_attr($classes),
+            implode('', $iconsMarkup)
+        );
+    }
+
+    private static function humanizeIconKey(string $iconKey): string
+    {
+        $readable = str_replace(['_', '-'], ' ', strtolower($iconKey));
+
+        if (strpos($readable, 'custom ') === 0) {
+            $readable = trim(substr($readable, strlen('custom ')));
+        }
+
+        $readable = trim($readable);
+
+        if ($readable === '') {
+            return __('Lien social', 'sidebar-jlg');
+        }
+
+        return ucwords($readable);
     }
 }
