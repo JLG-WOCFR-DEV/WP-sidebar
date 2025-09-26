@@ -103,6 +103,48 @@ $result_min = $method->invoke($sanitizer, $input_min, $existing_options);
 
 assertSame(0.0, $result_min['overlay_opacity'] ?? null, 'Overlay opacity is floored at 0.0');
 
+$existing_enums = array_merge($defaults->all(), [
+    'layout_style'           => 'floating',
+    'desktop_behavior'       => 'push',
+    'search_method'          => 'hook',
+    'search_alignment'       => 'flex-end',
+    'header_logo_type'       => 'image',
+    'header_alignment_desktop' => 'center',
+    'header_alignment_mobile'  => 'flex-start',
+]);
+
+$input_invalid_enums = [
+    'layout_style'           => 'diagonal',
+    'desktop_behavior'       => 'teleport',
+    'search_method'          => 'quantum',
+    'search_alignment'       => 'space-between',
+    'header_logo_type'       => 'emoji',
+    'header_alignment_desktop' => 'space-around',
+    'header_alignment_mobile'  => 'stretch',
+];
+
+$result_invalid_enums = $method->invoke($sanitizer, $input_invalid_enums, $existing_enums);
+
+assertSame('floating', $result_invalid_enums['layout_style'] ?? null, 'Invalid layout style falls back to existing value');
+assertSame('push', $result_invalid_enums['desktop_behavior'] ?? null, 'Invalid desktop behavior falls back to default');
+assertSame('hook', $result_invalid_enums['search_method'] ?? null, 'Invalid search method falls back to existing value');
+assertSame('flex-end', $result_invalid_enums['search_alignment'] ?? null, 'Invalid search alignment falls back to existing value');
+assertSame('image', $result_invalid_enums['header_logo_type'] ?? null, 'Invalid header logo type falls back to existing value');
+assertSame('center', $result_invalid_enums['header_alignment_desktop'] ?? null, 'Invalid desktop header alignment falls back to existing value');
+assertSame('flex-start', $result_invalid_enums['header_alignment_mobile'] ?? null, 'Invalid mobile header alignment falls back to existing value');
+
+$existing_invalid_alignment = array_merge($defaults->all(), [
+    'header_alignment_desktop' => 'diagonal',
+]);
+
+$input_invalid_alignment = [
+    'header_alignment_desktop' => 'curved',
+];
+
+$result_alignment_default = $method->invoke($sanitizer, $input_invalid_alignment, $existing_invalid_alignment);
+
+assertSame('flex-start', $result_alignment_default['header_alignment_desktop'] ?? null, 'Invalid alignment with invalid existing value falls back to default');
+
 if (!$testsPassed) {
     exit(1);
 }
