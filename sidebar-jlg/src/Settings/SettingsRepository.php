@@ -30,6 +30,7 @@ class SettingsRepository
         'animation_speed',
         'neon_blur',
         'neon_spread',
+        'social_icon_size',
     ];
 
     private const COLOR_OPTION_KEYS = [
@@ -172,6 +173,8 @@ class SettingsRepository
                 } elseif ($normalizedOpacity > 1.0) {
                     $normalizedOpacity = 1.0;
                     $shouldUpdate = true;
+                } elseif (!is_float($currentOpacity)) {
+                    $shouldUpdate = true;
                 }
             }
 
@@ -191,7 +194,7 @@ class SettingsRepository
             } else {
                 $normalizedValue = absint($currentValue);
 
-                if ((string) $normalizedValue !== (string) $currentValue) {
+                if ($normalizedValue !== (int) $currentValue || !is_int($currentValue)) {
                     $shouldUpdate = true;
                 }
             }
