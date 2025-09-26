@@ -15,6 +15,23 @@ class SettingsRepository
         'header_padding_top',
     ];
 
+    private const OPACITY_OPTION_KEYS = [
+        'overlay_opacity',
+        'mobile_bg_opacity',
+    ];
+
+    private const ABSINT_OPTION_KEYS = [
+        'border_width',
+        'width_desktop',
+        'width_tablet',
+        'header_logo_size',
+        'font_size',
+        'mobile_blur',
+        'animation_speed',
+        'neon_blur',
+        'neon_spread',
+    ];
+
     private const COLOR_OPTION_KEYS = [
         'bg_color',
         'bg_color_start',
@@ -133,6 +150,54 @@ class SettingsRepository
 
             if (($revalidated[$dimensionKey] ?? '') !== $normalizedValue) {
                 $revalidated[$dimensionKey] = $normalizedValue;
+            }
+        }
+
+        foreach (self::OPACITY_OPTION_KEYS as $opacityKey) {
+            $defaultOpacity = isset($defaults[$opacityKey]) && is_numeric($defaults[$opacityKey])
+                ? max(0.0, min(1.0, (float) $defaults[$opacityKey]))
+                : 0.0;
+            $currentOpacity = $revalidated[$opacityKey] ?? $defaultOpacity;
+            $shouldUpdate = false;
+
+            if (!is_numeric($currentOpacity)) {
+                $normalizedOpacity = $defaultOpacity;
+                $shouldUpdate = true;
+            } else {
+                $normalizedOpacity = (float) $currentOpacity;
+
+                if ($normalizedOpacity < 0.0) {
+                    $normalizedOpacity = 0.0;
+                    $shouldUpdate = true;
+                } elseif ($normalizedOpacity > 1.0) {
+                    $normalizedOpacity = 1.0;
+                    $shouldUpdate = true;
+                }
+            }
+
+            if ($shouldUpdate) {
+                $revalidated[$opacityKey] = $normalizedOpacity;
+            }
+        }
+
+        foreach (self::ABSINT_OPTION_KEYS as $intKey) {
+            $defaultValue = isset($defaults[$intKey]) ? absint($defaults[$intKey]) : 0;
+            $currentValue = $revalidated[$intKey] ?? $defaultValue;
+            $shouldUpdate = false;
+
+            if (!is_scalar($currentValue)) {
+                $normalizedValue = $defaultValue;
+                $shouldUpdate = true;
+            } else {
+                $normalizedValue = absint($currentValue);
+
+                if ((string) $normalizedValue !== (string) $currentValue) {
+                    $shouldUpdate = true;
+                }
+            }
+
+            if ($shouldUpdate) {
+                $revalidated[$intKey] = $normalizedValue;
             }
         }
 
