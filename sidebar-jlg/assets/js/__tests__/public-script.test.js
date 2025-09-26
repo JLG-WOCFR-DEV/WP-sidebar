@@ -6,8 +6,25 @@ describe('public-script.js', () => {
   let overlay;
   let focusableContent;
 
-  beforeEach(() => {
+  const loadScript = (settings = {}) => {
     jest.resetModules();
+
+    global.sidebarSettings = {
+      animation_type: 'fade',
+      close_on_link_click: '0',
+      ...settings,
+    };
+
+    require('../public-script.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+
+    sidebar = document.getElementById('pro-sidebar');
+    hamburgerBtn = document.getElementById('hamburger-btn');
+    overlay = document.getElementById('sidebar-overlay');
+    focusableContent = sidebar.querySelectorAll(FOCUSABLE_SELECTOR);
+  };
+
+  beforeEach(() => {
     jest.useFakeTimers();
 
     document.body.innerHTML = `
@@ -15,7 +32,12 @@ describe('public-script.js', () => {
       <button id="hamburger-btn" aria-expanded="false">Menu</button>
       <aside id="pro-sidebar" data-hover-desktop="glow" data-hover-mobile="underline">
         <button class="close-sidebar-btn">Fermer</button>
-        <a href="#item">Item</a>
+        <nav class="sidebar-menu">
+          <a href="#item">Item</a>
+        </nav>
+        <div class="social-icons">
+          <a href="#social">Social</a>
+        </div>
         <button type="button">Action</button>
       </aside>
     `;
@@ -27,18 +49,7 @@ describe('public-script.js', () => {
       value: 1200,
     });
 
-    global.sidebarSettings = {
-      animation_type: 'fade',
-      close_on_link_click: '0',
-    };
-
-    require('../public-script.js');
-    document.dispatchEvent(new Event('DOMContentLoaded'));
-
-    sidebar = document.getElementById('pro-sidebar');
-    hamburgerBtn = document.getElementById('hamburger-btn');
-    overlay = document.getElementById('sidebar-overlay');
-    focusableContent = sidebar.querySelectorAll(FOCUSABLE_SELECTOR);
+    loadScript();
   });
 
   afterEach(() => {
@@ -96,5 +107,22 @@ describe('public-script.js', () => {
 
     expect(removeSpy).toHaveBeenCalledWith('sidebar-open');
     expect(document.body.classList.contains('sidebar-open')).toBe(false);
+  });
+
+  test('closes the sidebar when a link is clicked if the setting is enabled', () => {
+    loadScript({ close_on_link_click: '1' });
+
+    hamburgerBtn.click();
+    jest.runOnlyPendingTimers();
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+
+    const link = sidebar.querySelector('.sidebar-menu a');
+    link.click();
+
+    jest.runOnlyPendingTimers();
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+    expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('false');
   });
 });
