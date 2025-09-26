@@ -20,6 +20,14 @@ $sanitizer = new SettingsSanitizer($defaults, $icons);
 $reflection = new ReflectionClass(SettingsSanitizer::class);
 $method = $reflection->getMethod('sanitize_general_settings');
 $method->setAccessible(true);
+$styleMethod = $reflection->getMethod('sanitize_style_settings');
+$styleMethod->setAccessible(true);
+$effectsMethod = $reflection->getMethod('sanitize_effects_settings');
+$effectsMethod->setAccessible(true);
+$menuMethod = $reflection->getMethod('sanitize_menu_settings');
+$menuMethod->setAccessible(true);
+$socialMethod = $reflection->getMethod('sanitize_social_settings');
+$socialMethod->setAccessible(true);
 
 $existing_options = array_merge($defaults->all(), [
     'overlay_color'   => 'rgba(10, 20, 30, 0.8)',
@@ -144,6 +152,123 @@ $input_invalid_alignment = [
 $result_alignment_default = $method->invoke($sanitizer, $input_invalid_alignment, $existing_invalid_alignment);
 
 assertSame('flex-start', $result_alignment_default['header_alignment_desktop'] ?? null, 'Invalid alignment with invalid existing value falls back to default');
+
+$existing_style_enums = array_merge($defaults->all(), [
+    'style_preset' => 'moderne_dark',
+    'bg_color_type' => 'gradient',
+    'accent_color_type' => 'gradient',
+]);
+
+$input_invalid_style_enums = [
+    'style_preset' => 'retro',
+    'bg_color_type' => 'pattern',
+    'accent_color_type' => 'sparkle',
+];
+
+$result_style_invalid = $styleMethod->invoke($sanitizer, $input_invalid_style_enums, $existing_style_enums);
+
+assertSame('moderne_dark', $result_style_invalid['style_preset'] ?? null, 'Invalid style preset falls back to existing value');
+assertSame('gradient', $result_style_invalid['bg_color_type'] ?? null, 'Invalid background color type falls back to existing value');
+assertSame('gradient', $result_style_invalid['accent_color_type'] ?? null, 'Invalid accent color type falls back to existing value');
+
+$existing_style_defaults = array_merge($defaults->all(), [
+    'font_color_type' => 'pattern',
+    'font_hover_color_type' => 'sparkle',
+]);
+
+$input_invalid_font_types = [
+    'font_color_type' => 'dots',
+    'font_hover_color_type' => 'stripes',
+];
+
+$result_style_default = $styleMethod->invoke($sanitizer, $input_invalid_font_types, $existing_style_defaults);
+
+assertSame('solid', $result_style_default['font_color_type'] ?? null, 'Invalid font color type with invalid existing value falls back to default');
+assertSame('solid', $result_style_default['font_hover_color_type'] ?? null, 'Invalid font hover color type with invalid existing value falls back to default');
+
+$existing_effects_enums = array_merge($defaults->all(), [
+    'hover_effect_desktop' => 'glow',
+    'hover_effect_mobile' => 'neon',
+    'animation_type' => 'fade',
+]);
+
+$input_invalid_effects = [
+    'hover_effect_desktop' => 'spin',
+    'hover_effect_mobile' => 'bounce',
+    'animation_type' => 'teleport',
+];
+
+$result_effects_invalid = $effectsMethod->invoke($sanitizer, $input_invalid_effects, $existing_effects_enums);
+
+assertSame('glow', $result_effects_invalid['hover_effect_desktop'] ?? null, 'Invalid desktop hover effect falls back to existing value');
+assertSame('neon', $result_effects_invalid['hover_effect_mobile'] ?? null, 'Invalid mobile hover effect falls back to existing value');
+assertSame('fade', $result_effects_invalid['animation_type'] ?? null, 'Invalid animation type falls back to existing value');
+
+$existing_effects_defaults = array_merge($defaults->all(), [
+    'hover_effect_mobile' => 'orbit',
+]);
+
+$input_invalid_mobile_effect = [
+    'hover_effect_mobile' => 'ripple',
+];
+
+$result_effects_default = $effectsMethod->invoke($sanitizer, $input_invalid_mobile_effect, $existing_effects_defaults);
+
+assertSame('none', $result_effects_default['hover_effect_mobile'] ?? null, 'Invalid mobile hover effect with invalid existing value falls back to default');
+
+$existing_menu_enums = array_merge($defaults->all(), [
+    'menu_alignment_desktop' => 'center',
+    'menu_alignment_mobile' => 'flex-end',
+]);
+
+$input_invalid_menu_alignments = [
+    'menu_alignment_desktop' => 'space-between',
+    'menu_alignment_mobile' => 'space-around',
+];
+
+$result_menu_invalid = $menuMethod->invoke($sanitizer, $input_invalid_menu_alignments, $existing_menu_enums);
+
+assertSame('center', $result_menu_invalid['menu_alignment_desktop'] ?? null, 'Invalid desktop menu alignment falls back to existing value');
+assertSame('flex-end', $result_menu_invalid['menu_alignment_mobile'] ?? null, 'Invalid mobile menu alignment falls back to existing value');
+
+$existing_menu_defaults = array_merge($defaults->all(), [
+    'menu_alignment_mobile' => 'stretch',
+]);
+
+$input_invalid_menu_mobile = [
+    'menu_alignment_mobile' => 'baseline',
+];
+
+$result_menu_default = $menuMethod->invoke($sanitizer, $input_invalid_menu_mobile, $existing_menu_defaults);
+
+assertSame('flex-start', $result_menu_default['menu_alignment_mobile'] ?? null, 'Invalid mobile menu alignment with invalid existing value falls back to default');
+
+$existing_social_enums = array_merge($defaults->all(), [
+    'social_orientation' => 'vertical',
+    'social_position' => 'in-menu',
+]);
+
+$input_invalid_social = [
+    'social_orientation' => 'diagonal',
+    'social_position' => 'header',
+];
+
+$result_social_invalid = $socialMethod->invoke($sanitizer, $input_invalid_social, $existing_social_enums);
+
+assertSame('vertical', $result_social_invalid['social_orientation'] ?? null, 'Invalid social orientation falls back to existing value');
+assertSame('in-menu', $result_social_invalid['social_position'] ?? null, 'Invalid social position falls back to existing value');
+
+$existing_social_defaults = array_merge($defaults->all(), [
+    'social_position' => 'sidebar',
+]);
+
+$input_invalid_social_default = [
+    'social_position' => 'toolbar',
+];
+
+$result_social_default = $socialMethod->invoke($sanitizer, $input_invalid_social_default, $existing_social_defaults);
+
+assertSame('footer', $result_social_default['social_position'] ?? null, 'Invalid social position with invalid existing value falls back to default');
 
 if (!$testsPassed) {
     exit(1);
