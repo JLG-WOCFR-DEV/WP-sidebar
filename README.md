@@ -37,6 +37,15 @@ Le plugin est écrit en PHP, HTML, CSS et JavaScript. Les fichiers principaux se
 - `sidebar-jlg/includes/`
 - `sidebar-jlg/assets/`
 
+### Tests JavaScript
+
+Installez les dépendances npm et exécutez les tests unitaires JSDOM avec :
+
+```bash
+npm install
+npm run test:js
+```
+
 ## Licence
 
 Distribué sous licence [GPL v2 ou ultérieure](https://www.gnu.org/licenses/gpl-2.0.html).
