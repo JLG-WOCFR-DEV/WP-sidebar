@@ -32,7 +32,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function closeSidebar() {
-        if (!document.body.classList.contains('sidebar-open')) {
+        const isSidebarOpen = document.body.classList.contains('sidebar-open');
+        if (!isSidebarOpen) {
             return;
         }
         document.body.classList.remove('sidebar-open');
@@ -88,9 +89,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && document.body.classList.contains('sidebar-open')) {
-            closeSidebar();
+        if (e.key !== 'Escape') {
+            return;
         }
+
+        if (!document.body.classList.contains('sidebar-open')) {
+            return;
+        }
+
+        closeSidebar();
     });
 
     // Appliquer la classe d'effet de survol en fonction de la taille de l'écran
