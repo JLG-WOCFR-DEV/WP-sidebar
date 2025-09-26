@@ -17,6 +17,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 // 1. Supprimer l'option principale du plugin de la table wp_options.
 // C'est ici que tous les réglages de la sidebar sont stockés.
 delete_option( 'sidebar_jlg_settings' );
+delete_option( 'sidebar_jlg_plugin_version' );
 
 // 2. Supprimer tous les transients de cache générés pour les locales mémorisées.
 $cached_locales = get_option( 'sidebar_jlg_cached_locales', [] );
