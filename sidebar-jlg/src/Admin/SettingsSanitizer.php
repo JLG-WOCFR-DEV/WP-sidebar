@@ -20,10 +20,25 @@ class SettingsSanitizer
         'search_method' => ['default', 'shortcode', 'hook'],
         'search_alignment' => ['flex-start', 'center', 'flex-end'],
         'header_logo_type' => ['text', 'image'],
-        'header_alignment' => ['flex-start', 'center', 'flex-end'],
+        'header_alignment_desktop' => ['flex-start', 'center', 'flex-end'],
+        'header_alignment_mobile' => ['flex-start', 'center', 'flex-end'],
         'style_preset' => ['custom', 'moderne_dark'],
-        'color_type' => ['solid', 'gradient'],
-        'hover_effect' => [
+        'bg_color_type' => ['solid', 'gradient'],
+        'accent_color_type' => ['solid', 'gradient'],
+        'font_color_type' => ['solid', 'gradient'],
+        'font_hover_color_type' => ['solid', 'gradient'],
+        'hover_effect_desktop' => [
+            'none',
+            'tile-slide',
+            'underline-center',
+            'pill-center',
+            'spotlight',
+            'glossy-tilt',
+            'neon',
+            'glow',
+            'pulse',
+        ],
+        'hover_effect_mobile' => [
             'none',
             'tile-slide',
             'underline-center',
@@ -35,7 +50,8 @@ class SettingsSanitizer
             'pulse',
         ],
         'animation_type' => ['slide-left', 'fade', 'scale'],
-        'menu_alignment' => ['flex-start', 'center', 'flex-end'],
+        'menu_alignment_desktop' => ['flex-start', 'center', 'flex-end'],
+        'menu_alignment_mobile' => ['flex-start', 'center', 'flex-end'],
         'social_orientation' => ['horizontal', 'vertical'],
         'social_position' => ['footer', 'in-menu'],
     ];
@@ -153,13 +169,13 @@ class SettingsSanitizer
         $sanitized['header_logo_size'] = absint($input['header_logo_size'] ?? $existingOptions['header_logo_size']);
         $sanitized['header_alignment_desktop'] = $this->sanitizeChoice(
             $input['header_alignment_desktop'] ?? null,
-            $this->allowedChoices['header_alignment'],
+            $this->allowedChoices['header_alignment_desktop'],
             $existingOptions['header_alignment_desktop'] ?? ($defaults['header_alignment_desktop'] ?? ''),
             $defaults['header_alignment_desktop'] ?? ''
         );
         $sanitized['header_alignment_mobile'] = $this->sanitizeChoice(
             $input['header_alignment_mobile'] ?? null,
-            $this->allowedChoices['header_alignment'],
+            $this->allowedChoices['header_alignment_mobile'],
             $existingOptions['header_alignment_mobile'] ?? ($defaults['header_alignment_mobile'] ?? ''),
             $defaults['header_alignment_mobile'] ?? ''
         );
@@ -185,7 +201,7 @@ class SettingsSanitizer
 
         $sanitized['bg_color_type'] = $this->sanitizeChoice(
             $input['bg_color_type'] ?? null,
-            $this->allowedChoices['color_type'],
+            $this->allowedChoices['bg_color_type'],
             $existingOptions['bg_color_type'] ?? ($defaults['bg_color_type'] ?? ''),
             $defaults['bg_color_type'] ?? ''
         );
@@ -195,7 +211,7 @@ class SettingsSanitizer
 
         $sanitized['accent_color_type'] = $this->sanitizeChoice(
             $input['accent_color_type'] ?? null,
-            $this->allowedChoices['color_type'],
+            $this->allowedChoices['accent_color_type'],
             $existingOptions['accent_color_type'] ?? ($defaults['accent_color_type'] ?? ''),
             $defaults['accent_color_type'] ?? ''
         );
@@ -206,7 +222,7 @@ class SettingsSanitizer
         $sanitized['font_size'] = absint($input['font_size'] ?? $existingOptions['font_size']);
         $sanitized['font_color_type'] = $this->sanitizeChoice(
             $input['font_color_type'] ?? null,
-            $this->allowedChoices['color_type'],
+            $this->allowedChoices['font_color_type'],
             $existingOptions['font_color_type'] ?? ($defaults['font_color_type'] ?? ''),
             $defaults['font_color_type'] ?? ''
         );
@@ -216,7 +232,7 @@ class SettingsSanitizer
 
         $sanitized['font_hover_color_type'] = $this->sanitizeChoice(
             $input['font_hover_color_type'] ?? null,
-            $this->allowedChoices['color_type'],
+            $this->allowedChoices['font_hover_color_type'],
             $existingOptions['font_hover_color_type'] ?? ($defaults['font_hover_color_type'] ?? ''),
             $defaults['font_hover_color_type'] ?? ''
         );
@@ -241,13 +257,13 @@ class SettingsSanitizer
 
         $sanitized['hover_effect_desktop'] = $this->sanitizeChoice(
             $input['hover_effect_desktop'] ?? null,
-            $this->allowedChoices['hover_effect'],
+            $this->allowedChoices['hover_effect_desktop'],
             $existingOptions['hover_effect_desktop'] ?? ($defaults['hover_effect_desktop'] ?? ''),
             $defaults['hover_effect_desktop'] ?? ''
         );
         $sanitized['hover_effect_mobile'] = $this->sanitizeChoice(
             $input['hover_effect_mobile'] ?? null,
-            $this->allowedChoices['hover_effect'],
+            $this->allowedChoices['hover_effect_mobile'],
             $existingOptions['hover_effect_mobile'] ?? ($defaults['hover_effect_mobile'] ?? ''),
             $defaults['hover_effect_mobile'] ?? ''
         );
@@ -272,13 +288,13 @@ class SettingsSanitizer
 
         $sanitized['menu_alignment_desktop'] = $this->sanitizeChoice(
             $input['menu_alignment_desktop'] ?? null,
-            $this->allowedChoices['menu_alignment'],
+            $this->allowedChoices['menu_alignment_desktop'],
             $existingOptions['menu_alignment_desktop'] ?? ($defaults['menu_alignment_desktop'] ?? ''),
             $defaults['menu_alignment_desktop'] ?? ''
         );
         $sanitized['menu_alignment_mobile'] = $this->sanitizeChoice(
             $input['menu_alignment_mobile'] ?? null,
-            $this->allowedChoices['menu_alignment'],
+            $this->allowedChoices['menu_alignment_mobile'],
             $existingOptions['menu_alignment_mobile'] ?? ($defaults['menu_alignment_mobile'] ?? ''),
             $defaults['menu_alignment_mobile'] ?? ''
         );
