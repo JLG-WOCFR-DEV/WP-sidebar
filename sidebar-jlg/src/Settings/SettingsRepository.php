@@ -204,6 +204,22 @@ class SettingsRepository
             }
         }
 
+        foreach (OptionChoices::getAll() as $choiceKey => $allowedValues) {
+            $currentValue = $revalidated[$choiceKey] ?? null;
+            $defaultValue = $defaults[$choiceKey] ?? null;
+
+            $normalizedChoice = OptionChoices::resolveChoice(
+                $currentValue,
+                $allowedValues,
+                $defaultValue,
+                $defaultValue
+            );
+
+            if (($revalidated[$choiceKey] ?? null) !== $normalizedChoice) {
+                $revalidated[$choiceKey] = $normalizedChoice;
+            }
+        }
+
         if ($revalidated !== $merged) {
             update_option('sidebar_jlg_settings', $revalidated);
             $this->invalidateCache();
