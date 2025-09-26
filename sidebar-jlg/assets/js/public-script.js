@@ -32,6 +32,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function closeSidebar() {
+        if (!document.body.classList.contains('sidebar-open')) {
+            return;
+        }
         document.body.classList.remove('sidebar-open');
         hamburgerBtn.classList.remove('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'false');
@@ -85,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && document.body.classList.contains('sidebar-open')) {
             closeSidebar();
         }
     });
