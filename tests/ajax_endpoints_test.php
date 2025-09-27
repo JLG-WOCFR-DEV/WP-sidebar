@@ -1,8 +1,25 @@
 <?php
 declare(strict_types=1);
 
-use JLG\Sidebar\Ajax\Endpoints;
-use function JLG\Sidebar\plugin;
+namespace JLG\Sidebar\Ajax {
+    function error_log($message): bool
+    {
+        $GLOBALS['logged_errors'][] = $message;
+
+        return true;
+    }
+}
+
+namespace JLG\Sidebar\Icons {
+    function wp_kses($string, $allowedHtml)
+    {
+        return $string;
+    }
+}
+
+namespace {
+    use JLG\Sidebar\Ajax\Endpoints;
+    use function JLG\Sidebar\plugin;
 
 if (!defined('ABSPATH')) {
     define('ABSPATH', true);
@@ -23,6 +40,8 @@ $GLOBALS['test_get_posts_queue'] = [];
 $GLOBALS['test_get_posts_requests'] = [];
 $GLOBALS['test_get_categories_queue'] = [];
 $GLOBALS['test_get_categories_requests'] = [];
+$GLOBALS['triggered_actions'] = [];
+$GLOBALS['logged_errors'] = [];
 $GLOBALS['test_nonce_results'] = [];
 
 function register_activation_hook($file, $callback): void {}
@@ -41,6 +60,10 @@ function add_action($hook, $callback, $priority = 10, $accepted_args = 1): void
 function add_filter($hook, $callback, $priority = 10, $accepted_args = 1): void
 {
     $GLOBALS['registered_filters'][$hook][$priority][] = ['callback' => $callback, 'accepted_args' => $accepted_args];
+}
+function do_action($hook, ...$args): void
+{
+    $GLOBALS['triggered_actions'][] = ['hook' => $hook, 'args' => $args];
 }
 function apply_filters($hook, $value, ...$args)
 {
@@ -176,6 +199,16 @@ function sanitize_text_field($value)
 
     return trim($value);
 }
+function wp_strip_all_tags($string, $remove_breaks = false): string
+{
+    $string = strip_tags((string) $string);
+
+    if ($remove_breaks) {
+        $string = preg_replace('/[\r\n\t ]+/', ' ', $string);
+    }
+
+    return trim($string);
+}
 function add_menu_page(...$args): void {}
 function register_setting(...$args): void {}
 function esc_attr($value)
@@ -296,6 +329,8 @@ function reset_test_environment(): void
     $GLOBALS['test_get_categories_requests'] = [];
     $GLOBALS['test_current_user_can'] = true;
     $GLOBALS['test_nonce_results'] = [];
+    $GLOBALS['triggered_actions'] = [];
+    $GLOBALS['logged_errors'] = [];
     $_POST = [];
 }
 
@@ -507,6 +542,21 @@ $iconPayload = $GLOBALS['json_success_payloads'][0] ?? [];
 assertTrue(isset($iconPayload['home_white']), 'Icon response includes sanitized key');
 assertSame(1, count($iconPayload), 'Icon response excludes duplicates and unknown values');
 
+reset_test_environment();
+$icons = [];
+for ($i = 0; $i < 25; $i++) {
+    $icons[] = 'icon_' . $i;
+}
+$_POST = ['nonce' => 'icons-limit', 'icons' => $icons];
+invoke_endpoint($endpoints, 'ajax_get_icon_svg');
+assertSame('Vous ne pouvez demander que 20 icônes à la fois.', $GLOBALS['json_error_payloads'][0] ?? null, 'Icon limit enforcement returns localized error');
+assertSame([], $GLOBALS['json_success_payloads'], 'Icon limit enforcement does not return icon payload');
+$triggered = $GLOBALS['triggered_actions'][0] ?? null;
+assertSame('sidebar_jlg_icon_request_limit_exceeded', $triggered['hook'] ?? null, 'Icon limit hook triggered when request exceeds cap');
+assertSame(25, $triggered['args'][0] ?? null, 'Icon limit hook receives total icon count');
+assertSame(25, count($triggered['args'][1] ?? []), 'Icon limit hook receives sanitized icon list');
+assertSame('[Sidebar JLG] Icon SVG request rejected: 25 icons requested (limit: 20).', $GLOBALS['logged_errors'][0] ?? null, 'Icon limit rejection logged');
+
 if ($testsPassed) {
     echo "AJAX endpoints tests passed.\n";
     exit(0);
@@ -514,3 +564,4 @@ if ($testsPassed) {
 
 echo "AJAX endpoints tests failed.\n";
 exit(1);
+}
