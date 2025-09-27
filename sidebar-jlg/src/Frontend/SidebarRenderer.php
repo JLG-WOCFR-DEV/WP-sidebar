@@ -353,7 +353,14 @@ class SidebarRenderer
                 return;
             }
 
-            ob_start();
+            $initialBufferLevel = function_exists('ob_get_level') ? ob_get_level() : null;
+
+            if (ob_start() === false) {
+                $this->handleOutputBufferFailure($initialBufferLevel, '[Sidebar JLG] Unable to start output buffering for sidebar rendering.');
+
+                return;
+            }
+
             $optionsForTemplate = $options;
             $allIconsForTemplate = $allIcons;
             $options = $optionsForTemplate;
@@ -361,12 +368,40 @@ class SidebarRenderer
             require $templatePath;
             $html = ob_get_clean();
 
+            if (!is_string($html)) {
+                $this->handleOutputBufferFailure($initialBufferLevel, '[Sidebar JLG] Failed to capture sidebar output buffer.');
+
+                return;
+            }
+
             if ($cacheEnabled) {
                 $this->cache->set($currentLocale, $html);
             }
         }
 
         echo $html;
+    }
+
+    private function handleOutputBufferFailure(?int $initialBufferLevel, string $message): void
+    {
+        $this->clearOutputBuffers($initialBufferLevel);
+
+        if (function_exists('error_log')) {
+            error_log($message);
+        }
+    }
+
+    private function clearOutputBuffers(?int $initialBufferLevel): void
+    {
+        if (!function_exists('ob_get_level') || !function_exists('ob_end_clean')) {
+            return;
+        }
+
+        $targetLevel = $initialBufferLevel ?? 0;
+
+        while (ob_get_level() > $targetLevel) {
+            ob_end_clean();
+        }
     }
 
     public function addBodyClasses(array $classes): array
