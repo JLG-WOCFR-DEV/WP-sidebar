@@ -103,6 +103,27 @@ $result_close_zero = $method->invoke($sanitizer, $input_close_on_click_zero, $ex
 
 assertSame(false, $result_close_zero['close_on_link_click'] ?? null, 'Close-on-click option treats "0" as disabled');
 
+$existing_numeric_general = array_merge($defaults->all(), [
+    'border_width'   => 4,
+    'width_desktop'  => 360,
+    'width_tablet'   => 280,
+    'header_logo_size' => 96,
+]);
+
+$input_empty_numeric_general = [
+    'border_width'   => '',
+    'width_desktop'  => '   ',
+    'width_tablet'   => 'abc',
+    'header_logo_size' => false,
+];
+
+$result_numeric_general = $method->invoke($sanitizer, $input_empty_numeric_general, $existing_numeric_general);
+
+assertSame(4, $result_numeric_general['border_width'] ?? null, 'Empty border width keeps existing value');
+assertSame(360, $result_numeric_general['width_desktop'] ?? null, 'Empty desktop width keeps existing value');
+assertSame(280, $result_numeric_general['width_tablet'] ?? null, 'Non-numeric tablet width keeps existing value');
+assertSame(96, $result_numeric_general['header_logo_size'] ?? null, 'Non-numeric header logo size keeps existing value');
+
 $input_min = [
     'overlay_opacity' => -0.3,
 ];
@@ -186,6 +207,21 @@ $result_style_default = $styleMethod->invoke($sanitizer, $input_invalid_font_typ
 assertSame('solid', $result_style_default['font_color_type'] ?? null, 'Invalid font color type with invalid existing value falls back to default');
 assertSame('solid', $result_style_default['font_hover_color_type'] ?? null, 'Invalid font hover color type with invalid existing value falls back to default');
 
+$existing_style_numeric = array_merge($defaults->all(), [
+    'font_size' => 22,
+    'mobile_blur' => 7,
+]);
+
+$input_style_numeric = [
+    'font_size' => '',
+    'mobile_blur' => 'blur',
+];
+
+$result_style_numeric = $styleMethod->invoke($sanitizer, $input_style_numeric, $existing_style_numeric);
+
+assertSame(22, $result_style_numeric['font_size'] ?? null, 'Empty font size keeps existing value');
+assertSame(7, $result_style_numeric['mobile_blur'] ?? null, 'Non-numeric mobile blur keeps existing value');
+
 $existing_effects_enums = array_merge($defaults->all(), [
     'hover_effect_desktop' => 'glow',
     'hover_effect_mobile' => 'neon',
@@ -215,6 +251,24 @@ $input_invalid_mobile_effect = [
 $result_effects_default = $effectsMethod->invoke($sanitizer, $input_invalid_mobile_effect, $existing_effects_defaults);
 
 assertSame('none', $result_effects_default['hover_effect_mobile'] ?? null, 'Invalid mobile hover effect with invalid existing value falls back to default');
+
+$existing_effects_numeric = array_merge($defaults->all(), [
+    'animation_speed' => 450,
+    'neon_blur' => 14,
+    'neon_spread' => 6,
+]);
+
+$input_effects_numeric = [
+    'animation_speed' => '',
+    'neon_blur' => 'blurrier',
+    'neon_spread' => [],
+];
+
+$result_effects_numeric = $effectsMethod->invoke($sanitizer, $input_effects_numeric, $existing_effects_numeric);
+
+assertSame(450, $result_effects_numeric['animation_speed'] ?? null, 'Empty animation speed keeps existing value');
+assertSame(14, $result_effects_numeric['neon_blur'] ?? null, 'Non-numeric neon blur keeps existing value');
+assertSame(6, $result_effects_numeric['neon_spread'] ?? null, 'Invalid neon spread keeps existing value');
 
 $existing_menu_enums = array_merge($defaults->all(), [
     'menu_alignment_desktop' => 'center',
@@ -269,6 +323,18 @@ $input_invalid_social_default = [
 $result_social_default = $socialMethod->invoke($sanitizer, $input_invalid_social_default, $existing_social_defaults);
 
 assertSame('footer', $result_social_default['social_position'] ?? null, 'Invalid social position with invalid existing value falls back to default');
+
+$existing_social_numeric = array_merge($defaults->all(), [
+    'social_icon_size' => 42,
+]);
+
+$input_social_numeric = [
+    'social_icon_size' => '',
+];
+
+$result_social_numeric = $socialMethod->invoke($sanitizer, $input_social_numeric, $existing_social_numeric);
+
+assertSame(42, $result_social_numeric['social_icon_size'] ?? null, 'Empty social icon size keeps existing value');
 
 if (!$testsPassed) {
     exit(1);

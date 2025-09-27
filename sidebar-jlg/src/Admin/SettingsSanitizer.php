@@ -68,7 +68,12 @@ class SettingsSanitizer
             $input['border_radius'] ?? $existingOptions['border_radius'],
             $existingOptions['border_radius']
         );
-        $sanitized['border_width'] = absint($input['border_width'] ?? $existingOptions['border_width']);
+        $sanitized['border_width'] = $this->sanitizeIntegerOption(
+            $input,
+            'border_width',
+            $existingOptions,
+            $defaults
+        );
         $existingBorderColor = array_key_exists('border_color', $existingOptions)
             ? $existingOptions['border_color']
             : ($defaults['border_color'] ?? '');
@@ -96,8 +101,18 @@ class SettingsSanitizer
             $input['content_margin'] ?? $existingOptions['content_margin'],
             $existingOptions['content_margin']
         );
-        $sanitized['width_desktop'] = absint($input['width_desktop'] ?? $existingOptions['width_desktop']);
-        $sanitized['width_tablet'] = absint($input['width_tablet'] ?? $existingOptions['width_tablet']);
+        $sanitized['width_desktop'] = $this->sanitizeIntegerOption(
+            $input,
+            'width_desktop',
+            $existingOptions,
+            $defaults
+        );
+        $sanitized['width_tablet'] = $this->sanitizeIntegerOption(
+            $input,
+            'width_tablet',
+            $existingOptions,
+            $defaults
+        );
         $sanitized['enable_search'] = !empty($input['enable_search']);
         $sanitized['search_method'] = $this->sanitizeChoice(
             $input['search_method'] ?? null,
@@ -128,7 +143,12 @@ class SettingsSanitizer
             $defaults['header_logo_type'] ?? ''
         );
         $sanitized['header_logo_image'] = esc_url_raw($input['header_logo_image'] ?? $existingOptions['header_logo_image']);
-        $sanitized['header_logo_size'] = absint($input['header_logo_size'] ?? $existingOptions['header_logo_size']);
+        $sanitized['header_logo_size'] = $this->sanitizeIntegerOption(
+            $input,
+            'header_logo_size',
+            $existingOptions,
+            $defaults
+        );
         $sanitized['header_alignment_desktop'] = $this->sanitizeChoice(
             $input['header_alignment_desktop'] ?? null,
             $this->allowedChoices['header_alignment_desktop'],
@@ -181,7 +201,12 @@ class SettingsSanitizer
         $sanitized['accent_color_start'] = ValueNormalizer::normalizeColorWithExisting($input['accent_color_start'] ?? null, $existingOptions['accent_color_start']);
         $sanitized['accent_color_end'] = ValueNormalizer::normalizeColorWithExisting($input['accent_color_end'] ?? null, $existingOptions['accent_color_end']);
 
-        $sanitized['font_size'] = absint($input['font_size'] ?? $existingOptions['font_size']);
+        $sanitized['font_size'] = $this->sanitizeIntegerOption(
+            $input,
+            'font_size',
+            $existingOptions,
+            $defaults
+        );
         $sanitized['font_color_type'] = $this->sanitizeChoice(
             $input['font_color_type'] ?? null,
             $this->allowedChoices['font_color_type'],
@@ -207,7 +232,12 @@ class SettingsSanitizer
         $sanitized['mobile_bg_opacity'] = is_numeric($input['mobile_bg_opacity'] ?? null)
             ? max(0.0, min(1.0, (float) $input['mobile_bg_opacity']))
             : max(0.0, min(1.0, $existingOpacity));
-        $sanitized['mobile_blur'] = absint($input['mobile_blur'] ?? $existingOptions['mobile_blur']);
+        $sanitized['mobile_blur'] = $this->sanitizeIntegerOption(
+            $input,
+            'mobile_blur',
+            $existingOptions,
+            $defaults
+        );
 
         return $sanitized;
     }
@@ -229,15 +259,30 @@ class SettingsSanitizer
             $existingOptions['hover_effect_mobile'] ?? ($defaults['hover_effect_mobile'] ?? ''),
             $defaults['hover_effect_mobile'] ?? ''
         );
-        $sanitized['animation_speed'] = absint($input['animation_speed'] ?? $existingOptions['animation_speed']);
+        $sanitized['animation_speed'] = $this->sanitizeIntegerOption(
+            $input,
+            'animation_speed',
+            $existingOptions,
+            $defaults
+        );
         $sanitized['animation_type'] = $this->sanitizeChoice(
             $input['animation_type'] ?? null,
             $this->allowedChoices['animation_type'],
             $existingOptions['animation_type'] ?? ($defaults['animation_type'] ?? ''),
             $defaults['animation_type'] ?? ''
         );
-        $sanitized['neon_blur'] = absint($input['neon_blur'] ?? $existingOptions['neon_blur']);
-        $sanitized['neon_spread'] = absint($input['neon_spread'] ?? $existingOptions['neon_spread']);
+        $sanitized['neon_blur'] = $this->sanitizeIntegerOption(
+            $input,
+            'neon_blur',
+            $existingOptions,
+            $defaults
+        );
+        $sanitized['neon_spread'] = $this->sanitizeIntegerOption(
+            $input,
+            'neon_spread',
+            $existingOptions,
+            $defaults
+        );
 
         return $sanitized;
     }
@@ -364,9 +409,44 @@ class SettingsSanitizer
             $existingOptions['social_position'] ?? ($defaults['social_position'] ?? ''),
             $defaults['social_position'] ?? ''
         );
-        $sanitized['social_icon_size'] = absint($input['social_icon_size'] ?? $existingOptions['social_icon_size']);
+        $sanitized['social_icon_size'] = $this->sanitizeIntegerOption(
+            $input,
+            'social_icon_size',
+            $existingOptions,
+            $defaults
+        );
 
         return $sanitized;
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @param array<string, mixed> $existingOptions
+     * @param array<string, mixed> $defaults
+     */
+    private function sanitizeIntegerOption(array $input, string $key, array $existingOptions, array $defaults): int
+    {
+        $existing = $existingOptions[$key] ?? ($defaults[$key] ?? 0);
+
+        if (array_key_exists($key, $input)) {
+            $raw = $input[$key];
+
+            if (!is_scalar($raw)) {
+                return absint($existing);
+            }
+
+            if (is_string($raw)) {
+                $raw = trim($raw);
+            }
+
+            if ($raw === '' || !is_numeric($raw)) {
+                return absint($existing);
+            }
+
+            return absint($raw);
+        }
+
+        return absint($existing);
     }
 
     private function sanitizeChoice($rawValue, array $allowed, $existingValue, $defaultValue): string
