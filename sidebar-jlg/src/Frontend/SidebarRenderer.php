@@ -353,7 +353,14 @@ class SidebarRenderer
                 return;
             }
 
-            ob_start();
+            $bufferStarted = ob_start();
+            if ($bufferStarted === false) {
+                $this->logSidebarBufferFailure('ob_start');
+
+                return;
+            }
+
+            $bufferLevel = ob_get_level();
             $optionsForTemplate = $options;
             $allIconsForTemplate = $allIcons;
             $options = $optionsForTemplate;
@@ -361,12 +368,35 @@ class SidebarRenderer
             require $templatePath;
             $html = ob_get_clean();
 
+            if (!is_string($html)) {
+                $this->cleanSidebarBuffer($bufferLevel);
+                $this->logSidebarBufferFailure('ob_get_clean');
+
+                return;
+            }
+
             if ($cacheEnabled) {
                 $this->cache->set($currentLocale, $html);
             }
         }
 
         echo $html;
+    }
+
+    private function cleanSidebarBuffer(int $targetLevel): void
+    {
+        while ($targetLevel > 0 && \ob_get_level() >= $targetLevel) {
+            \ob_end_clean();
+        }
+    }
+
+    private function logSidebarBufferFailure(string $operation): void
+    {
+        if (!function_exists('error_log')) {
+            return;
+        }
+
+        error_log(sprintf('[Sidebar JLG] Failed to capture sidebar output buffer using %s.', $operation));
     }
 
     public function addBodyClasses(array $classes): array
