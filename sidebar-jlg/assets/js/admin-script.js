@@ -1,3 +1,38 @@
+function renderSvgUrlPreview(iconValue, $preview) {
+    if (!$preview || typeof $preview.empty !== 'function' || typeof $preview.append !== 'function') {
+        return false;
+    }
+
+    if (!iconValue) {
+        $preview.empty();
+        return false;
+    }
+
+    let url;
+    try {
+        url = new URL(iconValue, window.location.origin);
+    } catch (error) {
+        $preview.empty();
+        return false;
+    }
+
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+        $preview.empty();
+        return false;
+    }
+
+    const img = document.createElement('img');
+    img.src = url.href;
+    img.alt = 'preview';
+    $preview.empty().append(img);
+
+    return true;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports.renderSvgUrlPreview = renderSvgUrlPreview;
+}
+
 jQuery(document).ready(function($) {
     const options = sidebarJLG.options || {};
     const ajaxUrl = sidebarJLG.ajax_url || '';
@@ -327,7 +362,7 @@ jQuery(document).ready(function($) {
 
         const iconType = $(input).closest('.menu-item-box').find('.menu-item-icon-type').val();
         if (iconType === 'svg_url') {
-            $preview.html(iconValue.startsWith('http') ? `<img src="${iconValue}" alt="preview">` : '');
+            renderSvgUrlPreview(iconValue, $preview);
             return;
         }
 
@@ -1127,6 +1162,16 @@ jQuery(document).ready(function($) {
     });
 
     // --- Bouton de debug (si mode debug activé) ---
+    if (typeof window !== 'undefined') {
+        window.SidebarJLGAdmin = window.SidebarJLGAdmin || {};
+        window.SidebarJLGAdmin.updateIconPreview = updateIconPreview;
+        window.SidebarJLGAdmin.renderSvgUrlPreview = renderSvgUrlPreview;
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports.updateIconPreview = updateIconPreview;
+    }
+
     if (debugMode) {
         const debugButton = $('<button type="button" class="button" style="margin-left: 20px;">🐛 Debug Info</button>');
         debugButton.on('click', function(e) {
