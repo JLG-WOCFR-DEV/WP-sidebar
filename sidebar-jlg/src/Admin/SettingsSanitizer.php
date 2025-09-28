@@ -307,6 +307,7 @@ class SettingsSanitizer
         );
 
         $sanitizedMenuItems = [];
+        $svgUrlContext = $this->getSvgUrlValidationContext();
         if (isset($input['menu_items']) && is_array($input['menu_items'])) {
             foreach ($input['menu_items'] as $item) {
                 if (!is_array($item)) {
@@ -328,7 +329,23 @@ class SettingsSanitizer
                 ];
 
                 if ($iconType === 'svg_url') {
-                    $sanitizedItem['icon'] = esc_url_raw($item['icon'] ?? '');
+                    $rawIconUrl = isset($item['icon']) ? (string) $item['icon'] : '';
+                    $sanitizedUrl = esc_url_raw($rawIconUrl);
+
+                    if ($sanitizedUrl !== '' && $this->isSvgUrlAllowed($sanitizedUrl, $svgUrlContext)) {
+                        $sanitizedItem['icon'] = $sanitizedUrl;
+                    } else {
+                        if ($sanitizedUrl !== '') {
+                            $this->icons->recordRejectedCustomIcon(
+                                $sanitizedUrl,
+                                'external_svg_url',
+                                ['source' => 'menu_item']
+                            );
+                        }
+
+                        $sanitizedItem['icon'] = '';
+                        $sanitizedItem['icon_type'] = 'svg_inline';
+                    }
                 } else {
                     $iconKey = sanitize_key($item['icon'] ?? '');
                     if ($iconKey !== '' && isset($availableIcons[$iconKey])) {
@@ -358,6 +375,109 @@ class SettingsSanitizer
         $sanitized['menu_items'] = $sanitizedMenuItems;
 
         return $sanitized;
+    }
+
+    /**
+     * @return array{host: string|null, allowed_path: string}
+     */
+    private function getSvgUrlValidationContext(): array
+    {
+        $uploads = wp_upload_dir();
+        $baseUrl = '';
+        $allowedHost = null;
+        $allowedPath = '/wp-content/uploads/sidebar-jlg/';
+
+        if (is_array($uploads)) {
+            if (!empty($uploads['baseurl']) && is_string($uploads['baseurl'])) {
+                $baseUrl = trailingslashit($uploads['baseurl']);
+            }
+        }
+
+        if ($baseUrl !== '') {
+            $baseParts = wp_parse_url($baseUrl);
+            if (is_array($baseParts)) {
+                if (!empty($baseParts['host'])) {
+                    $allowedHost = strtolower((string) $baseParts['host']);
+                }
+
+                if (!empty($baseParts['path'])) {
+                    $normalizedBasePath = wp_normalize_path((string) $baseParts['path']);
+                    if ($normalizedBasePath !== '') {
+                        $allowedPath = wp_normalize_path(trailingslashit($normalizedBasePath) . 'sidebar-jlg/');
+                    }
+                }
+            }
+        }
+
+        if ($allowedHost === null) {
+            $siteUrl = get_option('siteurl');
+            if (is_string($siteUrl) && $siteUrl !== '') {
+                $siteParts = wp_parse_url($siteUrl);
+                if (is_array($siteParts) && !empty($siteParts['host'])) {
+                    $allowedHost = strtolower((string) $siteParts['host']);
+                }
+            }
+        }
+
+        $allowedPath = wp_normalize_path($allowedPath);
+        if ($allowedPath === '') {
+            $allowedPath = '/wp-content/uploads/sidebar-jlg/';
+        }
+
+        if ($allowedPath[0] !== '/') {
+            $allowedPath = '/' . ltrim($allowedPath, '/');
+        }
+
+        $allowedPath = rtrim($allowedPath, '/') . '/';
+
+        return [
+            'host' => $allowedHost,
+            'allowed_path' => $allowedPath,
+        ];
+    }
+
+    /**
+     * @param array{host: string|null, allowed_path: string} $context
+     */
+    private function isSvgUrlAllowed(string $url, array $context): bool
+    {
+        $parts = wp_parse_url($url);
+        if (!is_array($parts) || empty($parts['path'])) {
+            return false;
+        }
+
+        $path = wp_normalize_path((string) $parts['path']);
+        if ($path === '') {
+            return false;
+        }
+
+        if ($path[0] !== '/') {
+            $path = '/' . ltrim($path, '/');
+        }
+
+        $allowedPath = wp_normalize_path($context['allowed_path']);
+        if ($allowedPath === '') {
+            return false;
+        }
+
+        $allowedPath = rtrim($allowedPath, '/') . '/';
+
+        if (strpos($path, $allowedPath) !== 0) {
+            return false;
+        }
+
+        if (!empty($parts['host'])) {
+            if ($context['host'] === null) {
+                return false;
+            }
+
+            $host = strtolower((string) $parts['host']);
+            if (strcasecmp($host, (string) $context['host']) !== 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function sanitize_social_settings(array $input, array $existingOptions): array

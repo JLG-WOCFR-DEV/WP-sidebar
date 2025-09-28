@@ -399,7 +399,7 @@ class IconLibrary
         return $customIcons;
     }
 
-    private function recordRejectedCustomIcon(string $file, string $reasonKey, array $context = []): void
+    public function recordRejectedCustomIcon(string $file, string $reasonKey, array $context = []): void
     {
         $this->storeRejectedCustomIcon($file, $reasonKey, $context, true);
     }
@@ -584,6 +584,8 @@ class IconLibrary
                 return __('sanitized SVG differed from the original markup', 'sidebar-jlg');
             case 'empty_icon_key':
                 return __('filename produced an empty identifier', 'sidebar-jlg');
+            case 'external_svg_url':
+                return __('external SVG URLs are not allowed', 'sidebar-jlg');
             case 'unknown':
                 return __('was rejected', 'sidebar-jlg');
         }
