@@ -7,6 +7,7 @@ class IconLibrary
     private const CUSTOM_ICON_CACHE_KEY = 'sidebar_jlg_custom_icons_cache';
     private const CUSTOM_ICON_INDEX_OPTION = 'sidebar_jlg_custom_icon_index';
     private const CUSTOM_ICON_CACHE_TTL = 86400;
+    private const MAX_CUSTOM_ICON_FILES = 200;
 
     private ?array $allIcons = null;
     private array $rejectedCustomIcons = [];
@@ -294,7 +295,29 @@ class IconLibrary
         $allowedMimes = ['svg' => 'image/svg+xml'];
         $customIcons = [];
 
+        $processedFiles = 0;
+        $limitLogged = false;
+        $processingLimit = self::MAX_CUSTOM_ICON_FILES;
+
         foreach ($candidateFiles as $file => $filePath) {
+            if ($processedFiles >= $processingLimit) {
+                if (!$limitLogged && function_exists('error_log')) {
+                    $limitLogged = true;
+                    error_log(sprintf(
+                        '[Sidebar JLG] Custom icons processing limit reached (%d files). Remaining icons will be skipped.',
+                        $processingLimit
+                    ));
+                }
+
+                $this->recordRejectedCustomIcon($file, 'icon_limit_reached', [
+                    'limit' => $processingLimit,
+                ]);
+
+                continue;
+            }
+
+            $processedFiles++;
+
             $fileType = wp_check_filetype_and_ext($filePath, $file, $allowedMimes);
             if (empty($fileType['ext']) || $fileType['ext'] !== 'svg' || empty($fileType['type'])) {
                 $this->recordRejectedCustomIcon($file, 'invalid_type', [
@@ -477,6 +500,16 @@ class IconLibrary
                 return __('file exceeds the maximum allowed size', 'sidebar-jlg');
             case 'read_error':
                 return __('file could not be read', 'sidebar-jlg');
+            case 'icon_limit_reached':
+                $limit = isset($context['limit']) ? (int) $context['limit'] : 0;
+                if ($limit > 0) {
+                    return sprintf(
+                        __('processing limit reached (maximum of %d icons)', 'sidebar-jlg'),
+                        max(1, $limit)
+                    );
+                }
+
+                return __('processing limit reached for custom icons', 'sidebar-jlg');
             case 'empty_after_sanitize':
                 return __('SVG markup was empty after sanitization', 'sidebar-jlg');
             case 'validation_failed':
