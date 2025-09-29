@@ -365,6 +365,35 @@ assertSame(['jlg_ajax_nonce', 'nonce', 'posts-nonce'], $GLOBALS['checked_nonces'
 assertSame(0, count($GLOBALS['test_get_posts_requests']), 'No posts queried when per-page cap exceeded');
 
 reset_test_environment();
+$largeInclude = range(1, 120);
+$_POST = [
+    'nonce' => 'posts-include-overflow',
+    'include' => $largeInclude,
+];
+invoke_endpoint($endpoints, 'ajax_get_posts');
+assertSame('Vous ne pouvez pas inclure plus de 100 éléments à la fois.', $GLOBALS['json_error_payloads'][0] ?? null, 'Posts include limit enforced');
+assertSame(0, count($GLOBALS['test_get_posts_requests']), 'No posts queried when include limit exceeded');
+
+reset_test_environment();
+$includeMax = [];
+for ($i = 1; $i <= 100; $i++) {
+    $includeMax[] = (string) $i;
+}
+$GLOBALS['test_get_posts_queue'] = [
+    ['return' => []],
+    ['return' => []],
+];
+$_POST = [
+    'nonce' => 'posts-include-max',
+    'include' => $includeMax,
+];
+invoke_endpoint($endpoints, 'ajax_get_posts');
+assertSame([], $GLOBALS['json_success_payloads'][0] ?? null, 'Posts request with max include returns empty payload when nothing found');
+assertSame(2, count($GLOBALS['test_get_posts_requests']), 'Posts include lookup triggered when initial query missing IDs');
+assertSame(100, $GLOBALS['test_get_posts_requests'][1]['posts_per_page'] ?? null, 'Posts include lookup limited to include cap');
+assertSame(range(1, 100), array_values($GLOBALS['test_get_posts_requests'][1]['post__in'] ?? []), 'Posts include lookup capped list of IDs');
+
+reset_test_environment();
 $GLOBALS['test_get_posts_queue'] = [
     ['return' => [
         (object) ['ID' => 2, 'post_title' => 'Second'],
@@ -430,6 +459,35 @@ invoke_endpoint($endpoints, 'ajax_get_categories');
 assertSame('Le paramètre posts_per_page ne peut pas dépasser 50.', $GLOBALS['json_error_payloads'][0] ?? null, 'Categories per-page cap enforced');
 assertSame(['jlg_ajax_nonce', 'nonce', 'cats-nonce'], $GLOBALS['checked_nonces'][0] ?? null, 'Categories nonce checked before per-page error');
 assertSame(0, count($GLOBALS['test_get_categories_requests']), 'No categories queried when per-page cap exceeded');
+
+reset_test_environment();
+$largeCategoryInclude = range(1, 121);
+$_POST = [
+    'nonce' => 'cats-include-overflow',
+    'include' => $largeCategoryInclude,
+];
+invoke_endpoint($endpoints, 'ajax_get_categories');
+assertSame('Vous ne pouvez pas inclure plus de 100 éléments à la fois.', $GLOBALS['json_error_payloads'][0] ?? null, 'Categories include limit enforced');
+assertSame(0, count($GLOBALS['test_get_categories_requests']), 'No categories queried when include limit exceeded');
+
+reset_test_environment();
+$categoryIncludeMax = [];
+for ($i = 1; $i <= 100; $i++) {
+    $categoryIncludeMax[] = (string) $i;
+}
+$GLOBALS['test_get_categories_queue'] = [
+    ['return' => []],
+    ['return' => []],
+];
+$_POST = [
+    'nonce' => 'cats-include-max',
+    'include' => $categoryIncludeMax,
+];
+invoke_endpoint($endpoints, 'ajax_get_categories');
+assertSame([], $GLOBALS['json_success_payloads'][0] ?? null, 'Categories request with max include returns empty payload when nothing found');
+assertSame(2, count($GLOBALS['test_get_categories_requests']), 'Categories include lookup triggered when initial query missing IDs');
+assertSame(100, $GLOBALS['test_get_categories_requests'][1]['number'] ?? null, 'Categories include lookup limited to include cap');
+assertSame(range(1, 100), array_values($GLOBALS['test_get_categories_requests'][1]['include'] ?? []), 'Categories include lookup capped list of IDs');
 
 reset_test_environment();
 $GLOBALS['test_get_categories_queue'] = [

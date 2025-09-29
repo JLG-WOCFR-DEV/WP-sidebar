@@ -10,6 +10,7 @@ use function __;
 class Endpoints
 {
     private const MAX_ICONS_PER_REQUEST = 20;
+    private const MAX_INCLUDE_IDS = 100;
 
     private SettingsRepository $settings;
     private MenuCache $cache;
@@ -65,6 +66,10 @@ class Endpoints
             $includeIds = array_filter(array_map('absint', $includeSource));
         }
 
+        if (count($includeIds) > self::MAX_INCLUDE_IDS) {
+            wp_send_json_error(sprintf(__('Vous ne pouvez pas inclure plus de %d éléments à la fois.', 'sidebar-jlg'), self::MAX_INCLUDE_IDS));
+        }
+
         $queryArgs = [
             'posts_per_page' => $perPage,
             'paged' => $page,
@@ -91,9 +96,10 @@ class Endpoints
             $missingIds = array_diff($includeIds, $existingIds);
 
             if (!empty($missingIds)) {
+                $limitedMissingIds = array_slice($missingIds, 0, self::MAX_INCLUDE_IDS);
                 $additionalPosts = get_posts([
-                    'posts_per_page' => count($missingIds),
-                    'post__in'       => $missingIds,
+                    'posts_per_page' => min(count($limitedMissingIds), self::MAX_INCLUDE_IDS),
+                    'post__in'       => $limitedMissingIds,
                     'orderby'        => 'post__in',
                     'post_type'      => $postType,
                 ]);
@@ -150,6 +156,10 @@ class Endpoints
             $includeIds = array_filter(array_map('absint', $includeSource));
         }
 
+        if (count($includeIds) > self::MAX_INCLUDE_IDS) {
+            wp_send_json_error(sprintf(__('Vous ne pouvez pas inclure plus de %d éléments à la fois.', 'sidebar-jlg'), self::MAX_INCLUDE_IDS));
+        }
+
         $categoryArgs = [
             'hide_empty' => false,
             'number' => $perPage,
@@ -175,10 +185,11 @@ class Endpoints
             $missingIds = array_diff($includeIds, $existingIds);
 
             if (!empty($missingIds)) {
+                $limitedMissingIds = array_slice($missingIds, 0, self::MAX_INCLUDE_IDS);
                 $additionalCategories = get_categories([
                     'hide_empty' => false,
-                    'include'    => $missingIds,
-                    'number'     => count($missingIds),
+                    'include'    => $limitedMissingIds,
+                    'number'     => min(count($limitedMissingIds), self::MAX_INCLUDE_IDS),
                     'orderby'    => 'include',
                 ]);
 
