@@ -21,6 +21,24 @@ input:checked + .jlg-slider:before { transform: translateX(26px); }
 .menu-item-content p { margin-top: 0; }
 .menu-item-content .widefat { width: 100%; }
 .icon-preview svg, .icon-preview img { width: 20px; height: 20px; vertical-align: middle; margin-left: 10px; }
+.icon-preview-status {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #3c434a;
+}
+.icon-preview-status.is-error {
+    color: #d63638;
+}
+.icon-input-invalid {
+    border-color: #d63638 !important;
+    box-shadow: 0 0 0 1px #d63638;
+}
+.icon-url-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #646970;
+}
 .menu-item-placeholder { border: 2px dashed #ccc; background-color: #f0f0f0; height: 50px; margin-bottom: 10px; }
 .menu-item-search-container { margin-top: 8px; gap: 8px; align-items: center; display: flex; }
 .menu-item-search-container input[type="search"] { flex: 1; min-width: 0; }

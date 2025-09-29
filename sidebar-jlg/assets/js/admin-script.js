@@ -1,10 +1,165 @@
-function renderSvgUrlPreview(iconValue, $preview) {
+function getSvgUrlRestrictions(overrides) {
+    if (overrides && typeof overrides === 'object') {
+        return overrides;
+    }
+
+    let globalData = null;
+
+    if (typeof window !== 'undefined' && window.sidebarJLG && typeof window.sidebarJLG === 'object') {
+        globalData = window.sidebarJLG;
+    }
+
+    if (!globalData && typeof sidebarJLG !== 'undefined' && typeof sidebarJLG === 'object') {
+        globalData = sidebarJLG;
+    }
+
+    if (globalData && typeof globalData.svg_url_restrictions === 'object' && globalData.svg_url_restrictions !== null) {
+        return globalData.svg_url_restrictions;
+    }
+
+    return {};
+}
+
+function normalizePath(path) {
+    if (typeof path !== 'string') {
+        return '';
+    }
+
+    let normalized = path.replace(/\\/g, '/').trim();
+    if (normalized === '') {
+        return '';
+    }
+
+    normalized = normalized.replace(/\/{2,}/g, '/');
+    normalized = normalized.replace(/^\/+/g, '');
+
+    return '/' + normalized;
+}
+
+function normalizeAllowedPath(path) {
+    const normalized = normalizePath(path);
+    if (!normalized) {
+        return '';
+    }
+
+    return normalized.endsWith('/') ? normalized : normalized + '/';
+}
+
+function normalizeUrlPath(path) {
+    const normalized = normalizePath(path);
+    if (!normalized) {
+        return '';
+    }
+
+    return normalized;
+}
+
+function getRestrictionDescription(restrictions) {
+    if (!restrictions || typeof restrictions !== 'object') {
+        return '';
+    }
+
+    const allowedPath = typeof restrictions.allowed_path === 'string' ? restrictions.allowed_path : '';
+    const host = typeof restrictions.host === 'string' ? restrictions.host : '';
+
+    if (host) {
+        return host + (allowedPath || '');
+    }
+
+    return allowedPath || '';
+}
+
+function buildOutOfScopeMessage(restrictions) {
+    const description = getRestrictionDescription(restrictions);
+
+    if (description) {
+        return `Cette URL ne sera pas enregistrée. Utilisez une adresse dans ${description}.`;
+    }
+
+    return 'Cette URL ne sera pas enregistrée car elle est en dehors de la zone autorisée.';
+}
+
+function joinMessages(...messages) {
+    return messages.filter(Boolean).join(' ');
+}
+
+function isUrlWithinAllowedArea(urlObject, originalValue, restrictions) {
+    const allowedPath = normalizeAllowedPath(restrictions.allowed_path);
+    if (!allowedPath) {
+        return false;
+    }
+
+    const urlPath = normalizeUrlPath(urlObject.pathname || '');
+    if (!urlPath) {
+        return false;
+    }
+
+    if (urlPath.indexOf(allowedPath) !== 0) {
+        return false;
+    }
+
+    const hasExplicitHost = /^https?:\/\//i.test(originalValue) || originalValue.startsWith('//');
+    const allowedHost = typeof restrictions.host === 'string' && restrictions.host !== ''
+        ? restrictions.host.toLowerCase()
+        : null;
+
+    if (hasExplicitHost) {
+        if (!urlObject.hostname || !allowedHost) {
+            return false;
+        }
+
+        return urlObject.hostname.toLowerCase() === allowedHost;
+    }
+
+    return true;
+}
+
+function renderSvgUrlPreview(iconValue, $preview, restrictionsOverride) {
     if (!$preview || typeof $preview.empty !== 'function' || typeof $preview.append !== 'function') {
         return false;
     }
 
-    if (!iconValue) {
+    const restrictions = getSvgUrlRestrictions(restrictionsOverride);
+    const outOfScopeMessage = buildOutOfScopeMessage(restrictions);
+    const $status = typeof $preview.siblings === 'function' ? $preview.siblings('.icon-preview-status') : null;
+    const $input = typeof $preview.siblings === 'function' ? $preview.siblings('.icon-input') : null;
+
+    const setStatus = (message, isError) => {
+        if (!$status || !$status.length) {
+            return;
+        }
+
+        const text = message || '';
+        $status.text(text);
+        if (isError) {
+            $status.addClass('is-error');
+        } else {
+            $status.removeClass('is-error');
+        }
+    };
+
+    const setInputValidity = (isValid) => {
+        if (!$input || !$input.length) {
+            return;
+        }
+
+        if (isValid) {
+            $input.removeClass('icon-input-invalid');
+            $input.removeAttr('aria-invalid');
+        } else {
+            $input.addClass('icon-input-invalid');
+            $input.attr('aria-invalid', 'true');
+        }
+    };
+
+    const clearPreview = () => {
         $preview.empty();
+    };
+
+    if (!iconValue) {
+        clearPreview();
+        setStatus('', false);
+        setInputValidity(true);
         return false;
     }
 
@@ -12,19 +167,34 @@ function renderSvgUrlPreview(iconValue, $preview) {
     try {
         url = new URL(iconValue, window.location.origin);
     } catch (error) {
-        $preview.empty();
+        clearPreview();
+        setStatus(joinMessages('URL invalide.', outOfScopeMessage), true);
+        setInputValidity(false);
         return false;
     }
 
     if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-        $preview.empty();
+        clearPreview();
+        setStatus(joinMessages('Seuls les liens HTTP(S) sont autorisés.', outOfScopeMessage), true);
+        setInputValidity(false);
+        return false;
+    }
+
+    if (!isUrlWithinAllowedArea(url, iconValue, restrictions)) {
+        clearPreview();
+        setStatus(outOfScopeMessage, true);
+        setInputValidity(false);
         return false;
     }
 
     const img = document.createElement('img');
     img.src = url.href;
     img.alt = 'preview';
-    $preview.empty().append(img);
+
+    clearPreview();
+    setStatus('', false);
+    setInputValidity(true);
+    $preview.append(img);
 
     return true;
 }
@@ -580,25 +750,54 @@ jQuery(document).ready(function($) {
         const iconWrapper = $itemBox.find('.menu-item-icon-wrapper');
         const index = $itemBox.index();
         const dataKey = $itemBox.parent().attr('id') === 'menu-items-container' ? 'menu_items' : 'social_icons';
-        
+
+        const existingInput = iconWrapper.find('.icon-input');
+        const previousValueRaw = existingInput.length ? existingInput.val() : '';
+        const previousValue = typeof previousValueRaw === 'string' ? previousValueRaw : '';
+
         iconWrapper.empty();
-        
+
         if (type === 'svg_url') {
             iconWrapper.html(`
-                <input type="text" class="widefat icon-input" 
-                       name="sidebar_jlg_settings[${dataKey}][${index}][icon]" 
+                <input type="text" class="widefat icon-input"
+                       name="sidebar_jlg_settings[${dataKey}][${index}][icon]"
                        placeholder="https://example.com/icon.svg">
                 <button type="button" class="button choose-svg">Choisir depuis la médiathèque</button>
                 <span class="icon-preview"></span>
+                <span class="icon-preview-status" role="status" aria-live="polite"></span>
+                <p class="description icon-url-hint"></p>
             `);
+
+            const restrictions = getSvgUrlRestrictions();
+            const description = getRestrictionDescription(restrictions);
+            const hintElement = iconWrapper.find('.icon-url-hint');
+            if (hintElement.length) {
+                if (description) {
+                    hintElement.text(`Les SVG personnalisés doivent provenir de : ${description}`);
+                } else {
+                    hintElement.text('Les SVG personnalisés doivent provenir du dossier de téléversement autorisé.');
+                }
+            }
         } else {
             iconWrapper.html(`
-                <input type="text" class="widefat icon-input" 
-                       name="sidebar_jlg_settings[${dataKey}][${index}][icon]" 
+                <input type="text" class="widefat icon-input"
+                       name="sidebar_jlg_settings[${dataKey}][${index}][icon]"
                        placeholder="Nom de l'icône">
                 <button type="button" class="button choose-icon">Parcourir les icônes</button>
                 <span class="icon-preview"></span>
             `);
+        }
+
+        const newInput = iconWrapper.find('.icon-input');
+        if (newInput.length) {
+            if (previousValue !== '') {
+                newInput.val(previousValue).trigger('change');
+            } else if (type === 'svg_url') {
+                renderSvgUrlPreview('', iconWrapper.find('.icon-preview'));
+            } else {
+                newInput.removeClass('icon-input-invalid');
+                newInput.removeAttr('aria-invalid');
+            }
         }
     }
 
