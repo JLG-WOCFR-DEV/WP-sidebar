@@ -48,6 +48,14 @@ class SettingsSanitizer
         return array_merge($existingOptions, $sanitizedInput);
     }
 
+    /**
+     * @return array{host: string|null, allowed_path: string}
+     */
+    public function getSvgUrlRestrictions(): array
+    {
+        return $this->getSvgUrlValidationContext();
+    }
+
     private function sanitize_general_settings(array $input, array $existingOptions): array
     {
         $sanitized = [];

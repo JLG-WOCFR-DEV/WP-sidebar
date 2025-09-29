@@ -94,6 +94,7 @@ class MenuPage
             'options' => wp_parse_args($options, $defaults),
             'icons_manifest' => $this->icons->getIconManifest(),
             'icon_fetch_action' => 'jlg_get_icon_svg',
+            'svg_url_restrictions' => $this->sanitizer->getSvgUrlRestrictions(),
         ]);
     }
 
