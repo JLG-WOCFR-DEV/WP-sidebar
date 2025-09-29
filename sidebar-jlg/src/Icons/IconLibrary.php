@@ -270,7 +270,8 @@ class IconLibrary
         ksort($candidateFiles);
 
         $storedIndex = get_option(self::CUSTOM_ICON_INDEX_OPTION, []);
-        if (is_array($storedIndex) && $storedIndex === $currentIndex) {
+        $indicesMatch = is_array($storedIndex) && $storedIndex === $currentIndex;
+        if ($indicesMatch) {
             $cached = get_transient(self::CUSTOM_ICON_CACHE_KEY);
             if (is_array($cached)
                 && isset($cached['icons'], $cached['sources'])
@@ -395,6 +396,10 @@ class IconLibrary
 
         set_transient(self::CUSTOM_ICON_CACHE_KEY, $cachePayload, self::CUSTOM_ICON_CACHE_TTL);
         update_option(self::CUSTOM_ICON_INDEX_OPTION, $currentIndex, 'no');
+
+        if (!$indicesMatch) {
+            do_action('sidebar_jlg_custom_icons_changed');
+        }
 
         return $customIcons;
     }
