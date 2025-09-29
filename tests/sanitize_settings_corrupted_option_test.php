@@ -13,10 +13,13 @@ $defaults = new DefaultSettings();
 $icons = new IconLibrary(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php');
 $sanitizer = new SettingsSanitizer($defaults, $icons);
 
-$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = 'totally-invalid-settings';
+$storedOptions = $defaults->all();
+$storedOptions['unexpected'] = 'should disappear';
+$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = $storedOptions;
 
 $input = [
     'enable_sidebar' => '1',
+    'unexpected_input' => 'also removed',
 ];
 
 $testsPassed = true;
@@ -57,6 +60,8 @@ assertSame(true, $sanitized['enable_sidebar'] ?? null, 'Enable sidebar flag keep
 assertSame($defaultSettings['layout_style'], $sanitized['layout_style'] ?? null, 'Layout style falls back to default when missing from input');
 assertSame($normalizedOverlayDefault, $sanitized['overlay_color'] ?? null, 'Overlay color falls back to default when missing from input');
 assertSame($defaultSettings['social_position'], $sanitized['social_position'] ?? null, 'Social position falls back to default when missing from input');
+assertTrue(!array_key_exists('unexpected', $sanitized), 'Unexpected stored keys are stripped after sanitization');
+assertTrue(!array_key_exists('unexpected_input', $sanitized), 'Unexpected input keys are stripped after sanitization');
 
 if (!$testsPassed) {
     exit(1);

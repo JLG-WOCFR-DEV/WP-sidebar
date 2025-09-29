@@ -32,9 +32,11 @@ class SettingsSanitizer
             if (function_exists('error_log')) {
                 error_log('Sidebar JLG settings option was not an array. Resetting to defaults.');
             }
-            $existingOptions = $defaults;
+            $existingOptions = [];
         }
-        $existingOptions = wp_parse_args($existingOptions, $defaults);
+        $allowedKeys = array_fill_keys(array_keys($defaults), true);
+        $existingOptions = array_intersect_key($existingOptions, $allowedKeys);
+        $existingOptions = array_merge($defaults, $existingOptions);
         $preparedInput = is_array($input) ? $input : [];
 
         $sanitizedInput = array_merge(
@@ -45,7 +47,9 @@ class SettingsSanitizer
             $this->sanitize_social_settings($preparedInput, $existingOptions) ?: []
         );
 
-        return array_merge($existingOptions, $sanitizedInput);
+        $sanitizedInput = array_intersect_key($sanitizedInput, $allowedKeys);
+
+        return array_merge($defaults, $sanitizedInput);
     }
 
     /**
