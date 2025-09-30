@@ -7,6 +7,7 @@ use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Admin\View\ColorPickerField;
 use JLG\Sidebar\Ajax\Endpoints;
 use JLG\Sidebar\Cache\MenuCache;
+use JLG\Sidebar\Frontend\Blocks\SearchBlock;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
@@ -24,6 +25,7 @@ class Plugin
     private MenuPage $menuPage;
     private SidebarRenderer $renderer;
     private Endpoints $ajax;
+    private SearchBlock $searchBlock;
 
     public function __construct(string $pluginFile, string $version)
     {
@@ -50,6 +52,7 @@ class Plugin
             $version
         );
         $this->ajax = new Endpoints($this->settings, $this->cache, $this->icons);
+        $this->searchBlock = new SearchBlock($this->settings, $pluginFile, $version);
     }
 
     public function register(): void
@@ -65,6 +68,7 @@ class Plugin
         $this->menuPage->registerHooks();
         $this->renderer->registerHooks();
         $this->ajax->registerHooks();
+        $this->searchBlock->registerHooks();
 
         $contentChangeHooks = [
             'save_post',

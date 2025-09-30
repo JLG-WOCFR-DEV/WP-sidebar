@@ -1,0 +1,38 @@
+{
+  "apiVersion": 2,
+  "name": "jlg/sidebar-search",
+  "title": "Sidebar JLG – Recherche",
+  "description": "Affiche le formulaire de recherche configuré via Sidebar JLG.",
+  "category": "widgets",
+  "icon": "search",
+  "keywords": [
+    "sidebar",
+    "search",
+    "jlg"
+  ],
+  "textdomain": "sidebar-jlg",
+  "attributes": {
+    "enable_search": {
+      "type": "boolean",
+      "default": false
+    },
+    "search_method": {
+      "type": "string",
+      "default": "default"
+    },
+    "search_alignment": {
+      "type": "string",
+      "default": "flex-start"
+    },
+    "search_shortcode": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "supports": {
+    "html": false,
+    "customClassName": false
+  },
+  "editorScript": "file:../build/sidebar-search.js",
+  "viewScript": "file:../build/sidebar-search-view.js"
+}
