@@ -10,7 +10,7 @@ use function __;
 class Endpoints
 {
     private const MAX_ICONS_PER_REQUEST = 20;
-    private const MAX_INCLUDE_IDS = 100;
+    private const MAX_RESULTS_PER_REQUEST = 100;
 
     private SettingsRepository $settings;
     private MenuCache $cache;
@@ -46,9 +46,20 @@ class Endpoints
         }
 
         check_ajax_referer('jlg_ajax_nonce', 'nonce');
+        $includeIds = [];
+        if (isset($_POST['include'])) {
+            $rawInclude = wp_unslash($_POST['include']);
+            $includeSource = is_array($rawInclude) ? $rawInclude : explode(',', (string) $rawInclude);
+            $includeIds = array_filter(array_map('absint', $includeSource));
+        }
+
+        if (count($includeIds) > self::MAX_RESULTS_PER_REQUEST) {
+            wp_send_json_error(sprintf(__('Vous ne pouvez pas inclure plus de %d éléments à la fois.', 'sidebar-jlg'), self::MAX_RESULTS_PER_REQUEST));
+        }
+
         $searchTerm = isset($_POST['search']) ? sanitize_text_field(wp_unslash($_POST['search'])) : '';
         $page = isset($_POST['page']) ? max(1, intval(wp_unslash($_POST['page']))) : 1;
-        $maxPerPage = 50;
+        $maxPerPage = self::MAX_RESULTS_PER_REQUEST;
         $requestedPerPage = isset($_POST['posts_per_page']) ? intval(wp_unslash($_POST['posts_per_page'])) : 20;
 
         if ($requestedPerPage > $maxPerPage) {
@@ -59,16 +70,6 @@ class Endpoints
         $allowedPostTypes = ['post', 'page'];
         $requestedPostType = isset($_POST['post_type']) ? sanitize_key(wp_unslash($_POST['post_type'])) : 'post';
         $postType = in_array($requestedPostType, $allowedPostTypes, true) ? $requestedPostType : 'post';
-        $includeIds = [];
-        if (isset($_POST['include'])) {
-            $rawInclude = wp_unslash($_POST['include']);
-            $includeSource = is_array($rawInclude) ? $rawInclude : explode(',', (string) $rawInclude);
-            $includeIds = array_filter(array_map('absint', $includeSource));
-        }
-
-        if (count($includeIds) > self::MAX_INCLUDE_IDS) {
-            wp_send_json_error(sprintf(__('Vous ne pouvez pas inclure plus de %d éléments à la fois.', 'sidebar-jlg'), self::MAX_INCLUDE_IDS));
-        }
 
         $queryArgs = [
             'posts_per_page' => $perPage,
@@ -96,9 +97,9 @@ class Endpoints
             $missingIds = array_diff($includeIds, $existingIds);
 
             if (!empty($missingIds)) {
-                $limitedMissingIds = array_slice($missingIds, 0, self::MAX_INCLUDE_IDS);
+                $limitedMissingIds = array_slice($missingIds, 0, self::MAX_RESULTS_PER_REQUEST);
                 $additionalPosts = get_posts([
-                    'posts_per_page' => min(count($limitedMissingIds), self::MAX_INCLUDE_IDS),
+                    'posts_per_page' => min(count($limitedMissingIds), self::MAX_RESULTS_PER_REQUEST),
                     'post__in'       => $limitedMissingIds,
                     'orderby'        => 'post__in',
                     'post_type'      => $postType,
@@ -138,9 +139,20 @@ class Endpoints
         }
 
         check_ajax_referer('jlg_ajax_nonce', 'nonce');
+        $includeIds = [];
+        if (isset($_POST['include'])) {
+            $rawInclude = wp_unslash($_POST['include']);
+            $includeSource = is_array($rawInclude) ? $rawInclude : explode(',', (string) $rawInclude);
+            $includeIds = array_filter(array_map('absint', $includeSource));
+        }
+
+        if (count($includeIds) > self::MAX_RESULTS_PER_REQUEST) {
+            wp_send_json_error(sprintf(__('Vous ne pouvez pas inclure plus de %d éléments à la fois.', 'sidebar-jlg'), self::MAX_RESULTS_PER_REQUEST));
+        }
+
         $searchTerm = isset($_POST['search']) ? sanitize_text_field(wp_unslash($_POST['search'])) : '';
         $page = isset($_POST['page']) ? max(1, intval(wp_unslash($_POST['page']))) : 1;
-        $maxPerPage = 50;
+        $maxPerPage = self::MAX_RESULTS_PER_REQUEST;
         $requestedPerPage = isset($_POST['posts_per_page']) ? intval(wp_unslash($_POST['posts_per_page'])) : 20;
 
         if ($requestedPerPage > $maxPerPage) {
@@ -149,16 +161,6 @@ class Endpoints
 
         $perPage = min(max(1, $requestedPerPage), $maxPerPage);
         $offset = ($page - 1) * $perPage;
-        $includeIds = [];
-        if (isset($_POST['include'])) {
-            $rawInclude = wp_unslash($_POST['include']);
-            $includeSource = is_array($rawInclude) ? $rawInclude : explode(',', (string) $rawInclude);
-            $includeIds = array_filter(array_map('absint', $includeSource));
-        }
-
-        if (count($includeIds) > self::MAX_INCLUDE_IDS) {
-            wp_send_json_error(sprintf(__('Vous ne pouvez pas inclure plus de %d éléments à la fois.', 'sidebar-jlg'), self::MAX_INCLUDE_IDS));
-        }
 
         $categoryArgs = [
             'hide_empty' => false,
@@ -185,11 +187,11 @@ class Endpoints
             $missingIds = array_diff($includeIds, $existingIds);
 
             if (!empty($missingIds)) {
-                $limitedMissingIds = array_slice($missingIds, 0, self::MAX_INCLUDE_IDS);
+                $limitedMissingIds = array_slice($missingIds, 0, self::MAX_RESULTS_PER_REQUEST);
                 $additionalCategories = get_categories([
                     'hide_empty' => false,
                     'include'    => $limitedMissingIds,
-                    'number'     => min(count($limitedMissingIds), self::MAX_INCLUDE_IDS),
+                    'number'     => min(count($limitedMissingIds), self::MAX_RESULTS_PER_REQUEST),
                     'orderby'    => 'include',
                 ]);
 
