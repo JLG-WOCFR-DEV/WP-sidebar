@@ -458,7 +458,17 @@ class SettingsSanitizer
             return false;
         }
 
-        $path = wp_normalize_path((string) $parts['path']);
+        $rawPath = (string) $parts['path'];
+        $decodedPath = rawurldecode($rawPath);
+        if ($decodedPath === '') {
+            return false;
+        }
+
+        if (preg_match('#(^|[\\/])\.\.(?=[\\/]|$)#', $decodedPath)) {
+            return false;
+        }
+
+        $path = wp_normalize_path($decodedPath);
         if ($path === '') {
             return false;
         }
