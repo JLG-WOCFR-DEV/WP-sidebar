@@ -358,9 +358,9 @@ assertSame(['jlg_ajax_nonce', 'nonce', 'invalid'], $GLOBALS['checked_nonces'][0]
 assertSame(0, count($GLOBALS['test_get_posts_requests']), 'Nonce failure prevents posts query');
 
 reset_test_environment();
-$_POST = ['nonce' => 'posts-nonce', 'posts_per_page' => '75'];
+$_POST = ['nonce' => 'posts-nonce', 'posts_per_page' => '150'];
 invoke_endpoint($endpoints, 'ajax_get_posts');
-assertSame('Le paramètre posts_per_page ne peut pas dépasser 50.', $GLOBALS['json_error_payloads'][0] ?? null, 'Posts per-page cap enforced');
+assertSame('Le paramètre posts_per_page ne peut pas dépasser 100.', $GLOBALS['json_error_payloads'][0] ?? null, 'Posts per-page cap enforced');
 assertSame(['jlg_ajax_nonce', 'nonce', 'posts-nonce'], $GLOBALS['checked_nonces'][0] ?? null, 'Posts nonce checked before error');
 assertSame(0, count($GLOBALS['test_get_posts_requests']), 'No posts queried when per-page cap exceeded');
 
@@ -454,9 +454,9 @@ assertSame(['jlg_ajax_nonce', 'nonce', 'invalid'], $GLOBALS['checked_nonces'][0]
 assertSame(0, count($GLOBALS['test_get_categories_requests']), 'Nonce failure prevents categories query');
 
 reset_test_environment();
-$_POST = ['nonce' => 'cats-nonce', 'posts_per_page' => '120'];
+$_POST = ['nonce' => 'cats-nonce', 'posts_per_page' => '150'];
 invoke_endpoint($endpoints, 'ajax_get_categories');
-assertSame('Le paramètre posts_per_page ne peut pas dépasser 50.', $GLOBALS['json_error_payloads'][0] ?? null, 'Categories per-page cap enforced');
+assertSame('Le paramètre posts_per_page ne peut pas dépasser 100.', $GLOBALS['json_error_payloads'][0] ?? null, 'Categories per-page cap enforced');
 assertSame(['jlg_ajax_nonce', 'nonce', 'cats-nonce'], $GLOBALS['checked_nonces'][0] ?? null, 'Categories nonce checked before per-page error');
 assertSame(0, count($GLOBALS['test_get_categories_requests']), 'No categories queried when per-page cap exceeded');
 
