@@ -95,6 +95,15 @@ class MenuPage
             'icons_manifest' => $this->icons->getIconManifest(),
             'icon_fetch_action' => 'jlg_get_icon_svg',
             'svg_url_restrictions' => $this->sanitizer->getSvgUrlRestrictions(),
+            'i18n' => [
+                'menuItemDefaultTitle' => __('Nouvel élément', 'sidebar-jlg'),
+                'socialIconDefaultTitle' => __('Nouvelle icône', 'sidebar-jlg'),
+                'svgUrlOutOfScopeWithDescription' => __('Cette URL ne sera pas enregistrée. Utilisez une adresse dans %s.', 'sidebar-jlg'),
+                'svgUrlOutOfScope' => __('Cette URL ne sera pas enregistrée car elle est en dehors de la zone autorisée.', 'sidebar-jlg'),
+                'invalidUrl' => __('URL invalide.', 'sidebar-jlg'),
+                'httpOnly' => __('Seuls les liens HTTP(S) sont autorisés.', 'sidebar-jlg'),
+                'iconPreviewAlt' => __('Aperçu', 'sidebar-jlg'),
+            ],
         ]);
     }
 

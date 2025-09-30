@@ -407,17 +407,17 @@
     <div class="menu-item-box">
         <div class="menu-item-header">
             <span class="menu-item-handle">::</span>
-            <span class="menu-item-title item-title">{{ data.label || 'Nouvel élément' }}</span>
-            <button type="button" class="button-link delete-menu-item">Supprimer</button>
+            <span class="menu-item-title item-title">{{ data.label || ( window.sidebarJLG && window.sidebarJLG.i18n && window.sidebarJLG.i18n.menuItemDefaultTitle ? window.sidebarJLG.i18n.menuItemDefaultTitle : '<?php echo esc_js( __( 'Nouvel élément', 'sidebar-jlg' ) ); ?>' ) }}</span>
+            <button type="button" class="button-link delete-menu-item"><?php echo esc_html__( 'Supprimer', 'sidebar-jlg' ); ?></button>
         </div>
         <div class="menu-item-content">
-            <p><label>Label</label><input type="text" class="widefat item-label" name="sidebar_jlg_settings[menu_items][{{ data.index }}][label]" value="{{ data.label }}"></p>
-            <p><label>Type de lien</label>
+            <p><label><?php echo esc_html__( 'Label', 'sidebar-jlg' ); ?></label><input type="text" class="widefat item-label" name="sidebar_jlg_settings[menu_items][{{ data.index }}][label]" value="{{ data.label }}"></p>
+            <p><label><?php echo esc_html__( 'Type de lien', 'sidebar-jlg' ); ?></label>
                 <select class="widefat menu-item-type" name="sidebar_jlg_settings[menu_items][{{ data.index }}][type]">
-                    <option value="custom" <# if (data.type === 'custom') { #>selected<# } #>>Lien personnalisé</option>
-                    <option value="post" <# if (data.type === 'post') { #>selected<# } #>>Article</option>
-                    <option value="page" <# if (data.type === 'page') { #>selected<# } #>>Page</option>
-                    <option value="category" <# if (data.type === 'category') { #>selected<# } #>>Catégorie</option>
+                    <option value="custom" <# if (data.type === 'custom') { #>selected<# } #>><?php echo esc_html__( 'Lien personnalisé', 'sidebar-jlg' ); ?></option>
+                    <option value="post" <# if (data.type === 'post') { #>selected<# } #>><?php echo esc_html__( 'Article', 'sidebar-jlg' ); ?></option>
+                    <option value="page" <# if (data.type === 'page') { #>selected<# } #>><?php echo esc_html__( 'Page', 'sidebar-jlg' ); ?></option>
+                    <option value="category" <# if (data.type === 'category') { #>selected<# } #>><?php echo esc_html__( 'Catégorie', 'sidebar-jlg' ); ?></option>
                 </select>
             </p>
             <div class="menu-item-value-wrapper">
@@ -427,10 +427,10 @@
                     <div class="menu-item-search-status" aria-live="polite"></div>
                 </div>
             </div>
-            <p><label>Icône</label>
+            <p><label><?php echo esc_html__( 'Icône', 'sidebar-jlg' ); ?></label>
                 <select class="widefat menu-item-icon-type" name="sidebar_jlg_settings[menu_items][{{ data.index }}][icon_type]">
-                    <option value="svg_inline" <# if (data.icon_type === 'svg_inline') { #>selected<# } #>>Icône de la bibliothèque</option>
-                    <option value="svg_url" <# if (data.icon_type === 'svg_url') { #>selected<# } #>>SVG personnalisé (URL)</option>
+                    <option value="svg_inline" <# if (data.icon_type === 'svg_inline') { #>selected<# } #>><?php echo esc_html__( 'Icône de la bibliothèque', 'sidebar-jlg' ); ?></option>
+                    <option value="svg_url" <# if (data.icon_type === 'svg_url') { #>selected<# } #>><?php echo esc_html__( 'SVG personnalisé (URL)', 'sidebar-jlg' ); ?></option>
                 </select>
             </p>
             <div class="menu-item-icon-wrapper"></div>
@@ -441,15 +441,15 @@
     <div class="menu-item-box">
         <div class="menu-item-header">
             <span class="menu-item-handle">::</span>
-            <span class="menu-item-title item-title">{{ data.label || data.icon || 'Nouvelle icône' }}</span>
-            <button type="button" class="button-link delete-social-icon">Supprimer</button>
+            <span class="menu-item-title item-title">{{ data.label || data.icon || ( window.sidebarJLG && window.sidebarJLG.i18n && window.sidebarJLG.i18n.socialIconDefaultTitle ? window.sidebarJLG.i18n.socialIconDefaultTitle : '<?php echo esc_js( __( 'Nouvelle icône', 'sidebar-jlg' ) ); ?>' ) }}</span>
+            <button type="button" class="button-link delete-social-icon"><?php echo esc_html__( 'Supprimer', 'sidebar-jlg' ); ?></button>
         </div>
         <div class="menu-item-content">
-            <p><label>Label</label><input type="text" class="widefat item-label" name="sidebar_jlg_settings[social_icons][{{ data.index }}][label]" value="{{ data.label || '' }}"></p>
-            <p><label>URL</label><input type="text" class="widefat social-url" name="sidebar_jlg_settings[social_icons][{{ data.index }}][url]" value="{{ data.url }}" placeholder="https://..."></p>
-            <p><label>Icône</label>
+            <p><label><?php echo esc_html__( 'Label', 'sidebar-jlg' ); ?></label><input type="text" class="widefat item-label" name="sidebar_jlg_settings[social_icons][{{ data.index }}][label]" value="{{ data.label || '' }}"></p>
+            <p><label><?php echo esc_html__( 'URL', 'sidebar-jlg' ); ?></label><input type="text" class="widefat social-url" name="sidebar_jlg_settings[social_icons][{{ data.index }}][url]" value="{{ data.url }}" placeholder="<?php echo esc_attr__( 'https://…', 'sidebar-jlg' ); ?>"></p>
+            <p><label><?php echo esc_html__( 'Icône', 'sidebar-jlg' ); ?></label>
                 <select class="widefat social-icon-select" name="sidebar_jlg_settings[social_icons][{{ data.index }}][icon]"></select>
-                 <span class="icon-preview"></span>
+             <span class="icon-preview"></span>
             </p>
         </div>
     </div>
