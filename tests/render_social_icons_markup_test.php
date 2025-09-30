@@ -59,7 +59,7 @@ $resultWithCustomFallback = Templating::renderSocialIcons([
 $expectedCustomFallbackMarkup = '<div class="social-icons vertical"><a href="https://example.com/custom" target="_blank" rel="noopener noreferrer" aria-label="My Brand"><svg class="custom"></svg></a></div>';
 assertSame($expectedCustomFallbackMarkup, $resultWithCustomFallback, 'falls back to humanized label for custom icon');
 
-$resultWithoutRenderableIcons = Templating::renderSocialIcons([
+$resultWithMissingIconMarkup = Templating::renderSocialIcons([
     [
         'icon'  => 'unknown_icon',
         'url'   => 'https://example.com/unknown',
@@ -67,6 +67,7 @@ $resultWithoutRenderableIcons = Templating::renderSocialIcons([
     ],
 ], $allIcons, 'horizontal');
 
-assertSame('', $resultWithoutRenderableIcons, 'returns empty string when no valid icons are rendered');
+$expectedMissingIconMarkup = '<div class="social-icons horizontal"><a href="https://example.com/unknown" class="no-icon" target="_blank" rel="noopener noreferrer" aria-label="Unknown Icon"><span class="no-icon-label">Unknown Icon</span></a></div>';
+assertSame($expectedMissingIconMarkup, $resultWithMissingIconMarkup, 'renders textual fallback when icon markup is missing');
 
 exit($testsPassed ? 0 : 1);

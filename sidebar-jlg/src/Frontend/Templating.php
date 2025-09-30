@@ -15,7 +15,7 @@ class Templating
         $iconsMarkup = [];
 
         foreach ($socialIcons as $social) {
-            if (empty($social['icon']) || empty($social['url']) || !isset($allIcons[$social['icon']])) {
+            if (empty($social['url'])) {
                 continue;
             }
 
@@ -25,14 +25,34 @@ class Templating
                 $customLabel = trim($social['label']);
             }
 
-            $defaultLabel = self::humanizeIconKey((string) $social['icon']);
+            $iconKey = isset($social['icon']) ? (string) $social['icon'] : '';
+            $iconMarkup = $iconKey !== '' && isset($allIcons[$iconKey]) ? (string) $allIcons[$iconKey] : null;
+
+            $defaultLabel = self::humanizeIconKey($iconKey);
             $ariaLabel = $customLabel !== '' ? $customLabel : $defaultLabel;
 
+            $href = esc_url($social['url']);
+
+            if ($href === '') {
+                continue;
+            }
+
+            $linkClasses = [];
+
+            if ($iconMarkup === null) {
+                $linkClasses[] = 'no-icon';
+            }
+
+            $classAttribute = $linkClasses === [] ? '' : sprintf(' class="%s"', esc_attr(implode(' ', $linkClasses)));
+
+            $content = $iconMarkup ?? sprintf('<span class="no-icon-label">%s</span>', esc_html($ariaLabel));
+
             $iconsMarkup[] = sprintf(
-                '<a href="%1$s" target="_blank" rel="noopener noreferrer" aria-label="%2$s">%3$s</a>',
-                esc_url($social['url']),
+                '<a href="%1$s"%2$s target="_blank" rel="noopener noreferrer" aria-label="%3$s">%4$s</a>',
+                $href,
+                $classAttribute,
                 esc_attr($ariaLabel),
-                (string) $allIcons[$social['icon']]
+                $content
             );
         }
 
