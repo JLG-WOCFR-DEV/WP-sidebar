@@ -33,6 +33,6 @@
     "html": false,
     "customClassName": false
   },
-  "editorScript": "file:../build/sidebar-search.js",
-  "viewScript": "file:../build/sidebar-search-view.js"
+  "editorScript": "file:../../build/sidebar-search.js",
+  "viewScript": "file:../../build/sidebar-search-view.js"
 }
