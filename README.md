@@ -19,6 +19,13 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 - Activer une recherche intégrée et personnaliser son affichage.
 - Importer vos propres icônes SVG en les plaçant dans le dossier `wp-content/uploads/sidebar-jlg/icons/`.
 
+### Bloc Gutenberg "Sidebar JLG – Recherche"
+
+- Le bloc dynamique `jlg/sidebar-search` permet d'insérer l'encart de recherche de la sidebar dans l'éditeur du site.
+- Les attributs `enable_search`, `search_method`, `search_alignment` et `search_shortcode` sont synchronisés avec les options globales du plugin via le `SettingsRepository` pour garantir la rétrocompatibilité avec les installations existantes.
+- Le bloc affiche un aperçu direct dans l'éditeur grâce au script d'édition (`sidebar-jlg/assets/js/blocks/sidebar-search.js`) et réutilise le rendu PHP (`render_callback`) pour conserver la logique de la sidebar en front.
+- Pour recompiler les scripts du bloc après modification, exécutez `npm run build`.
+
 ### Icônes personnalisées
 
 - Seuls les fichiers au format `.svg` sont chargés par le plugin. Chaque fichier est contrôlé avec `wp_check_filetype()` avant d'être ajouté à la bibliothèque.
