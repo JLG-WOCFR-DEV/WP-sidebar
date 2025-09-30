@@ -79,7 +79,13 @@ $sidebar_content_html = ob_get_clean();
 ?>
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-<button class="hamburger-menu" id="hamburger-btn" type="button" aria-label="<?php esc_attr_e('Ouvrir le menu', 'sidebar-jlg'); ?>" aria-controls="pro-sidebar" aria-expanded="false">
+<button
+    class="hamburger-menu"
+    id="hamburger-btn"
+    type="button"
+    aria-label="<?php esc_attr_e('Ouvrir le menu', 'sidebar-jlg'); ?>"
+    aria-controls="pro-sidebar"
+    aria-expanded="false">
     <div class="hamburger-icon">
         <div class="icon-1"></div>
         <div class="icon-2"></div>
