@@ -54,7 +54,7 @@ class SearchBlock
         $options = $this->settings->getOptions();
         $normalized = $this->normalizeAttributes($attributes, $options);
 
-        if (!$this->isRestRequest()) {
+        if (!$this->isRestRequest() && $this->canSynchronizeOptions()) {
             $this->maybeSynchronizeOptions($normalized, $options);
         }
 
@@ -95,6 +95,10 @@ class SearchBlock
      */
     private function maybeSynchronizeOptions(array $attributes, array $options): void
     {
+        if (!$this->canSynchronizeOptions()) {
+            return;
+        }
+
         $updates = [];
 
         $currentEnable = isset($options['enable_search']) ? (bool) $options['enable_search'] : false;
@@ -127,6 +131,19 @@ class SearchBlock
         }
 
         $this->settings->saveOptions(array_merge($storedOptions, $updates));
+    }
+
+    private function canSynchronizeOptions(): bool
+    {
+        if (!function_exists('current_user_can')) {
+            return false;
+        }
+
+        if (!function_exists('is_admin') || !is_admin()) {
+            return false;
+        }
+
+        return current_user_can('manage_options');
     }
 
     private function renderSearchMarkup(array $options): string
