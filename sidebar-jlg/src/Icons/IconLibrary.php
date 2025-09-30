@@ -662,6 +662,8 @@ class IconLibrary
             'transform' => true,
             'data-name' => true,
             'focusable' => true,
+            'aria-label' => true,
+            'aria-describedby' => true,
         ];
 
         $allowed = [
