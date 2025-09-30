@@ -31,6 +31,7 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 - Seuls les fichiers au format `.svg` sont chargés par le plugin. Chaque fichier est contrôlé avec `wp_check_filetype()` avant d'être ajouté à la bibliothèque.
 - Le contenu SVG est validé via `wp_kses`. Les fichiers dont le contenu est altéré par le nettoyage ou qui contiennent des éléments non autorisés sont ignorés pour éviter toute contamination.
 - Un contrôle supplémentaire inspecte les attributs `href`/`xlink:href` des balises `<use>` afin de s'assurer qu'ils pointent uniquement vers un identifiant local ou vers un média de la bibliothèque (`wp-content/uploads`). Les validations spécifiques sont centralisées dans `Sidebar\JLG\Icons\IconLibrary::validateSanitizedSvg()` pour simplifier l'ajout de nouvelles règles de sécurité.
+- Les attributs ARIA usuels (`aria-label`, `aria-describedby`, etc.) sont désormais préservés lors de la validation afin de faciliter l'accessibilité des icônes.
 
 ## Désinstallation
 

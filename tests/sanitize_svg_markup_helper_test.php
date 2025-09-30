@@ -81,6 +81,18 @@ if (is_array($safeResult)) {
     assertNotContains('<script', $safeResult['svg'], 'sanitizeSvgMarkup keeps safe markup unchanged');
 }
 
+$svgWithAria = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" aria-label="Icone decorative" aria-describedby="group-desc"><g id="group-desc" aria-label="Description du groupe"><circle cx="5" cy="5" r="4" aria-label="Point central" /></g></svg>';
+$failure = null;
+$ariaResult = $iconLibrary->sanitizeSvgMarkup($svgWithAria, null, $failure);
+
+assertTrue(is_array($ariaResult), 'sanitizeSvgMarkup accepts SVG markup with common ARIA attributes');
+assertSame(null, $failure, 'sanitizeSvgMarkup leaves failure context empty for SVG markup using ARIA attributes');
+
+if (is_array($ariaResult)) {
+    assertTrue(strpos($ariaResult['svg'], 'aria-label="Icone decorative"') !== false, 'sanitizeSvgMarkup preserves aria-label attributes');
+    assertTrue(strpos($ariaResult['svg'], 'aria-describedby="group-desc"') !== false, 'sanitizeSvgMarkup preserves aria-describedby attributes');
+}
+
 $svgWithScript = '<svg xmlns="http://www.w3.org/2000/svg"><title>Unsafe</title><script>alert(1)</script><circle cx="0" cy="0" r="1" /></svg>';
 $failure = null;
 $rejectedResult = $iconLibrary->sanitizeSvgMarkup($svgWithScript, null, $failure);
