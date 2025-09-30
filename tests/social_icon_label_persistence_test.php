@@ -103,7 +103,7 @@ $html = ob_get_clean();
 unset($GLOBALS['wp_test_function_overrides']['esc_attr']);
 
 assertContains('aria-label="Label &quot;Test &amp; Co&quot;"', $html, 'Custom label is escaped in aria-label attribute');
-assertContains('aria-label="x"', $html, 'Empty label falls back to icon name in aria-label');
+assertContains('aria-label="X"', $html, 'Empty label falls back to icon name in aria-label');
 
 if (!$testsPassed) {
     exit(1);
