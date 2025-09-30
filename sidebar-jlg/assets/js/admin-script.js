@@ -1,17 +1,30 @@
+function getSidebarGlobalData() {
+    if (typeof window !== 'undefined' && window.sidebarJLG && typeof window.sidebarJLG === 'object') {
+        return window.sidebarJLG;
+    }
+
+    if (typeof sidebarJLG !== 'undefined' && typeof sidebarJLG === 'object') {
+        return sidebarJLG;
+    }
+
+    return null;
+}
+
+function getI18nString(key, fallback = '') {
+    const globalData = getSidebarGlobalData();
+    if (globalData && globalData.i18n && typeof globalData.i18n[key] === 'string') {
+        return globalData.i18n[key];
+    }
+
+    return fallback;
+}
+
 function getSvgUrlRestrictions(overrides) {
     if (overrides && typeof overrides === 'object') {
         return overrides;
     }
 
-    let globalData = null;
-
-    if (typeof window !== 'undefined' && window.sidebarJLG && typeof window.sidebarJLG === 'object') {
-        globalData = window.sidebarJLG;
-    }
-
-    if (!globalData && typeof sidebarJLG !== 'undefined' && typeof sidebarJLG === 'object') {
-        globalData = sidebarJLG;
-    }
+    const globalData = getSidebarGlobalData();
 
     if (globalData && typeof globalData.svg_url_restrictions === 'object' && globalData.svg_url_restrictions !== null) {
         return globalData.svg_url_restrictions;
@@ -73,10 +86,18 @@ function buildOutOfScopeMessage(restrictions) {
     const description = getRestrictionDescription(restrictions);
 
     if (description) {
-        return `Cette URL ne sera pas enregistrée. Utilisez une adresse dans ${description}.`;
+        const template = getI18nString(
+            'svgUrlOutOfScopeWithDescription',
+            'Cette URL ne sera pas enregistrée. Utilisez une adresse dans %s.'
+        );
+
+        return template.replace('%s', description);
     }
 
-    return 'Cette URL ne sera pas enregistrée car elle est en dehors de la zone autorisée.';
+    return getI18nString(
+        'svgUrlOutOfScope',
+        'Cette URL ne sera pas enregistrée car elle est en dehors de la zone autorisée.'
+    );
 }
 
 function joinMessages(...messages) {
@@ -168,14 +189,14 @@ function renderSvgUrlPreview(iconValue, $preview, restrictionsOverride) {
         url = new URL(iconValue, window.location.origin);
     } catch (error) {
         clearPreview();
-        setStatus(joinMessages('URL invalide.', outOfScopeMessage), true);
+        setStatus(joinMessages(getI18nString('invalidUrl', 'URL invalide.'), outOfScopeMessage), true);
         setInputValidity(false);
         return false;
     }
 
     if (url.protocol !== 'https:' && url.protocol !== 'http:') {
         clearPreview();
-        setStatus(joinMessages('Seuls les liens HTTP(S) sont autorisés.', outOfScopeMessage), true);
+        setStatus(joinMessages(getI18nString('httpOnly', 'Seuls les liens HTTP(S) sont autorisés.'), outOfScopeMessage), true);
         setInputValidity(false);
         return false;
     }
@@ -189,7 +210,7 @@ function renderSvgUrlPreview(iconValue, $preview, restrictionsOverride) {
 
     const img = document.createElement('img');
     img.src = url.href;
-    img.alt = 'preview';
+    img.alt = getI18nString('iconPreviewAlt', 'preview');
 
     clearPreview();
     setStatus('', false);
@@ -1186,7 +1207,7 @@ jQuery(document).ready(function($) {
         dataKey: 'menu_items',
         addButtonId: 'add-menu-item', 
         deleteButtonClass: 'delete-menu-item',
-        newTitle: 'Nouvel élément',
+        newTitle: getI18nString('menuItemDefaultTitle', 'Nouvel élément'),
         newItem: (index) => ({ 
             index, 
             label: '', 
@@ -1261,7 +1282,7 @@ jQuery(document).ready(function($) {
         dataKey: 'social_icons',
         addButtonId: 'add-social-icon',
         deleteButtonClass: 'delete-social-icon',
-        newTitle: 'Nouvelle icône',
+        newTitle: getI18nString('socialIconDefaultTitle', 'Nouvelle icône'),
         newItem: (index) => ({
             index,
             label: '',
@@ -1275,7 +1296,7 @@ jQuery(document).ready(function($) {
             const $preview = $itemBox.find('.icon-preview');
             $preview.html(standardIcons[itemData.icon] || '');
 
-            const defaultTitle = 'Nouvelle icône';
+            const defaultTitle = getI18nString('socialIconDefaultTitle', 'Nouvelle icône');
             const iconKey = typeof itemData.icon === 'string' ? itemData.icon : '';
             const fallbackTitle = iconKey ? iconKey.split('_')[0] : defaultTitle;
             $itemBox.data('fallbackTitle', (fallbackTitle || defaultTitle).trim());
