@@ -34,7 +34,7 @@ $resultWithStandardIcon = Templating::renderSocialIcons([
     ],
 ], $allIcons, 'horizontal');
 
-$expectedStandardMarkup = '<div class="social-icons horizontal"><a href="https://example.com/facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook White"><svg class="facebook"></svg></a></div>';
+$expectedStandardMarkup = '<div class="social-icons horizontal"><a href="https://example.com/facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg class="facebook"></svg></a></div>';
 assertSame($expectedStandardMarkup, $resultWithStandardIcon, 'renders markup for valid social icon with humanized label');
 
 $resultWithCustomLabel = Templating::renderSocialIcons([

@@ -4,6 +4,8 @@ namespace JLG\Sidebar\Frontend;
 
 class Templating
 {
+    private const ICON_COLOR_SUFFIXES = ['white', 'black'];
+
     public static function renderSocialIcons(array $socialIcons, array $allIcons, string $orientation): string
     {
         if ($socialIcons === []) {
@@ -60,6 +62,16 @@ class Templating
         }
 
         $readable = trim($readable);
+
+        if ($readable !== '' && self::ICON_COLOR_SUFFIXES !== []) {
+            $suffixPattern = sprintf(
+                '/\b(?:%s)\s*$/u',
+                implode('|', array_map(static fn (string $suffix): string => preg_quote($suffix, '/'), self::ICON_COLOR_SUFFIXES))
+            );
+
+            $readable = (string) preg_replace($suffixPattern, '', $readable);
+            $readable = trim($readable);
+        }
 
         if ($readable === '') {
             return __('Lien social', 'sidebar-jlg');
