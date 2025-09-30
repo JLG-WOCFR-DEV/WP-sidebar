@@ -24,7 +24,8 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 - Le bloc dynamique `jlg/sidebar-search` permet d'insérer l'encart de recherche de la sidebar dans l'éditeur du site.
 - Les attributs `enable_search`, `search_method`, `search_alignment` et `search_shortcode` sont synchronisés avec les options globales du plugin via le `SettingsRepository` pour garantir la rétrocompatibilité avec les installations existantes.
 - Le bloc affiche un aperçu direct dans l'éditeur grâce au script d'édition (`sidebar-jlg/assets/js/blocks/sidebar-search.js`) et réutilise le rendu PHP (`render_callback`) pour conserver la logique de la sidebar en front.
-- Pour recompiler les scripts du bloc après modification, exécutez `npm run build`.
+- Les scripts générés sont exposés via `block.json` et chargés automatiquement par WordPress depuis `sidebar-jlg/assets/build`. Après compilation, vérifiez que les fichiers `sidebar-search(.asset).php` et `sidebar-search-view(.asset).php` sont bien présents afin de garantir le chargement du bloc aussi bien dans l'éditeur que sur le site public.
+- Pour recompiler les scripts du bloc après modification, exécutez `npm run build`, puis (optionnel) contrôlez dans la console du navigateur WordPress que le bloc `jlg/sidebar-search` n'émet aucun avertissement de script manquant.
 
 ### Icônes personnalisées
 
