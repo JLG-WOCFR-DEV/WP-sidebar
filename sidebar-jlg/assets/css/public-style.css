@@ -2,6 +2,77 @@
 
 /* --- Base --- */
 body { transition: padding-left var(--transition-speed, 0.4s) ease; }
+
+@media (prefers-reduced-motion: reduce) {
+    body,
+    .pro-sidebar,
+    .sidebar-overlay,
+    .sidebar-menu a,
+    .sidebar-menu a::before,
+    .social-icons a,
+    .social-icons a svg,
+    .hamburger-menu .icon-1,
+    .hamburger-menu .icon-2,
+    .hamburger-menu .icon-3 {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    .pro-sidebar.animation-scale,
+    body.sidebar-open .pro-sidebar.animation-scale,
+    .pro-sidebar.animation-slide-left,
+    body.sidebar-open .pro-sidebar.animation-slide-left,
+    .pro-sidebar.animation-fade,
+    body.sidebar-open .pro-sidebar.animation-fade,
+    .pro-sidebar[data-hover-desktop="glossy-tilt"] .sidebar-menu a,
+    .pro-sidebar[data-hover-mobile="glossy-tilt"] .sidebar-menu a {
+        transform: none !important;
+        opacity: 1 !important;
+    }
+
+    .sidebar-menu a,
+    .sidebar-menu a::before,
+    .social-icons a,
+    .social-icons a svg,
+    .pro-sidebar[data-hover-desktop="neon"] .sidebar-menu a:hover,
+    .pro-sidebar[data-hover-mobile="neon"] .sidebar-menu a:hover,
+    .pro-sidebar[data-hover-desktop="glow"] .sidebar-menu a:hover,
+    .pro-sidebar[data-hover-mobile="glow"] .sidebar-menu a:hover,
+    .pro-sidebar[data-hover-desktop="spotlight"] .sidebar-menu a,
+    .pro-sidebar[data-hover-mobile="spotlight"] .sidebar-menu a,
+    .pro-sidebar[data-hover-desktop="tile-slide"] .sidebar-menu a::before,
+    .pro-sidebar[data-hover-mobile="tile-slide"] .sidebar-menu a::before,
+    .pro-sidebar[data-hover-desktop="underline-center"] .sidebar-menu a::before,
+    .pro-sidebar[data-hover-mobile="underline-center"] .sidebar-menu a::before,
+    .pro-sidebar[data-hover-desktop="pill-center"] .sidebar-menu a::before,
+    .pro-sidebar[data-hover-mobile="pill-center"] .sidebar-menu a::before,
+    .social-icons a:hover svg {
+        transform: none !important;
+    }
+
+    .pro-sidebar[data-hover-desktop="pulse"] .sidebar-menu a:hover,
+    .pro-sidebar[data-hover-mobile="pulse"] .sidebar-menu a:hover,
+    .social-icons a,
+    .social-icons a:hover,
+    .sidebar-menu a:hover,
+    .sidebar-menu .menu-icon svg,
+    .close-sidebar-btn svg {
+        animation: none !important;
+        transform: none !important;
+    }
+
+    .hamburger-menu.is-active .icon-1,
+    .hamburger-menu.is-active .icon-3 {
+        top: 0;
+    }
+
+    .hamburger-menu.is-active .icon-1,
+    .hamburger-menu.is-active .icon-2,
+    .hamburger-menu.is-active .icon-3 {
+        transform: none !important;
+        opacity: 1 !important;
+    }
+}
 body.sidebar-open {
     overflow: hidden;
     touch-action: none;

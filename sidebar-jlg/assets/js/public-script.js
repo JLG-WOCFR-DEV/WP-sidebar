@@ -11,6 +11,18 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    const prefersReducedMotion = typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-reduced-motion: reduce)')
+        : null;
+
+    function getDelay(defaultDelay) {
+        if (!prefersReducedMotion) {
+            return defaultDelay;
+        }
+
+        return prefersReducedMotion.matches ? 0 : defaultDelay;
+    }
+
     // Appliquer la classe d'animation
     const animationType = (typeof sidebarSettings !== 'undefined' && sidebarSettings.animation_type) ? sidebarSettings.animation_type : 'slide-left';
     sidebar.classList.add(`animation-${animationType}`);
@@ -52,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (overlay) overlay.classList.add('is-visible');
         setTimeout(() => {
             if (firstFocusableElement) firstFocusableElement.focus();
-        }, 100);
+        }, getDelay(100));
         document.addEventListener('keydown', trapFocus);
     }
 
@@ -111,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
         selectors.forEach((selector) => {
             sidebar.querySelectorAll(selector).forEach((element) => {
                 element.addEventListener('click', () => {
-                    setTimeout(closeSidebar, 50);
+                    setTimeout(closeSidebar, getDelay(50));
                 });
             });
         });

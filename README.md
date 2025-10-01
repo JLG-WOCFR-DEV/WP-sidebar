@@ -15,6 +15,7 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 - Activer ou désactiver la sidebar.
 - Choisir le style : couleurs, typographie, effets d'animation, marges…
 - Ajuster la position et la couleur du bouton hamburger pour garantir le contraste.
+- Désactiver les animations front-end lorsque le système annonce "réduire les mouvements" (`prefers-reduced-motion`).
 - Renseigner les dimensions en utilisant des unités classiques (`px`, `rem`, `vh`, etc.) ou des expressions `calc()` composées d'opérateurs arithmétiques autorisés.
 - Ajouter des éléments de menu (pages, articles, catégories, liens personnalisés) et des icônes sociales.
 - Activer une recherche intégrée et personnaliser son affichage.
