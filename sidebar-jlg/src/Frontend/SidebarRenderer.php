@@ -590,6 +590,18 @@ class SidebarRenderer
             return self::trimPath($url);
         }
 
+        if (!isset($parts['scheme']) || !isset($parts['host'])) {
+            $absoluteUrl = self::convertRelativeUrlToAbsolute($url);
+            if ($absoluteUrl !== null) {
+                $parts = @parse_url($absoluteUrl);
+                if ($parts === false) {
+                    return self::trimPath($absoluteUrl);
+                }
+
+                $url = $absoluteUrl;
+            }
+        }
+
         $path = isset($parts['path']) ? (string) $parts['path'] : '';
         if ($path === '') {
             $path = '/';
@@ -615,6 +627,53 @@ class SidebarRenderer
         }
 
         return $path . $query;
+    }
+
+    private static function convertRelativeUrlToAbsolute(string $url): ?string
+    {
+        $homeUrl = self::getHomeUrlForNormalization();
+        if ($homeUrl === null) {
+            return null;
+        }
+
+        $homeUrl = rtrim($homeUrl, '/');
+        if ($homeUrl === '') {
+            return null;
+        }
+
+        if ($url === '' || $url === '/') {
+            return $homeUrl . '/';
+        }
+
+        $firstChar = $url[0];
+        if ($firstChar === '/') {
+            return $homeUrl . $url;
+        }
+
+        if ($firstChar === '?' || $firstChar === '#') {
+            return $homeUrl . '/' . $url;
+        }
+
+        return $homeUrl . '/' . $url;
+    }
+
+    private static function getHomeUrlForNormalization(): ?string
+    {
+        if (!function_exists('home_url')) {
+            return null;
+        }
+
+        $homeUrl = home_url('/');
+        if (!is_string($homeUrl)) {
+            return null;
+        }
+
+        $homeUrl = trim($homeUrl);
+        if ($homeUrl === '') {
+            return null;
+        }
+
+        return $homeUrl;
     }
 
     private static function trimPath(string $path): string
