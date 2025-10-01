@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const hamburgerBtn = document.getElementById('hamburger-btn');
     const closeBtn = sidebar ? sidebar.querySelector('.close-sidebar-btn') : null;
     const overlay = document.getElementById('sidebar-overlay');
+    const openLabel = hamburgerBtn ? (hamburgerBtn.getAttribute('data-open-label') || hamburgerBtn.getAttribute('aria-label') || '') : '';
+    const closeLabel = hamburgerBtn ? (hamburgerBtn.getAttribute('data-close-label') || openLabel) : '';
 
     if (!sidebar || !hamburgerBtn) {
         if (typeof sidebarSettings !== 'undefined' && sidebarSettings.debug_mode == '1') {
@@ -113,6 +115,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('sidebar-open');
         hamburgerBtn.classList.add('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'true');
+        if (closeLabel) {
+            hamburgerBtn.setAttribute('aria-label', closeLabel);
+        }
         if (overlay) overlay.classList.add('is-visible');
         setTimeout(() => {
             focusFirstAvailableElement();
@@ -129,6 +134,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.remove('sidebar-open');
         hamburgerBtn.classList.remove('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'false');
+        if (openLabel) {
+            hamburgerBtn.setAttribute('aria-label', openLabel);
+        }
         if (overlay) overlay.classList.remove('is-visible');
         clearScrollLockCompensation();
         if (returnFocus) {
