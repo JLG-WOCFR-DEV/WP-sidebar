@@ -94,6 +94,8 @@ class MenuPage
             'options' => wp_parse_args($options, $defaults),
             'icons_manifest' => $this->icons->getIconManifest(),
             'icon_fetch_action' => 'jlg_get_icon_svg',
+            'icon_upload_action' => 'jlg_upload_custom_icon',
+            'icon_upload_max_size' => IconLibrary::MAX_CUSTOM_ICON_FILESIZE,
             'svg_url_restrictions' => $this->sanitizer->getSvgUrlRestrictions(),
             'i18n' => [
                 'menuItemDefaultTitle' => __('Nouvel élément', 'sidebar-jlg'),
@@ -103,6 +105,15 @@ class MenuPage
                 'invalidUrl' => __('URL invalide.', 'sidebar-jlg'),
                 'httpOnly' => __('Seuls les liens HTTP(S) sont autorisés.', 'sidebar-jlg'),
                 'iconPreviewAlt' => __('Aperçu', 'sidebar-jlg'),
+                'iconUploadMediaTitle' => __('Sélectionner un fichier SVG', 'sidebar-jlg'),
+                'iconUploadMediaButton' => __('Utiliser ce SVG', 'sidebar-jlg'),
+                'iconUploadInProgress' => __('Téléversement du SVG en cours…', 'sidebar-jlg'),
+                'iconUploadPreparing' => __('Préparation du fichier…', 'sidebar-jlg'),
+                'iconUploadSuccess' => __('Icône SVG ajoutée.', 'sidebar-jlg'),
+                'iconUploadErrorGeneric' => __('Le téléversement du SVG a échoué.', 'sidebar-jlg'),
+                'iconUploadErrorMime' => __('Seuls les fichiers SVG sont acceptés.', 'sidebar-jlg'),
+                'iconUploadErrorSize' => __('Le fichier dépasse la taille maximale autorisée de %d Ko.', 'sidebar-jlg'),
+                'iconUploadErrorFetch' => __('Impossible de récupérer le fichier depuis la médiathèque.', 'sidebar-jlg'),
             ],
         ]);
     }

@@ -29,6 +29,7 @@ class Endpoints
         add_action('wp_ajax_jlg_get_categories', [$this, 'ajax_get_categories']);
         add_action('wp_ajax_jlg_reset_settings', [$this, 'ajax_reset_settings']);
         add_action('wp_ajax_jlg_get_icon_svg', [$this, 'ajax_get_icon_svg']);
+        add_action('wp_ajax_jlg_upload_custom_icon', [$this, 'ajax_upload_custom_icon']);
     }
 
     /**
@@ -307,6 +308,208 @@ class Endpoints
         }
 
         wp_send_json_success($response);
+    }
+
+    public function ajax_upload_custom_icon(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
+        }
+
+        check_ajax_referer('jlg_ajax_nonce', 'nonce');
+
+        if (!isset($_FILES['icon_file']) || !is_array($_FILES['icon_file'])) {
+            wp_send_json_error(__('Aucun fichier reçu.', 'sidebar-jlg'));
+        }
+
+        $file = $_FILES['icon_file'];
+        $uploadError = isset($file['error']) ? (int) $file['error'] : UPLOAD_ERR_OK;
+
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            wp_send_json_error($this->describeUploadError($uploadError));
+        }
+
+        $tmpName = isset($file['tmp_name']) ? $file['tmp_name'] : '';
+
+        if (!is_string($tmpName) || $tmpName === '' || !file_exists($tmpName) || !is_uploaded_file($tmpName)) {
+            wp_send_json_error(__('Le fichier téléversé est invalide ou introuvable.', 'sidebar-jlg'));
+        }
+
+        $originalName = isset($file['name']) && is_string($file['name']) ? $file['name'] : 'icon.svg';
+        $sanitizedOriginalName = sanitize_file_name($originalName);
+
+        if ($sanitizedOriginalName === '') {
+            $sanitizedOriginalName = 'icon.svg';
+        }
+
+        $fileSize = isset($file['size']) ? (int) $file['size'] : filesize($tmpName);
+
+        if (!is_int($fileSize) || $fileSize <= 0) {
+            wp_send_json_error(__('La taille du fichier n’a pas pu être déterminée.', 'sidebar-jlg'));
+        }
+
+        if ($fileSize > IconLibrary::MAX_CUSTOM_ICON_FILESIZE) {
+            wp_send_json_error(
+                sprintf(
+                    __('Le fichier dépasse la taille maximale autorisée (%d Ko).', 'sidebar-jlg'),
+                    (int) ceil(IconLibrary::MAX_CUSTOM_ICON_FILESIZE / 1024)
+                )
+            );
+        }
+
+        $allowedMimes = ['svg' => 'image/svg+xml'];
+        $typeCheck = wp_check_filetype_and_ext($tmpName, $sanitizedOriginalName, $allowedMimes);
+
+        if (empty($typeCheck['ext']) || $typeCheck['ext'] !== 'svg' || empty($typeCheck['type'])) {
+            wp_send_json_error(__('Seuls les fichiers SVG sont autorisés.', 'sidebar-jlg'));
+        }
+
+        $rawContents = file_get_contents($tmpName);
+
+        if (!is_string($rawContents) || $rawContents === '') {
+            wp_send_json_error(__('Le fichier SVG est vide ou illisible.', 'sidebar-jlg'));
+        }
+
+        $uploadDir = wp_upload_dir();
+
+        if (!is_array($uploadDir)) {
+            wp_send_json_error(__('Le répertoire de téléversement est indisponible.', 'sidebar-jlg'));
+        }
+
+        $baseDir = isset($uploadDir['basedir']) ? (string) $uploadDir['basedir'] : '';
+        $baseUrl = isset($uploadDir['baseurl']) ? (string) $uploadDir['baseurl'] : '';
+        $errorValue = $uploadDir['error'] ?? null;
+
+        $hasError = false;
+        if ($errorValue !== null) {
+            if (is_wp_error($errorValue)) {
+                $hasError = (string) $errorValue->get_error_message() !== '';
+            } elseif (is_string($errorValue) && $errorValue !== '') {
+                $hasError = true;
+            }
+        }
+
+        if ($baseDir === '' || $hasError) {
+            wp_send_json_error(__('Impossible d’accéder au dossier des téléversements.', 'sidebar-jlg'));
+        }
+
+        $iconsDir = trailingslashit($baseDir) . 'sidebar-jlg/icons/';
+
+        if (!wp_mkdir_p($iconsDir) || !is_dir($iconsDir) || !is_writable($iconsDir)) {
+            wp_send_json_error(__('Le dossier des icônes personnalisées est inaccessible en écriture.', 'sidebar-jlg'));
+        }
+
+        $uploadsContext = $this->icons->createUploadsContextFrom($baseDir, $baseUrl);
+
+        if ($uploadsContext === null) {
+            wp_send_json_error(__('Impossible de déterminer le contexte des téléversements.', 'sidebar-jlg'));
+        }
+
+        $sanitizationFailure = null;
+        $sanitizationResult = $this->icons->sanitizeSvgMarkup($rawContents, $uploadsContext, $sanitizationFailure);
+
+        if ($sanitizationResult === null) {
+            $reasonKey = 'unknown';
+            $context = [];
+
+            if (is_array($sanitizationFailure)) {
+                if (!empty($sanitizationFailure['reason'])) {
+                    $reasonKey = (string) $sanitizationFailure['reason'];
+                }
+                if (!empty($sanitizationFailure['context']) && is_array($sanitizationFailure['context'])) {
+                    $context = $sanitizationFailure['context'];
+                }
+            }
+
+            $message = $this->icons->getRejectionReasonMessage($reasonKey, $context);
+            $message = $message === '' ? __('Le fichier SVG a été rejeté lors de la validation.', 'sidebar-jlg') : $message;
+
+            $this->icons->recordRejectedCustomIcon($sanitizedOriginalName, $reasonKey, $context);
+
+            wp_send_json_error($message);
+        }
+
+        $sanitizedSvg = $sanitizationResult['svg'];
+        $baseName = pathinfo($sanitizedOriginalName, PATHINFO_FILENAME);
+        $slug = sanitize_key($baseName);
+
+        if ($slug === '') {
+            $slug = 'icone';
+        }
+
+        $candidateSlug = $slug;
+        $fileName = $candidateSlug . '.svg';
+        $targetPath = $iconsDir . $fileName;
+        $suffix = 1;
+
+        while (file_exists($targetPath)) {
+            $candidateSlug = $slug . '-' . $suffix;
+            $fileName = $candidateSlug . '.svg';
+            $targetPath = $iconsDir . $fileName;
+            $suffix++;
+        }
+
+        $bytesWritten = file_put_contents($targetPath, $sanitizedSvg);
+
+        if ($bytesWritten === false) {
+            wp_send_json_error(__('Impossible d’enregistrer le SVG nettoyé.', 'sidebar-jlg'));
+        }
+
+        if (function_exists('wp_chmod_file')) {
+            wp_chmod_file($targetPath);
+        }
+
+        $this->icons->clearCustomIconCache();
+        $this->cache->clear();
+
+        $manifest = $this->icons->getIconManifest();
+        $iconKey = 'custom_' . $candidateSlug;
+        $iconSource = $this->icons->getCustomIconSource($iconKey);
+
+        $iconUrl = '';
+        if (is_array($iconSource) && !empty($iconSource['url'])) {
+            $iconUrl = (string) $iconSource['url'];
+        } elseif ($baseUrl !== '') {
+            $iconUrl = trailingslashit($baseUrl) . 'sidebar-jlg/icons/' . rawurlencode($fileName);
+        }
+
+        $response = [
+            'icon_key' => $iconKey,
+            'icon_markup' => $sanitizedSvg,
+            'icon_manifest' => $manifest,
+            'icon_url' => $iconUrl,
+            'message' => __('Icône SVG téléversée avec succès.', 'sidebar-jlg'),
+        ];
+
+        if (!empty($sanitizationResult['modified'])) {
+            $response['was_modified'] = true;
+        }
+
+        wp_send_json_success($response);
+    }
+
+    private function describeUploadError(int $code): string
+    {
+        switch ($code) {
+            case UPLOAD_ERR_INI_SIZE:
+            case UPLOAD_ERR_FORM_SIZE:
+                return sprintf(
+                    __('Le fichier dépasse la taille maximale autorisée (%d Ko).', 'sidebar-jlg'),
+                    (int) ceil(IconLibrary::MAX_CUSTOM_ICON_FILESIZE / 1024)
+                );
+            case UPLOAD_ERR_PARTIAL:
+                return __('Le fichier n’a été que partiellement téléversé.', 'sidebar-jlg');
+            case UPLOAD_ERR_NO_FILE:
+                return __('Aucun fichier n’a été téléversé.', 'sidebar-jlg');
+            case UPLOAD_ERR_NO_TMP_DIR:
+                return __('Le dossier temporaire est manquant.', 'sidebar-jlg');
+            case UPLOAD_ERR_CANT_WRITE:
+                return __('Écriture du fichier impossible sur le disque.', 'sidebar-jlg');
+            case UPLOAD_ERR_EXTENSION:
+                return __('Le téléversement a été interrompu par une extension PHP.', 'sidebar-jlg');
+        }
+
+        return __('Le téléversement du fichier a échoué.', 'sidebar-jlg');
     }
 
     private function get_ajax_capability(): string

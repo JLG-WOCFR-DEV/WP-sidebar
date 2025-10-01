@@ -256,7 +256,14 @@
             <p class="description"><?php esc_html_e('Ajoutez, organisez et supprimez les éléments de votre menu. Glissez-déposez pour réorganiser.', 'sidebar-jlg'); ?></p>
             <div id="menu-items-container"></div>
             <button type="button" class="button button-primary" id="add-menu-item"><?php esc_html_e('Ajouter un élément', 'sidebar-jlg'); ?></button>
-            
+
+            <div class="sidebar-jlg-custom-icon-upload">
+                <button type="button" class="button sidebar-jlg-upload-svg" data-context="menu">
+                    <?php esc_html_e('Téléverser un SVG', 'sidebar-jlg'); ?>
+                </button>
+                <span class="sidebar-jlg-upload-feedback" role="status" aria-live="polite"></span>
+            </div>
+
             <hr style="margin: 20px 0;">
 
             <h2><?php esc_html_e('Alignement du Menu', 'sidebar-jlg'); ?></h2>
@@ -317,10 +324,16 @@
                 </tr>
                  <tr>
                     <th scope="row"><?php esc_html_e( 'Icônes', 'sidebar-jlg' ); ?></th>
-                    <td>
+                 <td>
                         <div id="social-icons-container"></div>
                         <button type="button" class="button button-primary" id="add-social-icon"><?php esc_html_e('Ajouter une icône', 'sidebar-jlg'); ?></button>
-                    </td>
+                        <div class="sidebar-jlg-custom-icon-upload">
+                            <button type="button" class="button sidebar-jlg-upload-svg" data-context="social">
+                                <?php esc_html_e('Téléverser un SVG', 'sidebar-jlg'); ?>
+                            </button>
+                            <span class="sidebar-jlg-upload-feedback" role="status" aria-live="polite"></span>
+                        </div>
+                 </td>
                 </tr>
             </table>
         </div>
