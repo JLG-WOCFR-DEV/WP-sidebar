@@ -15,10 +15,74 @@ document.addEventListener('DOMContentLoaded', function() {
     const animationType = (typeof sidebarSettings !== 'undefined' && sidebarSettings.animation_type) ? sidebarSettings.animation_type : 'slide-left';
     sidebar.classList.add(`animation-${animationType}`);
 
-    const focusableElements = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    const focusableContent = sidebar.querySelectorAll(focusableElements);
-    const firstFocusableElement = focusableContent[0];
-    const lastFocusableElement = focusableContent[focusableContent.length - 1];
+    const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const originalSidebarTabIndex = sidebar.hasAttribute('tabindex') ? sidebar.getAttribute('tabindex') : null;
+    let cachedFocusableElements = [];
+
+    function isAriaHidden(element) {
+        const ariaHidden = element.getAttribute('aria-hidden');
+        return ariaHidden !== null && ariaHidden !== 'false';
+    }
+
+    function isElementHiddenByStyles(element, computedStyle) {
+        return computedStyle.display === 'none' || computedStyle.visibility === 'hidden';
+    }
+
+    function isElementVisible(element) {
+        if (!element) return false;
+        if (element.disabled || element.hidden || isAriaHidden(element)) {
+            return false;
+        }
+
+        const computedStyle = window.getComputedStyle(element);
+        if (isElementHiddenByStyles(element, computedStyle)) {
+            return false;
+        }
+
+        if (typeof element.offsetParent !== 'undefined' && element.offsetParent === null) {
+            const hiddenAncestor = element.closest('[hidden], [aria-hidden="true"]');
+            if (hiddenAncestor && hiddenAncestor !== document.body) {
+                return false;
+            }
+        }
+
+        let parent = element.parentElement;
+        while (parent && parent !== document.body) {
+            if (parent.hidden || isAriaHidden(parent)) {
+                return false;
+            }
+            const parentStyle = window.getComputedStyle(parent);
+            if (isElementHiddenByStyles(parent, parentStyle)) {
+                return false;
+            }
+            parent = parent.parentElement;
+        }
+
+        return true;
+    }
+
+    function getVisibleFocusableElements() {
+        const allFocusable = Array.from(sidebar.querySelectorAll(focusableSelector));
+        return allFocusable.filter(isElementVisible);
+    }
+
+    function refreshFocusableElements() {
+        cachedFocusableElements = getVisibleFocusableElements();
+        return cachedFocusableElements;
+    }
+
+    function focusFirstAvailableElement() {
+        const focusableElements = refreshFocusableElements();
+        if (focusableElements.length > 0) {
+            focusableElements[0].focus();
+            return;
+        }
+
+        if (!sidebar.hasAttribute('tabindex')) {
+            sidebar.setAttribute('tabindex', '-1');
+        }
+        sidebar.focus({ preventScroll: true });
+    }
     const DESKTOP_BREAKPOINT = 993;
 
     function getScrollbarWidth() {
@@ -51,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
         hamburgerBtn.setAttribute('aria-expanded', 'true');
         if (overlay) overlay.classList.add('is-visible');
         setTimeout(() => {
-            if (firstFocusableElement) firstFocusableElement.focus();
+            focusFirstAvailableElement();
         }, 100);
         document.addEventListener('keydown', trapFocus);
     }
@@ -71,6 +135,12 @@ document.addEventListener('DOMContentLoaded', function() {
             hamburgerBtn.focus();
         }
         document.removeEventListener('keydown', trapFocus);
+
+        if (originalSidebarTabIndex === null) {
+            sidebar.removeAttribute('tabindex');
+        } else {
+            sidebar.setAttribute('tabindex', originalSidebarTabIndex);
+        }
     }
 
     function toggleSidebar() {
@@ -82,17 +152,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function trapFocus(e) {
-        let isTabPressed = e.key === 'Tab' || e.keyCode === 9;
+        const isTabPressed = e.key === 'Tab' || e.keyCode === 9;
         if (!isTabPressed) return;
 
-        if (e.shiftKey) { // shift + tab
-            if (document.activeElement === firstFocusableElement) {
-                if (lastFocusableElement) lastFocusableElement.focus();
+        const focusableElements = refreshFocusableElements();
+        if (focusableElements.length === 0) {
+            if (!sidebar.hasAttribute('tabindex')) {
+                sidebar.setAttribute('tabindex', '-1');
+            }
+            sidebar.focus({ preventScroll: true });
+            e.preventDefault();
+            return;
+        }
+
+        const firstFocusableElement = focusableElements[0];
+        const lastFocusableElement = focusableElements[focusableElements.length - 1];
+        const activeElement = document.activeElement;
+
+        if (e.shiftKey) {
+            if (!sidebar.contains(activeElement) || activeElement === firstFocusableElement) {
+                lastFocusableElement.focus();
                 e.preventDefault();
             }
-        } else { // tab
-            if (document.activeElement === lastFocusableElement) {
-                if (firstFocusableElement) firstFocusableElement.focus();
+        } else {
+            if (!sidebar.contains(activeElement) || activeElement === lastFocusableElement) {
+                firstFocusableElement.focus();
                 e.preventDefault();
             }
         }
