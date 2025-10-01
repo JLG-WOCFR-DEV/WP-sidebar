@@ -8,6 +8,17 @@ describe('public-script.js', () => {
   let matchMediaListeners;
   const recordedDocumentListeners = [];
   const recordedWindowListeners = [];
+  const dispatchPointerEvent = (target, type, options = {}) => {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.entries(options).forEach(([key, value]) => {
+      Object.defineProperty(event, key, {
+        configurable: true,
+        value,
+      });
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
   const getVisibleFocusable = () => {
     const elements = Array.from(sidebar.querySelectorAll(FOCUSABLE_SELECTOR));
     return elements.filter((element) => {
@@ -255,6 +266,64 @@ describe('public-script.js', () => {
     expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('false');
   });
 
+  test('updates spotlight hover variables in response to pointer movement', () => {
+    loadScript();
+    sidebar.setAttribute('data-hover-desktop', 'spotlight');
+    window.dispatchEvent(new Event('resize'));
+
+    const link = sidebar.querySelector('.sidebar-menu a');
+    link.getBoundingClientRect = jest.fn(() => ({
+      left: 0,
+      top: 0,
+      width: 200,
+      height: 100,
+    }));
+
+    dispatchPointerEvent(link, 'pointermove', { clientX: 50, clientY: 25 });
+
+    expect(link.style.getPropertyValue('--mouse-x')).toBe('25.00%');
+    expect(link.style.getPropertyValue('--mouse-y')).toBe('25.00%');
+    expect(link.style.getPropertyValue('--rotate-x')).toBe('5.00deg');
+    expect(link.style.getPropertyValue('--rotate-y')).toBe('-5.00deg');
+
+    dispatchPointerEvent(link, 'pointerleave');
+    expect(link.style.getPropertyValue('--mouse-x')).toBe('');
+    expect(link.style.getPropertyValue('--mouse-y')).toBe('');
+    expect(link.style.getPropertyValue('--rotate-x')).toBe('');
+    expect(link.style.getPropertyValue('--rotate-y')).toBe('');
+  });
+
+  test('updates glossy tilt hover rotations and resets on touch events', () => {
+    loadScript();
+    sidebar.setAttribute('data-hover-desktop', 'glossy-tilt');
+    window.dispatchEvent(new Event('resize'));
+
+    const link = sidebar.querySelector('.sidebar-menu a');
+    link.getBoundingClientRect = jest.fn(() => ({
+      left: 0,
+      top: 0,
+      width: 200,
+      height: 120,
+    }));
+
+    dispatchPointerEvent(link, 'pointermove', {
+      clientX: 150,
+      clientY: 90,
+      pointerType: 'touch',
+    });
+
+    expect(link.style.getPropertyValue('--mouse-x')).toBe('75.00%');
+    expect(link.style.getPropertyValue('--mouse-y')).toBe('75.00%');
+    expect(link.style.getPropertyValue('--rotate-x')).toBe('-5.00deg');
+    expect(link.style.getPropertyValue('--rotate-y')).toBe('5.00deg');
+
+    dispatchPointerEvent(link, 'pointerup', { pointerType: 'touch' });
+    expect(link.style.getPropertyValue('--mouse-x')).toBe('');
+    expect(link.style.getPropertyValue('--mouse-y')).toBe('');
+    expect(link.style.getPropertyValue('--rotate-x')).toBe('');
+    expect(link.style.getPropertyValue('--rotate-y')).toBe('');
+  });
+
   test('respects the reduced motion preference', () => {
     loadScript({ close_on_link_click: '1' }, { prefersReducedMotion: true });
 
@@ -273,5 +342,22 @@ describe('public-script.js', () => {
 
     expect(document.body.classList.contains('sidebar-open')).toBe(false);
     expect(jest.getTimerCount()).toBe(0);
+
+    sidebar.setAttribute('data-hover-desktop', 'spotlight');
+    window.dispatchEvent(new Event('resize'));
+
+    link.getBoundingClientRect = jest.fn(() => ({
+      left: 0,
+      top: 0,
+      width: 200,
+      height: 100,
+    }));
+
+    dispatchPointerEvent(link, 'pointermove', { clientX: 100, clientY: 50 });
+
+    expect(link.style.getPropertyValue('--mouse-x')).toBe('');
+    expect(link.style.getPropertyValue('--mouse-y')).toBe('');
+    expect(link.style.getPropertyValue('--rotate-x')).toBe('');
+    expect(link.style.getPropertyValue('--rotate-y')).toBe('');
   });
 });
