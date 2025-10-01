@@ -12,13 +12,13 @@
     <p><?php esc_html_e( 'Personnalisez l\'apparence et le comportement de votre sidebar.', 'sidebar-jlg' ); ?></p>
     <p><b><?php esc_html_e( 'Nouveau :', 'sidebar-jlg' ); ?></b> <?php printf( esc_html__( 'Ajoutez vos propres icônes SVG dans le dossier %1$s. Elles apparaîtront dans les listes de sélection !', 'sidebar-jlg' ), '<code>/wp-content/uploads/sidebar-jlg/icons/</code>' ); ?></p>
 
-    <div class="nav-tab-wrapper">
-        <a href="#tab-general" class="nav-tab nav-tab-active"><?php esc_html_e( 'Général & Comportement', 'sidebar-jlg' ); ?></a>
-        <a href="#tab-presets" class="nav-tab"><?php esc_html_e( 'Style & Préréglages', 'sidebar-jlg' ); ?></a>
-        <a href="#tab-menu" class="nav-tab"><?php esc_html_e( 'Contenu du Menu', 'sidebar-jlg' ); ?></a>
-        <a href="#tab-social" class="nav-tab"><?php esc_html_e( 'Réseaux Sociaux', 'sidebar-jlg' ); ?></a>
-        <a href="#tab-effects" class="nav-tab"><?php esc_html_e( 'Effets & Animations', 'sidebar-jlg' ); ?></a>
-        <a href="#tab-tools" class="nav-tab"><?php esc_html_e( 'Outils', 'sidebar-jlg' ); ?></a>
+    <div class="nav-tab-wrapper" role="tablist">
+        <a href="#tab-general" class="nav-tab nav-tab-active" id="tab-general-tab" role="tab" aria-controls="tab-general" aria-selected="true" tabindex="0"><?php esc_html_e( 'Général & Comportement', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-presets" class="nav-tab" id="tab-presets-tab" role="tab" aria-controls="tab-presets" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Style & Préréglages', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-menu" class="nav-tab" id="tab-menu-tab" role="tab" aria-controls="tab-menu" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Contenu du Menu', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-social" class="nav-tab" id="tab-social-tab" role="tab" aria-controls="tab-social" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Réseaux Sociaux', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-effects" class="nav-tab" id="tab-effects-tab" role="tab" aria-controls="tab-effects" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Effets & Animations', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-tools" class="nav-tab" id="tab-tools-tab" role="tab" aria-controls="tab-tools" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Outils', 'sidebar-jlg' ); ?></a>
     </div>
 
     <form action="options.php" method="post" id="sidebar-jlg-form">
@@ -29,7 +29,7 @@
         ?>
 
         <!-- Onglet Général -->
-        <div id="tab-general" class="tab-content active">
+        <div id="tab-general" class="tab-content active" role="tabpanel" aria-labelledby="tab-general-tab" aria-hidden="false">
             <table class="form-table">
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Activation', 'sidebar-jlg' ); ?></th>
@@ -166,7 +166,7 @@
         </div>
         
         <!-- Onglet Style & Préréglages -->
-        <div id="tab-presets" class="tab-content">
+        <div id="tab-presets" class="tab-content" role="tabpanel" aria-labelledby="tab-presets-tab" aria-hidden="true" hidden>
              <table class="form-table">
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Préréglage de style', 'sidebar-jlg' ); ?></th>
@@ -251,7 +251,7 @@
         </div>
 
         <!-- Onglet Contenu du Menu -->
-        <div id="tab-menu" class="tab-content">
+        <div id="tab-menu" class="tab-content" role="tabpanel" aria-labelledby="tab-menu-tab" aria-hidden="true" hidden>
             <h2><?php esc_html_e('Construire le menu', 'sidebar-jlg'); ?></h2>
             <p class="description"><?php esc_html_e('Ajoutez, organisez et supprimez les éléments de votre menu. Glissez-déposez pour réorganiser.', 'sidebar-jlg'); ?></p>
             <div id="menu-items-container"></div>
@@ -287,7 +287,7 @@
         </div>
 
         <!-- Onglet Réseaux Sociaux -->
-        <div id="tab-social" class="tab-content">
+        <div id="tab-social" class="tab-content" role="tabpanel" aria-labelledby="tab-social-tab" aria-hidden="true" hidden>
             <h2><?php esc_html_e('Icônes des réseaux sociaux', 'sidebar-jlg'); ?></h2>
             <table class="form-table">
                 <tr>
@@ -326,7 +326,7 @@
         </div>
 
         <!-- Onglet Effets -->
-        <div id="tab-effects" class="tab-content">
+        <div id="tab-effects" class="tab-content" role="tabpanel" aria-labelledby="tab-effects-tab" aria-hidden="true" hidden>
              <table class="form-table">
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Animation (Mobile)', 'sidebar-jlg' ); ?></th>
@@ -391,7 +391,7 @@
         </div>
         
         <!-- Onglet Outils & Débogage -->
-        <div id="tab-tools" class="tab-content">
+        <div id="tab-tools" class="tab-content" role="tabpanel" aria-labelledby="tab-tools-tab" aria-hidden="true" hidden>
             <table class="form-table">
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Mode de débogage', 'sidebar-jlg' ); ?></th>

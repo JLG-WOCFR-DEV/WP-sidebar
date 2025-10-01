@@ -285,13 +285,107 @@ jQuery(document).ready(function($) {
     });
     
     // --- Gestion des onglets ---
-    $('.nav-tab-wrapper a').on('click', function(e) {
+    const tabWrapper = $('.nav-tab-wrapper');
+    const tabPanels = $('.tab-content');
+
+    function getTabs() {
+        return tabWrapper.find('.nav-tab');
+    }
+
+    function setPanelState($panel, isActive) {
+        if (!$panel || !$panel.length) {
+            return;
+        }
+
+        $panel.toggleClass('active', isActive);
+        $panel.attr('aria-hidden', isActive ? 'false' : 'true');
+
+        if (isActive) {
+            $panel.removeAttr('hidden');
+        } else {
+            $panel.attr('hidden', 'hidden');
+        }
+    }
+
+    function activateTab($tab, shouldFocus = false) {
+        if (!$tab || !$tab.length) {
+            return;
+        }
+
+        const tabs = getTabs();
+        const panelId = $tab.attr('aria-controls');
+        const panelElement = panelId ? document.getElementById(panelId) : null;
+        const $panel = panelElement ? $(panelElement) : $();
+
+        tabs.each(function() {
+            const $currentTab = $(this);
+            const isActive = $currentTab.is($tab);
+
+            $currentTab.toggleClass('nav-tab-active', isActive);
+            $currentTab.attr('aria-selected', isActive ? 'true' : 'false');
+            $currentTab.attr('tabindex', isActive ? '0' : '-1');
+        });
+
+        tabPanels.each(function() {
+            const $currentPanel = $(this);
+            const isActive = $currentPanel.is($panel);
+            setPanelState($currentPanel, isActive);
+        });
+
+        if (panelElement && !$panel.hasClass('active')) {
+            setPanelState($panel, true);
+        }
+
+        if (shouldFocus) {
+            $tab.trigger('focus');
+        }
+    }
+
+    function focusTabAtIndex(index) {
+        const tabs = getTabs();
+        if (!tabs.length) {
+            return;
+        }
+
+        const normalizedIndex = (index + tabs.length) % tabs.length;
+        const $targetTab = tabs.eq(normalizedIndex);
+        activateTab($targetTab, true);
+    }
+
+    tabWrapper.on('click', '.nav-tab', function(e) {
         e.preventDefault();
-        $('.nav-tab-wrapper a').removeClass('nav-tab-active');
-        $('.tab-content').removeClass('active');
-        $(this).addClass('nav-tab-active');
-        $($(this).attr('href')).addClass('active');
+        activateTab($(this), true);
     });
+
+    tabWrapper.on('keydown', '.nav-tab', function(e) {
+        const key = e.key;
+        const tabs = getTabs();
+        const currentIndex = tabs.index(this);
+
+        if (key === 'ArrowLeft') {
+            e.preventDefault();
+            focusTabAtIndex(currentIndex - 1);
+        } else if (key === 'ArrowRight') {
+            e.preventDefault();
+            focusTabAtIndex(currentIndex + 1);
+        } else if (key === 'Home') {
+            e.preventDefault();
+            focusTabAtIndex(0);
+        } else if (key === 'End') {
+            e.preventDefault();
+            focusTabAtIndex(tabs.length - 1);
+        } else if (key === ' ' || key === 'Spacebar' || key === 'Enter') {
+            e.preventDefault();
+            activateTab($(this), true);
+        }
+    });
+
+    const initialTab = getTabs().filter('.nav-tab-active').first();
+    if (initialTab.length) {
+        activateTab(initialTab, false);
+    } else {
+        activateTab(getTabs().first(), false);
+    }
 
     // --- Options de Comportement ---
     const behaviorSelect = $('.desktop-behavior-select');
