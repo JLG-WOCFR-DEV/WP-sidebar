@@ -147,6 +147,10 @@ class SettingsSanitizer
             $input['hamburger_top_position'] ?? $existingOptions['hamburger_top_position'],
             $existingOptions['hamburger_top_position']
         );
+        $sanitized['hamburger_color'] = ValueNormalizer::normalizeColorWithExisting(
+            $input['hamburger_color'] ?? null,
+            $existingOptions['hamburger_color'] ?? ''
+        );
         $sanitized['app_name'] = sanitize_text_field($input['app_name'] ?? $existingOptions['app_name']);
         $sanitized['header_logo_type'] = $this->sanitizeChoice(
             $input['header_logo_type'] ?? null,

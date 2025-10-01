@@ -28,6 +28,7 @@ class SidebarRenderer
         'header_alignment_mobile' => 'center',
         'header_logo_size' => 150,
         'hamburger_top_position' => '4rem',
+        'hamburger_color' => 'rgba(255, 255, 255, 1)',
         'content_margin' => '2rem',
         'floating_vertical_margin' => '4rem',
         'border_radius' => '12px',
@@ -165,6 +166,7 @@ class SidebarRenderer
         $this->assignVariable($variables, '--header-alignment-mobile', $this->sanitizeCssString($this->resolveOption($options, 'header_alignment_mobile')));
         $this->assignVariable($variables, '--header-logo-size', $this->formatPixelValue($this->resolveOption($options, 'header_logo_size')));
         $this->assignVariable($variables, '--hamburger-top-position', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_top_position')));
+        $this->assignVariable($variables, '--hamburger-color', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_color')));
 
         $contentMargin = $this->resolveContentMargin($options);
         if ($contentMargin !== null) {
