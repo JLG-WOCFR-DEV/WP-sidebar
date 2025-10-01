@@ -563,3 +563,50 @@ body.jlg-sidebar-active.jlg-sidebar-horizontal-bar { padding-left: 0 !important;
 .pro-sidebar[data-hover-mobile="pill-center"] .sidebar-menu a:focus-visible {
     background-color: transparent;
 }
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        animation-delay: 0s !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0s !important;
+        scroll-behavior: auto !important;
+    }
+
+    body,
+    .sidebar-overlay,
+    .pro-sidebar,
+    .sidebar-menu a,
+    .hamburger-menu,
+    .social-icons a {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    .sidebar-menu a:hover,
+    .sidebar-menu a:focus,
+    .sidebar-menu a:focus-visible,
+    .social-icons a:hover,
+    .social-icons a:focus,
+    .social-icons a:focus-visible,
+    body.sidebar-open .pro-sidebar,
+    body.jlg-sidebar-horizontal-bar.sidebar-open .pro-sidebar {
+        transform: none !important;
+    }
+
+    .hamburger-menu.is-active .icon-1,
+    .hamburger-menu.is-active .icon-2,
+    .hamburger-menu.is-active .icon-3 {
+        transform: none !important;
+        opacity: 1 !important;
+    }
+
+    .pro-sidebar,
+    .sidebar-overlay {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+    }
+}
