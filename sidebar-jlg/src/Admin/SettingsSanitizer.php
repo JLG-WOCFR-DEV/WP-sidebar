@@ -72,6 +72,23 @@ class SettingsSanitizer
             $existingOptions['layout_style'] ?? ($defaults['layout_style'] ?? ''),
             $defaults['layout_style'] ?? ''
         );
+        $sanitized['horizontal_bar_height'] = ValueNormalizer::normalizeCssDimension(
+            $input['horizontal_bar_height'] ?? $existingOptions['horizontal_bar_height'],
+            $existingOptions['horizontal_bar_height']
+        );
+        $sanitized['horizontal_bar_alignment'] = $this->sanitizeChoice(
+            $input['horizontal_bar_alignment'] ?? null,
+            $this->allowedChoices['horizontal_bar_alignment'],
+            $existingOptions['horizontal_bar_alignment'] ?? ($defaults['horizontal_bar_alignment'] ?? ''),
+            $defaults['horizontal_bar_alignment'] ?? ''
+        );
+        $sanitized['horizontal_bar_position'] = $this->sanitizeChoice(
+            $input['horizontal_bar_position'] ?? null,
+            $this->allowedChoices['horizontal_bar_position'],
+            $existingOptions['horizontal_bar_position'] ?? ($defaults['horizontal_bar_position'] ?? ''),
+            $defaults['horizontal_bar_position'] ?? ''
+        );
+        $sanitized['horizontal_bar_sticky'] = !empty($input['horizontal_bar_sticky']);
         $sanitized['floating_vertical_margin'] = ValueNormalizer::normalizeCssDimension(
             $input['floating_vertical_margin'] ?? $existingOptions['floating_vertical_margin'],
             $existingOptions['floating_vertical_margin']

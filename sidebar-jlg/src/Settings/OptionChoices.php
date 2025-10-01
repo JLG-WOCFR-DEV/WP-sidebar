@@ -8,7 +8,7 @@ final class OptionChoices
      * @var array<string, string[]>
      */
     public const ALLOWED_CHOICES = [
-        'layout_style' => ['full', 'floating'],
+        'layout_style' => ['full', 'floating', 'horizontal-bar'],
         'desktop_behavior' => ['push', 'overlay'],
         'search_method' => ['default', 'shortcode', 'hook'],
         'search_alignment' => ['flex-start', 'center', 'flex-end'],
@@ -47,6 +47,8 @@ final class OptionChoices
         'menu_alignment_mobile' => ['flex-start', 'center', 'flex-end'],
         'social_orientation' => ['horizontal', 'vertical'],
         'social_position' => ['footer', 'in-menu'],
+        'horizontal_bar_position' => ['top', 'bottom'],
+        'horizontal_bar_alignment' => ['flex-start', 'center', 'flex-end', 'space-between'],
     ];
 
     /**

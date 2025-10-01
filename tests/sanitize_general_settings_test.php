@@ -140,6 +140,8 @@ $existing_enums = array_merge($defaults->all(), [
     'header_logo_type'       => 'image',
     'header_alignment_desktop' => 'center',
     'header_alignment_mobile'  => 'flex-start',
+    'horizontal_bar_position' => 'bottom',
+    'horizontal_bar_alignment' => 'flex-start',
 ]);
 
 $input_invalid_enums = [
@@ -150,6 +152,8 @@ $input_invalid_enums = [
     'header_logo_type'       => 'emoji',
     'header_alignment_desktop' => 'space-around',
     'header_alignment_mobile'  => 'stretch',
+    'horizontal_bar_position' => 'diagonal',
+    'horizontal_bar_alignment' => 'middle',
 ];
 
 $result_invalid_enums = $method->invoke($sanitizer, $input_invalid_enums, $existing_enums);
@@ -161,6 +165,40 @@ assertSame('flex-end', $result_invalid_enums['search_alignment'] ?? null, 'Inval
 assertSame('image', $result_invalid_enums['header_logo_type'] ?? null, 'Invalid header logo type falls back to existing value');
 assertSame('center', $result_invalid_enums['header_alignment_desktop'] ?? null, 'Invalid desktop header alignment falls back to existing value');
 assertSame('flex-start', $result_invalid_enums['header_alignment_mobile'] ?? null, 'Invalid mobile header alignment falls back to existing value');
+assertSame('bottom', $result_invalid_enums['horizontal_bar_position'] ?? null, 'Invalid horizontal bar position falls back to existing value');
+assertSame('flex-start', $result_invalid_enums['horizontal_bar_alignment'] ?? null, 'Invalid horizontal bar alignment falls back to existing value');
+
+$horizontal_existing = array_merge($defaults->all(), [
+    'layout_style' => 'floating',
+    'horizontal_bar_height' => '4rem',
+    'horizontal_bar_position' => 'top',
+    'horizontal_bar_alignment' => 'space-between',
+    'horizontal_bar_sticky' => false,
+]);
+
+$horizontal_input = [
+    'layout_style' => 'horizontal-bar',
+    'horizontal_bar_height' => '72px',
+    'horizontal_bar_position' => 'bottom',
+    'horizontal_bar_alignment' => 'center',
+    'horizontal_bar_sticky' => '1',
+];
+
+$horizontal_result = $method->invoke($sanitizer, $horizontal_input, $horizontal_existing);
+
+assertSame('horizontal-bar', $horizontal_result['layout_style'] ?? null, 'Horizontal layout is accepted');
+assertSame('72px', $horizontal_result['horizontal_bar_height'] ?? null, 'Horizontal bar height is sanitized');
+assertSame('bottom', $horizontal_result['horizontal_bar_position'] ?? null, 'Horizontal bar position accepts valid input');
+assertSame('center', $horizontal_result['horizontal_bar_alignment'] ?? null, 'Horizontal bar alignment accepts valid input');
+assertSame(true, $horizontal_result['horizontal_bar_sticky'] ?? null, 'Horizontal bar sticky flag is converted to boolean');
+
+$horizontal_invalid_height = [
+    'horizontal_bar_height' => 'javascript:alert(1);',
+];
+
+$horizontal_height_result = $method->invoke($sanitizer, $horizontal_invalid_height, $horizontal_existing);
+
+assertSame('4rem', $horizontal_height_result['horizontal_bar_height'] ?? null, 'Invalid horizontal bar height falls back to existing value');
 
 $existing_invalid_alignment = array_merge($defaults->all(), [
     'header_alignment_desktop' => 'diagonal',
