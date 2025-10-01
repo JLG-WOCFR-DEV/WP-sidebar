@@ -1,4 +1,5 @@
 <?php
+use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Frontend\Templating;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -20,6 +21,8 @@ if ($layoutStyle === 'horizontal-bar') {
     $menuClasses[] = 'is-horizontal';
 }
 $menuClassAttr = implode(' ', array_map('sanitize_html_class', $menuClasses));
+
+$currentRequestContext = SidebarRenderer::getCurrentRequestContext();
 
 ob_start();
 ?>
@@ -52,9 +55,30 @@ ob_start();
                 if ($is_valid_url) {
                     $url = $raw_url;
                 }
+
+                $is_current_item = false;
+                if (is_array($item)) {
+                    if (($item['type'] ?? '') === 'custom' && !$is_valid_url) {
+                        $is_current_item = false;
+                    } else {
+                        $is_current_item = SidebarRenderer::isMenuItemCurrent($item, $currentRequestContext);
+                    }
+                }
+
+                $itemClasses = [];
+                if ($is_current_item) {
+                    $itemClasses[] = 'current-menu-item';
+                }
+
+                $liClassAttribute = '';
+                if (!empty($itemClasses)) {
+                    $liClassAttribute = ' class="' . esc_attr(implode(' ', array_map('sanitize_html_class', $itemClasses))) . '"';
+                }
+
+                $ariaCurrentAttribute = $is_current_item ? ' aria-current="page"' : '';
                 ?>
-                <li>
-                    <a href="<?php echo esc_url($url); ?>">
+                <li<?php echo $liClassAttribute; ?>>
+                    <a href="<?php echo esc_url($url); ?>"<?php echo $ariaCurrentAttribute; ?>>
                         <?php if (!empty($item['icon'])) : ?>
                             <?php if (!empty($item['icon_type']) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL)) : ?>
                                 <span class="menu-icon svg-icon"><img src="<?php echo esc_url($item['icon']); ?>" alt=""></span>
