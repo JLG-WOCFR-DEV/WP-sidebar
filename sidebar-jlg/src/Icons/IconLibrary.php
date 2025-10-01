@@ -4,6 +4,8 @@ namespace JLG\Sidebar\Icons;
 
 class IconLibrary
 {
+    public const MAX_CUSTOM_ICON_FILESIZE = 204800;
+
     private const CUSTOM_ICON_CACHE_KEY = 'sidebar_jlg_custom_icons_cache';
     private const CUSTOM_ICON_INDEX_OPTION = 'sidebar_jlg_custom_icon_index';
     private const CUSTOM_ICON_CACHE_TTL = 86400;
@@ -120,6 +122,17 @@ class IconLibrary
         $this->getAllIcons();
 
         return $this->customIconSources[$iconKey] ?? null;
+    }
+
+    public function clearCustomIconCache(): void
+    {
+        $this->allIcons = null;
+        $this->resetCustomIconCacheArtifacts();
+    }
+
+    public function createUploadsContextFrom(string $baseDir, string $baseUrl): ?array
+    {
+        return $this->createUploadsContext($baseDir, $baseUrl);
     }
 
     public function consumeRejectedCustomIcons(): array
@@ -292,7 +305,7 @@ class IconLibrary
             }
         }
 
-        $maxFileSize = 200 * 1024;
+        $maxFileSize = self::MAX_CUSTOM_ICON_FILESIZE;
         $allowedMimes = ['svg' => 'image/svg+xml'];
         $customIcons = [];
 
@@ -469,7 +482,7 @@ class IconLibrary
         return sprintf('%s (%s)', $fileLabel, $reasonMessage);
     }
 
-    private function getRejectionReasonMessage(string $reasonKey, array $context): string
+    public function getRejectionReasonMessage(string $reasonKey, array $context): string
     {
         switch ($reasonKey) {
             case 'invalid_type':

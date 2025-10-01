@@ -229,7 +229,10 @@ jQuery(document).ready(function($) {
     const ajaxUrl = sidebarJLG.ajax_url || '';
     const ajaxNonce = sidebarJLG.nonce || '';
     const iconFetchAction = typeof sidebarJLG.icon_fetch_action === 'string' ? sidebarJLG.icon_fetch_action : 'jlg_get_icon_svg';
-    const iconManifest = Array.isArray(sidebarJLG.icons_manifest) ? sidebarJLG.icons_manifest : [];
+    let iconManifest = Array.isArray(sidebarJLG.icons_manifest) ? sidebarJLG.icons_manifest : [];
+    const iconUploadAction = typeof sidebarJLG.icon_upload_action === 'string' ? sidebarJLG.icon_upload_action : '';
+    const parsedUploadMax = parseInt(sidebarJLG.icon_upload_max_size, 10);
+    const iconUploadMaxSize = !isNaN(parsedUploadMax) && parsedUploadMax > 0 ? parsedUploadMax : 0;
     const debugMode = options.debug_mode == '1';
     const ajaxCache = { posts: {}, categories: {} };
     const searchDebounceDelay = 300;
@@ -238,27 +241,41 @@ jQuery(document).ready(function($) {
     const iconEntryByExactKey = {};
     const iconKeyLookup = {};
 
-    iconManifest.forEach(icon => {
-        if (!icon || typeof icon.key !== 'string') {
-            return;
-        }
+    function rebuildIconLookups(manifest) {
+        iconManifest = Array.isArray(manifest) ? manifest : [];
 
-        const key = icon.key;
-        iconEntryByExactKey[key] = icon;
+        Object.keys(iconEntryByExactKey).forEach(key => {
+            delete iconEntryByExactKey[key];
+        });
 
-        if (key === '') {
-            return;
-        }
+        Object.keys(iconKeyLookup).forEach(key => {
+            delete iconKeyLookup[key];
+        });
 
-        if (!iconKeyLookup[key]) {
-            iconKeyLookup[key] = key;
-        }
+        iconManifest.forEach(icon => {
+            if (!icon || typeof icon.key !== 'string') {
+                return;
+            }
 
-        const sanitized = sanitizeIconKey(key);
-        if (sanitized && !iconKeyLookup[sanitized]) {
-            iconKeyLookup[sanitized] = key;
-        }
-    });
+            const key = icon.key;
+            iconEntryByExactKey[key] = icon;
+
+            if (key === '') {
+                return;
+            }
+
+            if (!iconKeyLookup[key]) {
+                iconKeyLookup[key] = key;
+            }
+
+            const sanitized = sanitizeIconKey(key);
+            if (sanitized && !iconKeyLookup[sanitized]) {
+                iconKeyLookup[sanitized] = key;
+            }
+        });
+    }
+
+    rebuildIconLookups(iconManifest);
 
     function logDebug(message, data = '') {
         if (debugMode) {
@@ -508,6 +525,296 @@ jQuery(document).ready(function($) {
         frame.open();
     }
 
+    const hiddenSvgUploadInput = $('<input>', {
+        type: 'file',
+        accept: '.svg,image/svg+xml',
+        style: 'display:none;',
+        'aria-hidden': 'true'
+    });
+
+    $('body').append(hiddenSvgUploadInput);
+
+    hiddenSvgUploadInput.on('change', function() {
+        const $originButton = hiddenSvgUploadInput.data('originButton');
+        const files = this.files;
+        const file = files && files.length ? files[0] : null;
+
+        hiddenSvgUploadInput.val('');
+        hiddenSvgUploadInput.removeData('originButton');
+
+        if (!$originButton || !$originButton.length) {
+            return;
+        }
+
+        if (!file) {
+            showUploadMessage($originButton, '', false);
+            return;
+        }
+
+        uploadSvgBlob($originButton, file, file.name);
+    });
+
+    let customIconUploadFrame = null;
+
+    function setUploadButtonState($button, isLoading) {
+        if (!$button || !$button.length) {
+            return;
+        }
+
+        const busy = !!isLoading;
+        $button.prop('disabled', busy);
+
+        if (busy) {
+            $button.addClass('is-busy');
+            $button.attr('aria-busy', 'true');
+        } else {
+            $button.removeClass('is-busy');
+            $button.removeAttr('aria-busy');
+        }
+    }
+
+    function getUploadFeedbackElement($button) {
+        if (!$button || !$button.length) {
+            return $();
+        }
+
+        const $container = $button.closest('.sidebar-jlg-custom-icon-upload');
+        if ($container.length) {
+            return $container.find('.sidebar-jlg-upload-feedback');
+        }
+
+        return $();
+    }
+
+    function showUploadMessage($button, message, isError = false) {
+        const $feedback = getUploadFeedbackElement($button);
+
+        if (!$feedback.length) {
+            if (message) {
+                logDebug('SVG upload message', message);
+            }
+            return;
+        }
+
+        const text = message || '';
+        $feedback.text(text);
+        $feedback.toggleClass('is-error', !!isError);
+    }
+
+    function speakUploadMessage(message) {
+        if (!message) {
+            return;
+        }
+
+        if (window.wp && wp.a11y && typeof wp.a11y.speak === 'function') {
+            wp.a11y.speak(message);
+        }
+    }
+
+    function handleUploadFailure($button, message) {
+        const fallback = message || getI18nString('iconUploadErrorGeneric', 'Le téléversement du SVG a échoué.');
+        showUploadMessage($button, fallback, true);
+        speakUploadMessage(fallback);
+    }
+
+    function parseAjaxError(jqXHR) {
+        if (jqXHR && jqXHR.responseJSON) {
+            const response = jqXHR.responseJSON;
+            if (response.data && typeof response.data === 'string') {
+                return response.data;
+            }
+            if (response.message && typeof response.message === 'string') {
+                return response.message;
+            }
+        }
+
+        if (jqXHR && typeof jqXHR.responseText === 'string' && jqXHR.responseText !== '') {
+            return jqXHR.responseText;
+        }
+
+        return getI18nString('iconUploadErrorGeneric', 'Le téléversement du SVG a échoué.');
+    }
+
+    function isSvgFileType(fileName, mimeType) {
+        const normalizedMime = typeof mimeType === 'string' ? mimeType.toLowerCase() : '';
+        if (normalizedMime === 'image/svg+xml') {
+            return true;
+        }
+
+        if (typeof fileName === 'string') {
+            return /\.svg(?:\?.*)?$/i.test(fileName.trim());
+        }
+
+        return false;
+    }
+
+    function uploadSvgBlob($button, blob, suggestedName) {
+        if (!blob) {
+            handleUploadFailure($button, getI18nString('iconUploadErrorGeneric', 'Le téléversement du SVG a échoué.'));
+            return false;
+        }
+
+        if (!iconUploadAction || !ajaxUrl) {
+            handleUploadFailure($button, getI18nString('iconUploadErrorGeneric', 'Le téléversement du SVG a échoué.'));
+            return false;
+        }
+
+        const fileName = typeof suggestedName === 'string' && suggestedName.trim() !== '' ? suggestedName.trim() : 'icon.svg';
+
+        if (!isSvgFileType(fileName, blob.type)) {
+            handleUploadFailure($button, getI18nString('iconUploadErrorMime', 'Seuls les fichiers SVG sont acceptés.'));
+            return false;
+        }
+
+        if (iconUploadMaxSize > 0 && blob.size > iconUploadMaxSize) {
+            const sizeMessage = getI18nString('iconUploadErrorSize', 'Le fichier dépasse la taille maximale autorisée de %d Ko.')
+                .replace('%d', Math.ceil(iconUploadMaxSize / 1024));
+            handleUploadFailure($button, sizeMessage);
+            return false;
+        }
+
+        const formData = new FormData();
+        formData.append('action', iconUploadAction);
+        formData.append('nonce', ajaxNonce);
+        formData.append('icon_file', blob, fileName);
+
+        setUploadButtonState($button, true);
+        showUploadMessage($button, getI18nString('iconUploadInProgress', 'Téléversement du SVG en cours…'), false);
+
+        const jqxhr = $.ajax({
+            url: ajaxUrl,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+        });
+
+        jqxhr.done(response => {
+            if (!response || typeof response !== 'object') {
+                handleUploadFailure($button, getI18nString('iconUploadErrorGeneric', 'Le téléversement du SVG a échoué.'));
+                return;
+            }
+
+            if (!response.success) {
+                const serverMessage = response.data && typeof response.data === 'string'
+                    ? response.data
+                    : getI18nString('iconUploadErrorGeneric', 'Le téléversement du SVG a échoué.');
+                handleUploadFailure($button, serverMessage);
+                return;
+            }
+
+            const data = response.data || {};
+
+            if (Array.isArray(data.icon_manifest)) {
+                sidebarJLG.icons_manifest = data.icon_manifest;
+                rebuildIconLookups(sidebarJLG.icons_manifest);
+                if (modal.is(':visible')) {
+                    populateIconGrid();
+                }
+            }
+
+            if (typeof data.icon_key === 'string' && typeof data.icon_markup === 'string') {
+                iconCache[data.icon_key] = data.icon_markup;
+            }
+
+            const successMessage = typeof data.message === 'string' && data.message !== ''
+                ? data.message
+                : getI18nString('iconUploadSuccess', 'Icône SVG ajoutée.');
+
+            showUploadMessage($button, successMessage, false);
+            speakUploadMessage(successMessage);
+            logDebug('Custom SVG uploaded.', data);
+        });
+
+        jqxhr.fail(jqXHR => {
+            const message = parseAjaxError(jqXHR);
+            handleUploadFailure($button, message);
+        });
+
+        jqxhr.always(() => {
+            setUploadButtonState($button, false);
+        });
+
+        return jqxhr;
+    }
+
+    function triggerHiddenUpload($button) {
+        hiddenSvgUploadInput.data('originButton', $button);
+        hiddenSvgUploadInput.trigger('click');
+    }
+
+    function openUploadMediaFrame($button) {
+        if (!window.wp || !wp.media || typeof wp.media !== 'function') {
+            triggerHiddenUpload($button);
+            return;
+        }
+
+        if (!customIconUploadFrame) {
+            customIconUploadFrame = wp.media({
+                title: getI18nString('iconUploadMediaTitle', 'Sélectionner un fichier SVG'),
+                button: { text: getI18nString('iconUploadMediaButton', 'Utiliser ce SVG') },
+                library: { type: 'image/svg+xml' },
+                multiple: false
+            });
+        }
+
+        customIconUploadFrame.off('select');
+        customIconUploadFrame.on('select', function() {
+            const selection = customIconUploadFrame.state().get('selection');
+            const attachment = selection ? selection.first() : null;
+
+            if (!attachment || typeof attachment.toJSON !== 'function') {
+                handleUploadFailure($button, getI18nString('iconUploadErrorGeneric', 'Le téléversement du SVG a échoué.'));
+                return;
+            }
+
+            const details = attachment.toJSON();
+            if (!details || !details.url) {
+                handleUploadFailure($button, getI18nString('iconUploadErrorGeneric', 'Le téléversement du SVG a échoué.'));
+                return;
+            }
+
+            if (typeof window.fetch !== 'function') {
+                triggerHiddenUpload($button);
+                return;
+            }
+
+            showUploadMessage($button, getI18nString('iconUploadPreparing', 'Préparation du fichier…'), false);
+            setUploadButtonState($button, true);
+
+            fetch(details.url, { credentials: 'same-origin' })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('network_error');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    setUploadButtonState($button, false);
+                    uploadSvgBlob($button, blob, details.filename || 'icon.svg');
+                })
+                .catch(() => {
+                    setUploadButtonState($button, false);
+                    handleUploadFailure($button, getI18nString('iconUploadErrorFetch', 'Impossible de récupérer le fichier depuis la médiathèque.'));
+                });
+        });
+
+        customIconUploadFrame.open();
+    }
+
+    function startSvgUploadFlow($button) {
+        if (!$button || !$button.length) {
+            return;
+        }
+
+        if (!iconUploadAction || !ajaxUrl) {
+            handleUploadFailure($button, getI18nString('iconUploadErrorGeneric', 'Le téléversement du SVG a échoué.'));
+            return;
+        }
+
+        openUploadMediaFrame($button);
+    }
+
     function sanitizeIconKey(iconName) {
         if (typeof iconName !== 'string') {
             return '';
@@ -686,13 +993,18 @@ jQuery(document).ready(function($) {
         });
     }
 
-    $('body').on('click', '.choose-icon', function() { 
-        openIconLibrary($(this).siblings('.icon-input'), $(this).siblings('.icon-preview')); 
+    $('body').on('click', '.choose-icon', function() {
+        openIconLibrary($(this).siblings('.icon-input'), $(this).siblings('.icon-preview'));
     });
-    $('body').on('click', '.choose-svg', function() { 
-        openMediaLibrary($(this).siblings('.icon-input'), $(this).siblings('.icon-preview')); 
+    $('body').on('click', '.choose-svg', function() {
+        openMediaLibrary($(this).siblings('.icon-input'), $(this).siblings('.icon-preview'));
     });
-    
+
+    $('.sidebar-jlg-upload-svg').on('click', function(e) {
+        e.preventDefault();
+        startSvgUploadFlow($(this));
+    });
+
     modal.on('click', '.modal-close, .modal-backdrop', () => modal.hide());
     $('#icon-grid').on('click', 'button', function() {
         const iconName = $(this).attr('data-icon-name');
