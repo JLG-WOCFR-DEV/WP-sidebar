@@ -48,6 +48,7 @@ class SettingsRepository
         'font_hover_color_end',
         'overlay_color',
         'mobile_bg_color',
+        'hamburger_color',
     ];
 
     private DefaultSettings $defaults;

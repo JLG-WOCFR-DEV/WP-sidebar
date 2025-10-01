@@ -32,6 +32,7 @@ class DefaultSettings
             // Automatically close the sidebar after clicking menu or social links.
             'close_on_link_click' => false,
             'hamburger_top_position' => '4rem',
+            'hamburger_color'      => 'rgba(255, 255, 255, 1)',
             'header_logo_type'  => 'text',
             'header_logo_image' => '',
             'header_logo_size'  => 150,
