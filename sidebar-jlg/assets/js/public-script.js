@@ -21,8 +21,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Appliquer la classe d'animation
     const animationType = (typeof sidebarSettings !== 'undefined' && sidebarSettings.animation_type) ? sidebarSettings.animation_type : 'slide-left';
     const animationClass = `animation-${animationType}`;
+    const REDUCED_MOTION_CLASS = 'jlg-prefers-reduced-motion';
 
     function applyAnimationPreference() {
+        document.documentElement.classList.toggle(REDUCED_MOTION_CLASS, isReducedMotion);
+
         if (isReducedMotion) {
             sidebar.classList.remove(animationClass);
         } else if (!sidebar.classList.contains(animationClass)) {
