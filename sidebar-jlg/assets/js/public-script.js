@@ -22,6 +22,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const animationType = (typeof sidebarSettings !== 'undefined' && sidebarSettings.animation_type) ? sidebarSettings.animation_type : 'slide-left';
     const animationClass = `animation-${animationType}`;
     const REDUCED_MOTION_CLASS = 'jlg-prefers-reduced-motion';
+    const INTERACTIVE_HOVER_EFFECTS = new Set(['spotlight', 'glossy-tilt']);
+    const MAX_TILT_DEGREES = 10;
+    let cleanupHoverEffectListeners = null;
 
     function applyAnimationPreference() {
         document.documentElement.classList.toggle(REDUCED_MOTION_CLASS, isReducedMotion);
@@ -277,7 +280,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Appliquer la classe d'effet de survol en fonction de la taille de l'écran
+    function teardownHoverEffectListeners() {
+        if (typeof cleanupHoverEffectListeners === 'function') {
+            cleanupHoverEffectListeners();
+            cleanupHoverEffectListeners = null;
+        }
+    }
+
+    function resetInteractiveHoverState(element) {
+        if (!element) {
+            return;
+        }
+
+        element.style.removeProperty('--mouse-x');
+        element.style.removeProperty('--mouse-y');
+        element.style.removeProperty('--rotate-x');
+        element.style.removeProperty('--rotate-y');
+    }
+
     function applyHoverEffect() {
+        teardownHoverEffectListeners();
+
         const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
         const hoverEffectDesktop = sidebar.getAttribute('data-hover-desktop');
         const hoverEffectMobile = sidebar.getAttribute('data-hover-mobile');
@@ -289,11 +312,89 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        const activeHoverEffect = isDesktop ? hoverEffectDesktop : hoverEffectMobile;
+
         if (isDesktop && hoverEffectDesktop && hoverEffectDesktop !== 'none') {
             sidebar.classList.add(`hover-effect-${hoverEffectDesktop}`);
         } else if (!isDesktop && hoverEffectMobile && hoverEffectMobile !== 'none') {
             sidebar.classList.add(`hover-effect-${hoverEffectMobile}`);
         }
+
+        if (!activeHoverEffect || !INTERACTIVE_HOVER_EFFECTS.has(activeHoverEffect)) {
+            return;
+        }
+
+        const sidebarLinks = Array.from(sidebar.querySelectorAll('.sidebar-menu a'));
+
+        if (!sidebarLinks.length) {
+            return;
+        }
+
+        const handlePointerMove = (event) => {
+            const target = event.currentTarget;
+            if (!target || typeof target.getBoundingClientRect !== 'function') {
+                return;
+            }
+
+            const rect = target.getBoundingClientRect();
+            if (!rect || !rect.width || !rect.height) {
+                return;
+            }
+
+            const clientX = typeof event.clientX === 'number' ? event.clientX : 0;
+            const clientY = typeof event.clientY === 'number' ? event.clientY : 0;
+            const relativeX = (clientX - rect.left) / rect.width;
+            const relativeY = (clientY - rect.top) / rect.height;
+
+            const clampedX = Math.min(Math.max(relativeX, 0), 1);
+            const clampedY = Math.min(Math.max(relativeY, 0), 1);
+
+            const percentX = (clampedX * 100).toFixed(2) + '%';
+            const percentY = (clampedY * 100).toFixed(2) + '%';
+            target.style.setProperty('--mouse-x', percentX);
+            target.style.setProperty('--mouse-y', percentY);
+
+            const tiltX = ((0.5 - clampedY) * MAX_TILT_DEGREES * 2).toFixed(2) + 'deg';
+            const tiltY = ((clampedX - 0.5) * MAX_TILT_DEGREES * 2).toFixed(2) + 'deg';
+            target.style.setProperty('--rotate-x', tiltX);
+            target.style.setProperty('--rotate-y', tiltY);
+        };
+
+        const handlePointerExit = (event) => {
+            resetInteractiveHoverState(event.currentTarget);
+        };
+
+        const handlePointerUp = (event) => {
+            if (event.pointerType && event.pointerType !== 'touch') {
+                return;
+            }
+            resetInteractiveHoverState(event.currentTarget);
+        };
+
+        const handleTouchEnd = (event) => {
+            resetInteractiveHoverState(event.currentTarget);
+        };
+
+        sidebarLinks.forEach((link) => {
+            link.addEventListener('pointermove', handlePointerMove);
+            link.addEventListener('pointerleave', handlePointerExit);
+            link.addEventListener('pointercancel', handlePointerExit);
+            link.addEventListener('pointerup', handlePointerUp);
+            link.addEventListener('touchend', handleTouchEnd);
+            link.addEventListener('touchcancel', handleTouchEnd);
+        });
+
+        cleanupHoverEffectListeners = () => {
+            sidebarLinks.forEach((link) => {
+                link.removeEventListener('pointermove', handlePointerMove);
+                link.removeEventListener('pointerleave', handlePointerExit);
+                link.removeEventListener('pointercancel', handlePointerExit);
+                link.removeEventListener('pointerup', handlePointerUp);
+                link.removeEventListener('touchend', handleTouchEnd);
+                link.removeEventListener('touchcancel', handleTouchEnd);
+                resetInteractiveHoverState(link);
+            });
+        };
     }
 
     function handleResize() {
