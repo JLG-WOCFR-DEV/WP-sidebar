@@ -29,7 +29,13 @@ describe('public-script.js', () => {
 
     document.body.innerHTML = `
       <div id="sidebar-overlay"></div>
-      <button id="hamburger-btn" aria-expanded="false">Menu</button>
+      <button
+        id="hamburger-btn"
+        aria-expanded="false"
+        aria-label="Ouvrir"
+        data-open-label="Ouvrir"
+        data-close-label="Fermer"
+      >Menu</button>
       <aside id="pro-sidebar" data-hover-desktop="glow" data-hover-mobile="underline">
         <button class="close-sidebar-btn">Fermer</button>
         <nav class="sidebar-menu">
@@ -66,6 +72,7 @@ describe('public-script.js', () => {
     expect(document.body.classList.contains('sidebar-open')).toBe(true);
     expect(hamburgerBtn.classList.contains('is-active')).toBe(true);
     expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('true');
+    expect(hamburgerBtn.getAttribute('aria-label')).toBe('Fermer');
     expect(overlay.classList.contains('is-visible')).toBe(true);
     expect(document.activeElement).toBe(focusableContent[0]);
 
@@ -74,6 +81,7 @@ describe('public-script.js', () => {
     expect(document.body.classList.contains('sidebar-open')).toBe(false);
     expect(hamburgerBtn.classList.contains('is-active')).toBe(false);
     expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('false');
+    expect(hamburgerBtn.getAttribute('aria-label')).toBe('Ouvrir');
     expect(document.activeElement).toBe(hamburgerBtn);
   });
 

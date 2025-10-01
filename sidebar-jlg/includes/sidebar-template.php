@@ -79,13 +79,19 @@ $sidebar_content_html = ob_get_clean();
 ?>
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
+<?php
+    $hamburger_open_label  = esc_attr__( 'Ouvrir le menu', 'sidebar-jlg' );
+    $hamburger_close_label = esc_attr__( 'Fermer le menu', 'sidebar-jlg' );
+?>
 <button
     class="hamburger-menu"
     id="hamburger-btn"
     type="button"
-    aria-label="<?php esc_attr_e('Ouvrir le menu', 'sidebar-jlg'); ?>"
+    aria-label="<?php echo esc_attr( $hamburger_open_label ); ?>"
     aria-controls="pro-sidebar"
-    aria-expanded="false">
+    aria-expanded="false"
+    data-open-label="<?php echo esc_attr( $hamburger_open_label ); ?>"
+    data-close-label="<?php echo esc_attr( $hamburger_close_label ); ?>">
     <div class="hamburger-icon">
         <div class="icon-1"></div>
         <div class="icon-2"></div>
