@@ -418,6 +418,231 @@ class SidebarRenderer
         error_log(sprintf('[Sidebar JLG] Failed to capture sidebar output buffer using %s.', $operation));
     }
 
+    public static function getCurrentRequestContext(): array
+    {
+        $context = [
+            'current_post_ids'      => [],
+            'current_post_types'    => [],
+            'current_category_ids'  => [],
+            'current_url'           => null,
+        ];
+
+        $queriedObject = null;
+        if (function_exists('get_queried_object')) {
+            $queriedObject = get_queried_object();
+        }
+
+        if (function_exists('get_queried_object_id')) {
+            $queriedId = absint(get_queried_object_id());
+            if ($queriedId > 0) {
+                $context['current_post_ids'][] = $queriedId;
+            }
+        }
+
+        if (is_object($queriedObject)) {
+            if (isset($queriedObject->ID)) {
+                $objectId = absint($queriedObject->ID);
+                if ($objectId > 0 && !in_array($objectId, $context['current_post_ids'], true)) {
+                    $context['current_post_ids'][] = $objectId;
+                }
+            }
+
+            if (isset($queriedObject->post_type)) {
+                $postType = (string) $queriedObject->post_type;
+                if ($postType !== '' && !in_array($postType, $context['current_post_types'], true)) {
+                    $context['current_post_types'][] = $postType;
+                }
+            }
+
+            if (isset($queriedObject->taxonomy) && isset($queriedObject->term_id)) {
+                $taxonomy = (string) $queriedObject->taxonomy;
+                $termId = absint($queriedObject->term_id);
+
+                if ($taxonomy === 'category' && $termId > 0) {
+                    $context['current_category_ids'][] = $termId;
+                }
+            }
+        }
+
+        $currentUrl = self::buildCurrentUrl();
+        if ($currentUrl !== null) {
+            $context['current_url'] = self::normalizeUrlForComparison($currentUrl);
+        }
+
+        return $context;
+    }
+
+    public static function isMenuItemCurrent(array $item, array $context): bool
+    {
+        $type = isset($item['type']) ? (string) $item['type'] : '';
+        $context += [
+            'current_post_ids'     => [],
+            'current_post_types'   => [],
+            'current_category_ids' => [],
+            'current_url'          => null,
+        ];
+
+        switch ($type) {
+            case 'page':
+                $targetId = absint($item['value'] ?? 0);
+                if ($targetId === 0) {
+                    return false;
+                }
+
+                if (!in_array($targetId, $context['current_post_ids'], true)) {
+                    return false;
+                }
+
+                $postTypes = (array) $context['current_post_types'];
+                if ($postTypes === []) {
+                    return true;
+                }
+
+                return in_array('page', $postTypes, true);
+
+            case 'post':
+                $targetId = absint($item['value'] ?? 0);
+                if ($targetId === 0) {
+                    return false;
+                }
+
+                if (!in_array($targetId, $context['current_post_ids'], true)) {
+                    return false;
+                }
+
+                $postTypes = (array) $context['current_post_types'];
+                if ($postTypes === []) {
+                    return true;
+                }
+
+                return in_array('post', $postTypes, true);
+
+            case 'category':
+                $targetId = absint($item['value'] ?? 0);
+                if ($targetId === 0) {
+                    return false;
+                }
+
+                return in_array($targetId, (array) $context['current_category_ids'], true);
+
+            case 'custom':
+                $targetUrl = isset($item['value']) ? (string) $item['value'] : '';
+                if ($targetUrl === '') {
+                    return false;
+                }
+
+                $currentUrl = is_string($context['current_url'] ?? null) ? (string) $context['current_url'] : '';
+                if ($currentUrl === '') {
+                    return false;
+                }
+
+                return self::urlsMatch($targetUrl, $currentUrl);
+        }
+
+        return false;
+    }
+
+    private static function buildCurrentUrl(): ?string
+    {
+        $host = isset($_SERVER['HTTP_HOST']) ? trim((string) $_SERVER['HTTP_HOST']) : '';
+        if ($host === '') {
+            return null;
+        }
+
+        $scheme = 'http';
+        if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+            $scheme = 'https';
+        }
+
+        $requestUri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        if ($requestUri === '') {
+            $requestUri = '/';
+        }
+
+        return $scheme . '://' . $host . $requestUri;
+    }
+
+    private static function urlsMatch(string $first, string $second): bool
+    {
+        $normalizedFirst = self::normalizeUrlForComparison($first);
+        $normalizedSecond = self::normalizeUrlForComparison($second);
+
+        if ($normalizedFirst === '' || $normalizedSecond === '') {
+            return false;
+        }
+
+        return $normalizedFirst === $normalizedSecond;
+    }
+
+    private static function normalizeUrlForComparison(?string $url): string
+    {
+        if (!is_string($url)) {
+            return '';
+        }
+
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+
+        $parts = @parse_url($url);
+        if ($parts === false) {
+            return self::trimPath($url);
+        }
+
+        $path = isset($parts['path']) ? (string) $parts['path'] : '';
+        if ($path === '') {
+            $path = '/';
+        }
+        $path = '/' . ltrim($path, '/');
+        $path = self::trimPath($path);
+
+        $query = isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '';
+
+        if (isset($parts['scheme']) && isset($parts['host'])) {
+            $scheme = strtolower((string) $parts['scheme']);
+            $host = strtolower((string) $parts['host']);
+            $normalized = $scheme . '://' . $host;
+
+            if (isset($parts['port']) && $parts['port'] !== null) {
+                $port = (int) $parts['port'];
+                if (!self::isDefaultPortForScheme($port, $scheme)) {
+                    $normalized .= ':' . $port;
+                }
+            }
+
+            return $normalized . $path . $query;
+        }
+
+        return $path . $query;
+    }
+
+    private static function trimPath(string $path): string
+    {
+        if ($path === '/') {
+            return '/';
+        }
+
+        $trimmed = rtrim($path, '/');
+
+        return $trimmed === '' ? '/' : $trimmed;
+    }
+
+    private static function isDefaultPortForScheme(int $port, string $scheme): bool
+    {
+        $scheme = strtolower($scheme);
+
+        if ($scheme === 'http') {
+            return $port === 80;
+        }
+
+        if ($scheme === 'https') {
+            return $port === 443;
+        }
+
+        return false;
+    }
+
     public function addBodyClasses(array $classes): array
     {
         $options = $this->settings->getOptions();
@@ -461,6 +686,21 @@ class SidebarRenderer
         }
 
         $isDynamic = !empty($options['enable_search']);
+
+        if (!$isDynamic && !empty($options['menu_items']) && is_array($options['menu_items'])) {
+            $context = self::getCurrentRequestContext();
+
+            foreach ($options['menu_items'] as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                if (self::isMenuItemCurrent($item, $context)) {
+                    $isDynamic = true;
+                    break;
+                }
+            }
+        }
 
         return (bool) \apply_filters('sidebar_jlg_is_dynamic', $isDynamic, $options);
     }

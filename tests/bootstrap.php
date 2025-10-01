@@ -574,6 +574,19 @@ if (!function_exists('esc_attr_e')) {
     }
 }
 
+if (!function_exists('esc_attr__')) {
+    function esc_attr__($text, $domain = 'default')
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return (string) $result;
+        }
+
+        return esc_attr(__($text, $domain));
+    }
+}
+
 if (!function_exists('esc_url_raw')) {
     function esc_url_raw($value)
     {
@@ -709,6 +722,25 @@ if (!function_exists('sanitize_key')) {
         $key = strtolower((string) $key);
 
         return preg_replace('/[^a-z0-9_\-]/', '', $key);
+    }
+}
+
+if (!function_exists('sanitize_html_class')) {
+    function sanitize_html_class($class, $fallback = '')
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return (string) $result;
+        }
+
+        $sanitized = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $class);
+
+        if ($sanitized === '' && $fallback !== '') {
+            $sanitized = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $fallback);
+        }
+
+        return (string) $sanitized;
     }
 }
 
