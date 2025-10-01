@@ -19,8 +19,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const focusableContent = sidebar.querySelectorAll(focusableElements);
     const firstFocusableElement = focusableContent[0];
     const lastFocusableElement = focusableContent[focusableContent.length - 1];
+    const DESKTOP_BREAKPOINT = 993;
+
+    function getScrollbarWidth() {
+        const scrollProbe = document.createElement('div');
+        scrollProbe.style.position = 'absolute';
+        scrollProbe.style.top = '-9999px';
+        scrollProbe.style.width = '100px';
+        scrollProbe.style.height = '100px';
+        scrollProbe.style.overflow = 'scroll';
+        document.body.appendChild(scrollProbe);
+        const width = scrollProbe.offsetWidth - scrollProbe.clientWidth;
+        document.body.removeChild(scrollProbe);
+        return width;
+    }
+
+    function applyScrollLockCompensation() {
+        const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
+        const compensation = isDesktop ? getScrollbarWidth() : 0;
+        document.body.style.setProperty('--sidebar-scrollbar-compensation', `${compensation}px`);
+    }
+
+    function clearScrollLockCompensation() {
+        document.body.style.removeProperty('--sidebar-scrollbar-compensation');
+    }
 
     function openSidebar() {
+        applyScrollLockCompensation();
         document.body.classList.add('sidebar-open');
         hamburgerBtn.classList.add('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'true');
@@ -31,7 +56,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('keydown', trapFocus);
     }
 
-    function closeSidebar() {
+    function closeSidebar(options = {}) {
+        const { returnFocus = true } = options;
         const isSidebarOpen = document.body.classList.contains('sidebar-open');
         if (!isSidebarOpen) {
             return;
@@ -40,7 +66,10 @@ document.addEventListener('DOMContentLoaded', function() {
         hamburgerBtn.classList.remove('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'false');
         if (overlay) overlay.classList.remove('is-visible');
-        hamburgerBtn.focus();
+        clearScrollLockCompensation();
+        if (returnFocus) {
+            hamburgerBtn.focus();
+        }
         document.removeEventListener('keydown', trapFocus);
     }
 
@@ -102,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Appliquer la classe d'effet de survol en fonction de la taille de l'écran
     function applyHoverEffect() {
-        const isDesktop = window.innerWidth >= 993;
+        const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
         const hoverEffectDesktop = sidebar.getAttribute('data-hover-desktop');
         const hoverEffectMobile = sidebar.getAttribute('data-hover-mobile');
         
@@ -116,6 +145,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function handleResize() {
+        applyHoverEffect();
+
+        if (!document.body.classList.contains('sidebar-open')) {
+            return;
+        }
+
+        if (window.innerWidth >= DESKTOP_BREAKPOINT) {
+            closeSidebar({ returnFocus: false });
+        } else {
+            applyScrollLockCompensation();
+        }
+    }
+
     applyHoverEffect();
-    window.addEventListener('resize', applyHoverEffect);
+    window.addEventListener('resize', handleResize);
 });

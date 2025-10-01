@@ -2,6 +2,11 @@
 
 /* --- Base --- */
 body { transition: padding-left var(--transition-speed, 0.4s) ease; }
+body.sidebar-open {
+    overflow: hidden;
+    touch-action: none;
+    padding-right: var(--sidebar-scrollbar-compensation, 0);
+}
 @media (min-width: 993px) {
     body.jlg-sidebar-active.jlg-sidebar-push {
         padding-left: var(--sidebar-width-desktop) !important;
