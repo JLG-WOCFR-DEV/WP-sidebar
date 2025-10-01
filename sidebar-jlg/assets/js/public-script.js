@@ -13,9 +13,38 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    const prefersReducedMotionQuery = typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-reduced-motion: reduce)')
+        : null;
+    let isReducedMotion = prefersReducedMotionQuery ? prefersReducedMotionQuery.matches : false;
+
     // Appliquer la classe d'animation
     const animationType = (typeof sidebarSettings !== 'undefined' && sidebarSettings.animation_type) ? sidebarSettings.animation_type : 'slide-left';
-    sidebar.classList.add(`animation-${animationType}`);
+    const animationClass = `animation-${animationType}`;
+
+    function applyAnimationPreference() {
+        if (isReducedMotion) {
+            sidebar.classList.remove(animationClass);
+        } else if (!sidebar.classList.contains(animationClass)) {
+            sidebar.classList.add(animationClass);
+        }
+    }
+
+    function handleReducedMotionChange(event) {
+        isReducedMotion = event.matches;
+        applyAnimationPreference();
+        applyHoverEffect();
+    }
+
+    applyAnimationPreference();
+
+    if (prefersReducedMotionQuery) {
+        if (typeof prefersReducedMotionQuery.addEventListener === 'function') {
+            prefersReducedMotionQuery.addEventListener('change', handleReducedMotionChange);
+        } else if (typeof prefersReducedMotionQuery.addListener === 'function') {
+            prefersReducedMotionQuery.addListener(handleReducedMotionChange);
+        }
+    }
 
     const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
     const originalSidebarTabIndex = sidebar.hasAttribute('tabindex') ? sidebar.getAttribute('tabindex') : null;
@@ -119,9 +148,13 @@ document.addEventListener('DOMContentLoaded', function() {
             hamburgerBtn.setAttribute('aria-label', closeLabel);
         }
         if (overlay) overlay.classList.add('is-visible');
-        setTimeout(() => {
+        if (isReducedMotion) {
             focusFirstAvailableElement();
-        }, 100);
+        } else {
+            setTimeout(() => {
+                focusFirstAvailableElement();
+            }, 100);
+        }
         document.addEventListener('keydown', trapFocus);
     }
 
@@ -203,7 +236,11 @@ document.addEventListener('DOMContentLoaded', function() {
         selectors.forEach((selector) => {
             sidebar.querySelectorAll(selector).forEach((element) => {
                 element.addEventListener('click', () => {
-                    setTimeout(closeSidebar, 50);
+                    if (isReducedMotion) {
+                        closeSidebar();
+                    } else {
+                        setTimeout(closeSidebar, 50);
+                    }
                 });
             });
         });
@@ -226,9 +263,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
         const hoverEffectDesktop = sidebar.getAttribute('data-hover-desktop');
         const hoverEffectMobile = sidebar.getAttribute('data-hover-mobile');
-        
+
         // Nettoyer les anciennes classes d'effet
         sidebar.className = sidebar.className.replace(/\bhover-effect-\S+/g, '');
+
+        if (isReducedMotion) {
+            return;
+        }
 
         if (isDesktop && hoverEffectDesktop && hoverEffectDesktop !== 'none') {
             sidebar.classList.add(`hover-effect-${hoverEffectDesktop}`);

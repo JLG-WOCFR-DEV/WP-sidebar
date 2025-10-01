@@ -4,6 +4,10 @@ describe('public-script.js', () => {
   let sidebar;
   let hamburgerBtn;
   let overlay;
+  let mediaQueryList;
+  let matchMediaListeners;
+  const recordedDocumentListeners = [];
+  const recordedWindowListeners = [];
   const getVisibleFocusable = () => {
     const elements = Array.from(sidebar.querySelectorAll(FOCUSABLE_SELECTOR));
     return elements.filter((element) => {
@@ -26,18 +30,82 @@ describe('public-script.js', () => {
       return true;
     });
   };
-
-  const loadScript = (settings = {}) => {
-    jest.resetModules();
-
-    global.sidebarSettings = {
-      animation_type: 'fade',
-      close_on_link_click: '0',
-      ...settings,
+  const setupMatchMedia = (matches = false) => {
+    matchMediaListeners = [];
+    mediaQueryList = {
+      matches,
+      media: '(prefers-reduced-motion: reduce)',
+      addEventListener: jest.fn((event, handler) => {
+        if (event === 'change') {
+          matchMediaListeners.push(handler);
+        }
+      }),
+      removeEventListener: jest.fn((event, handler) => {
+        if (event === 'change') {
+          matchMediaListeners = matchMediaListeners.filter((listener) => listener !== handler);
+        }
+      }),
+      addListener: jest.fn((handler) => {
+        matchMediaListeners.push(handler);
+      }),
+      removeListener: jest.fn((handler) => {
+        matchMediaListeners = matchMediaListeners.filter((listener) => listener !== handler);
+      }),
+      dispatchEvent: jest.fn((event) => {
+        matchMediaListeners.forEach((listener) => listener(event));
+        return true;
+      }),
+      onchange: null,
     };
 
-    require('../public-script.js');
-    document.dispatchEvent(new Event('DOMContentLoaded'));
+    window.matchMedia = jest.fn(() => mediaQueryList);
+  };
+
+  const removeRecordedListeners = () => {
+    while (recordedDocumentListeners.length > 0) {
+      const { target, type, listener, options } = recordedDocumentListeners.pop();
+      target.removeEventListener(type, listener, options);
+    }
+
+    while (recordedWindowListeners.length > 0) {
+      const { target, type, listener, options } = recordedWindowListeners.pop();
+      target.removeEventListener(type, listener, options);
+    }
+  };
+
+  const loadScript = (settings = {}, options = {}) => {
+    removeRecordedListeners();
+
+    jest.resetModules();
+
+    const originalDocumentAddEventListener = document.addEventListener.bind(document);
+    const originalWindowAddEventListener = window.addEventListener.bind(window);
+
+    document.addEventListener = (type, listener, options) => {
+      recordedDocumentListeners.push({ target: document, type, listener, options });
+      return originalDocumentAddEventListener(type, listener, options);
+    };
+
+    window.addEventListener = (type, listener, options) => {
+      recordedWindowListeners.push({ target: window, type, listener, options });
+      return originalWindowAddEventListener(type, listener, options);
+    };
+
+    try {
+      setupMatchMedia(options.prefersReducedMotion ?? false);
+
+      global.sidebarSettings = {
+        animation_type: 'fade',
+        close_on_link_click: '0',
+        ...settings,
+      };
+
+      require('../public-script.js');
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+    } finally {
+      document.addEventListener = originalDocumentAddEventListener;
+      window.addEventListener = originalWindowAddEventListener;
+    }
 
     sidebar = document.getElementById('pro-sidebar');
     hamburgerBtn = document.getElementById('hamburger-btn');
@@ -75,18 +143,20 @@ describe('public-script.js', () => {
       configurable: true,
       value: 1200,
     });
-
-    loadScript();
   });
 
   afterEach(() => {
     jest.clearAllTimers();
     jest.useRealTimers();
     delete global.sidebarSettings;
+    delete window.matchMedia;
+    removeRecordedListeners();
     document.body.innerHTML = '';
   });
 
   test('opens and closes the sidebar via UI controls', () => {
+    loadScript();
+
     hamburgerBtn.click();
     jest.runOnlyPendingTimers();
 
@@ -108,6 +178,8 @@ describe('public-script.js', () => {
   });
 
   test('traps focus within the sidebar when open', () => {
+    loadScript();
+
     hamburgerBtn.click();
     jest.runOnlyPendingTimers();
 
@@ -125,6 +197,8 @@ describe('public-script.js', () => {
   });
 
   test('maintains focus trap when only the search field is visible', () => {
+    loadScript();
+
     hamburgerBtn.click();
     jest.runOnlyPendingTimers();
 
@@ -149,6 +223,8 @@ describe('public-script.js', () => {
   });
 
   test('Escape closes the sidebar only when it is open', () => {
+    loadScript();
+
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(document.body.classList.contains('sidebar-open')).toBe(false);
 
@@ -177,5 +253,25 @@ describe('public-script.js', () => {
 
     expect(document.body.classList.contains('sidebar-open')).toBe(false);
     expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  test('respects the reduced motion preference', () => {
+    loadScript({ close_on_link_click: '1' }, { prefersReducedMotion: true });
+
+    expect(sidebar.classList.contains('animation-fade')).toBe(false);
+    expect(sidebar.className).not.toMatch(/hover-effect-/);
+
+    hamburgerBtn.click();
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+    expect(jest.getTimerCount()).toBe(0);
+    const focusableContent = getVisibleFocusable();
+    expect(document.activeElement).toBe(focusableContent[0]);
+
+    const link = sidebar.querySelector('.sidebar-menu a');
+    link.click();
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+    expect(jest.getTimerCount()).toBe(0);
   });
 });
