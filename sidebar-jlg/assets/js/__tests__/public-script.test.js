@@ -4,7 +4,28 @@ describe('public-script.js', () => {
   let sidebar;
   let hamburgerBtn;
   let overlay;
-  let focusableContent;
+  const getVisibleFocusable = () => {
+    const elements = Array.from(sidebar.querySelectorAll(FOCUSABLE_SELECTOR));
+    return elements.filter((element) => {
+      if (element.hidden || element.disabled) {
+        return false;
+      }
+
+      if (element.getAttribute('aria-hidden') === 'true') {
+        return false;
+      }
+
+      let parent = element.parentElement;
+      while (parent && parent !== document.body) {
+        if (parent.hidden || parent.getAttribute('aria-hidden') === 'true') {
+          return false;
+        }
+        parent = parent.parentElement;
+      }
+
+      return true;
+    });
+  };
 
   const loadScript = (settings = {}) => {
     jest.resetModules();
@@ -21,7 +42,6 @@ describe('public-script.js', () => {
     sidebar = document.getElementById('pro-sidebar');
     hamburgerBtn = document.getElementById('hamburger-btn');
     overlay = document.getElementById('sidebar-overlay');
-    focusableContent = sidebar.querySelectorAll(FOCUSABLE_SELECTOR);
   };
 
   beforeEach(() => {
@@ -32,6 +52,7 @@ describe('public-script.js', () => {
       <button id="hamburger-btn" aria-expanded="false">Menu</button>
       <aside id="pro-sidebar" data-hover-desktop="glow" data-hover-mobile="underline">
         <button class="close-sidebar-btn">Fermer</button>
+        <input type="search" class="sidebar-search" placeholder="Rechercher" />
         <nav class="sidebar-menu">
           <a href="#item">Item</a>
         </nav>
@@ -67,6 +88,7 @@ describe('public-script.js', () => {
     expect(hamburgerBtn.classList.contains('is-active')).toBe(true);
     expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('true');
     expect(overlay.classList.contains('is-visible')).toBe(true);
+    const focusableContent = getVisibleFocusable();
     expect(document.activeElement).toBe(focusableContent[0]);
 
     overlay.click();
@@ -81,6 +103,7 @@ describe('public-script.js', () => {
     hamburgerBtn.click();
     jest.runOnlyPendingTimers();
 
+    const focusableContent = getVisibleFocusable();
     const firstFocusable = focusableContent[0];
     const lastFocusable = focusableContent[focusableContent.length - 1];
 
@@ -93,20 +116,42 @@ describe('public-script.js', () => {
     expect(document.activeElement).toBe(lastFocusable);
   });
 
-  test('Escape closes the sidebar only when it is open', () => {
-    const removeSpy = jest.spyOn(document.body.classList, 'remove');
+  test('maintains focus trap when only the search field is visible', () => {
+    hamburgerBtn.click();
+    jest.runOnlyPendingTimers();
 
+    const closeButton = sidebar.querySelector('.close-sidebar-btn');
+    const actionButton = sidebar.querySelector('button[type="button"]');
+    const navLink = sidebar.querySelector('.sidebar-menu a');
+    const socialLink = sidebar.querySelector('.social-icons a');
+    const searchField = sidebar.querySelector('input[type="search"]');
+
+    closeButton.hidden = true;
+    actionButton.disabled = true;
+    navLink.setAttribute('aria-hidden', 'true');
+    socialLink.hidden = true;
+
+    searchField.focus();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+    expect(document.activeElement).toBe(searchField);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true }));
+    expect(document.activeElement).toBe(searchField);
+  });
+
+  test('Escape closes the sidebar only when it is open', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    expect(removeSpy).not.toHaveBeenCalled();
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
 
     hamburgerBtn.click();
     jest.runOnlyPendingTimers();
 
-    removeSpy.mockClear();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
-    expect(removeSpy).toHaveBeenCalledWith('sidebar-open');
     expect(document.body.classList.contains('sidebar-open')).toBe(false);
+    expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('false');
+    expect(overlay.classList.contains('is-visible')).toBe(false);
   });
 
   test('closes the sidebar when a link is clicked if the setting is enabled', () => {
