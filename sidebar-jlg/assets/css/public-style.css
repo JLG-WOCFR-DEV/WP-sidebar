@@ -207,7 +207,7 @@ body.sidebar-open {
 .icon-1, .icon-2, .icon-3 {
     position: absolute; left: 0;
     width: 32px; height: 3px;
-    background-color: var(--hamburger-color, #fff);
+    background-color: var(--hamburger-color, var(--sidebar-text-color, #fff));
     transition: all 400ms cubic-bezier(.84,.06,.52,1.8);
 }
 .icon-1 { top: 0; }

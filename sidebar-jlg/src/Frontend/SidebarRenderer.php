@@ -166,7 +166,13 @@ class SidebarRenderer
         $this->assignVariable($variables, '--header-alignment-mobile', $this->sanitizeCssString($this->resolveOption($options, 'header_alignment_mobile')));
         $this->assignVariable($variables, '--header-logo-size', $this->formatPixelValue($this->resolveOption($options, 'header_logo_size')));
         $this->assignVariable($variables, '--hamburger-top-position', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_top_position')));
-        $this->assignVariable($variables, '--hamburger-color', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_color')));
+
+        $hamburgerColor = $this->sanitizeCssString($options['hamburger_color'] ?? null);
+        if ($hamburgerColor === null) {
+            $hamburgerColor = $this->sanitizeCssString($this->resolveOption($options, 'font_color'));
+        }
+
+        $this->assignVariable($variables, '--hamburger-color', $hamburgerColor);
 
         $contentMargin = $this->resolveContentMargin($options);
         if ($contentMargin !== null) {
