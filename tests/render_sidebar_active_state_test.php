@@ -146,6 +146,20 @@ assertContains('current-menu-item', $customScenario['html'], 'Custom URL item ma
 assertContains('aria-current="page"', $customScenario['html'], 'Custom URL item includes aria-current attribute');
 assertTrue($renderer->is_sidebar_output_dynamic($customScenario['settings']), 'Custom URL scenario disables cached sidebar output');
 
+$relativeCustomScenario = runSidebarScenario([
+    'label' => 'Relative Custom Link',
+    'type'  => 'custom',
+    'value' => '/relative-path/',
+], function (): void {
+    $_SERVER['HTTP_HOST'] = 'example.com';
+    $_SERVER['REQUEST_URI'] = '/relative-path/';
+    $GLOBALS['test_queried_object'] = null;
+});
+
+assertContains('current-menu-item', $relativeCustomScenario['html'], 'Relative custom URL item marked as current when URLs match');
+assertContains('aria-current="page"', $relativeCustomScenario['html'], 'Relative custom URL item includes aria-current attribute');
+assertTrue($renderer->is_sidebar_output_dynamic($relativeCustomScenario['settings']), 'Relative custom URL scenario disables cached sidebar output');
+
 if ($testsPassed) {
     echo "Render sidebar active state tests passed.\n";
     exit(0);

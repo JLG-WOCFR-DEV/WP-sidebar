@@ -183,6 +183,43 @@ if (!function_exists('trailingslashit')) {
     }
 }
 
+if (!function_exists('home_url')) {
+    function home_url($path = '', $scheme = null): string
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return (string) $result;
+        }
+
+        $path = is_string($path) ? $path : '';
+        $schemeValue = 'http';
+
+        if (is_string($scheme) && $scheme !== '') {
+            $schemeValue = strtolower($scheme);
+        } elseif (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+            $schemeValue = 'https';
+        }
+
+        $host = isset($_SERVER['HTTP_HOST']) ? trim((string) $_SERVER['HTTP_HOST']) : '';
+        if ($host === '') {
+            $host = 'example.com';
+        }
+
+        $url = $schemeValue . '://' . $host;
+
+        if ($path !== '') {
+            if ($path[0] === '/') {
+                $url .= $path;
+            } else {
+                $url .= '/' . $path;
+            }
+        }
+
+        return $url;
+    }
+}
+
 if (!function_exists('wp_normalize_path')) {
     function wp_normalize_path($path)
     {
