@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
         sidebar.focus({ preventScroll: true });
     }
     const DESKTOP_BREAKPOINT = 993;
+    const SCROLL_LOCK_CLASS = 'sidebar-scroll-lock';
 
     function getScrollbarWidth() {
         const scrollProbe = document.createElement('div');
@@ -110,8 +111,21 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.style.removeProperty('--sidebar-scrollbar-compensation');
     }
 
+    function applyScrollLock() {
+        if (window.innerWidth < DESKTOP_BREAKPOINT) {
+            document.body.classList.add(SCROLL_LOCK_CLASS);
+        } else {
+            document.body.classList.remove(SCROLL_LOCK_CLASS);
+        }
+    }
+
+    function releaseScrollLock() {
+        document.body.classList.remove(SCROLL_LOCK_CLASS);
+    }
+
     function openSidebar() {
         applyScrollLockCompensation();
+        applyScrollLock();
         document.body.classList.add('sidebar-open');
         hamburgerBtn.classList.add('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'true');
@@ -132,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         document.body.classList.remove('sidebar-open');
+        releaseScrollLock();
         hamburgerBtn.classList.remove('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'false');
         if (openLabel) {
@@ -248,6 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
             closeSidebar({ returnFocus: false });
         } else {
             applyScrollLockCompensation();
+            applyScrollLock();
         }
     }
 
