@@ -299,9 +299,14 @@ jQuery(document).ready(function($) {
         $('.push-option-field').toggle($(this).val() === 'push');
     }).trigger('change');
 
-    $('input[name="sidebar_jlg_settings[layout_style]"]').on('change', function() {
-        $('.floating-options-field').toggle($(this).val() === 'floating');
-    }).trigger('change');
+    const layoutStyleRadios = $('input[name="sidebar_jlg_settings[layout_style]"]');
+    function updateLayoutStyleFields() {
+        const selectedLayout = layoutStyleRadios.filter(':checked').val();
+        $('.floating-options-field').toggle(selectedLayout === 'floating');
+        $('.horizontal-options-field').toggle(selectedLayout === 'horizontal-bar');
+    }
+    layoutStyleRadios.on('change', updateLayoutStyleFields);
+    updateLayoutStyleFields();
 
     // --- Options de recherche ---
     const enableSearchCheckbox = $('input[name="sidebar_jlg_settings[enable_search]"]');

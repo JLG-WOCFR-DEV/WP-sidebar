@@ -48,12 +48,36 @@
                             <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="full" <?php checked($options['layout_style'], 'full'); ?>> <?php esc_html_e('Pleine hauteur', 'sidebar-jlg'); ?></label>
                             <br>
                             <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="floating" <?php checked($options['layout_style'], 'floating'); ?>> <?php esc_html_e('Flottant', 'sidebar-jlg'); ?></label>
+                            <br>
+                            <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="horizontal-bar" <?php checked($options['layout_style'], 'horizontal-bar'); ?>> <?php esc_html_e('Barre horizontale', 'sidebar-jlg'); ?></label>
                         </p>
                         <div class="floating-options-field" style="<?php echo $options['layout_style'] === 'floating' ? '' : 'display:none;'; ?>">
                             <p><label><?php esc_html_e( 'Marge verticale', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[floating_vertical_margin]" value="<?php echo esc_attr( $options['floating_vertical_margin'] ); ?>" class="small-text"/> <em class="description"><?php esc_html_e( 'Ex: 4rem, 15px', 'sidebar-jlg' ); ?></em></p>
                             <p><label><?php esc_html_e( 'Arrondi des coins', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[border_radius]" value="<?php echo esc_attr( $options['border_radius'] ); ?>" class="small-text"/> <em class="description"><?php esc_html_e( 'Ex: 12px, 1rem', 'sidebar-jlg' ); ?></em></p>
                             <p><label><?php esc_html_e( 'Épaisseur de la bordure', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[border_width]" value="<?php echo esc_attr( $options['border_width'] ); ?>" class="small-text"/> px</p>
                             <p><label><?php esc_html_e( 'Couleur de la bordure', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[border_color]" value="<?php echo esc_attr( $options['border_color'] ); ?>" class="color-picker-rgba"/></p>
+                        </div>
+                        <div class="horizontal-options-field" style="<?php echo $options['layout_style'] === 'horizontal-bar' ? '' : 'display:none;'; ?>">
+                            <p><label><?php esc_html_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[horizontal_bar_height]" value="<?php echo esc_attr( $options['horizontal_bar_height'] ); ?>" class="small-text"/> <em class="description"><?php esc_html_e( 'Utilisez des unités CSS (ex : 4rem, 72px).', 'sidebar-jlg' ); ?></em></p>
+                            <p>
+                                <label><?php esc_html_e( 'Position sur l\'écran', 'sidebar-jlg' ); ?></label>
+                                <select name="sidebar_jlg_settings[horizontal_bar_position]">
+                                    <option value="top" <?php selected($options['horizontal_bar_position'], 'top'); ?>><?php esc_html_e('En haut (Top)', 'sidebar-jlg'); ?></option>
+                                    <option value="bottom" <?php selected($options['horizontal_bar_position'], 'bottom'); ?>><?php esc_html_e('En bas (Bottom)', 'sidebar-jlg'); ?></option>
+                                </select>
+                            </p>
+                            <p>
+                                <label><?php esc_html_e( 'Alignement du contenu', 'sidebar-jlg' ); ?></label>
+                                <select name="sidebar_jlg_settings[horizontal_bar_alignment]">
+                                    <option value="flex-start" <?php selected($options['horizontal_bar_alignment'], 'flex-start'); ?>><?php esc_html_e('Aligné à gauche', 'sidebar-jlg'); ?></option>
+                                    <option value="center" <?php selected($options['horizontal_bar_alignment'], 'center'); ?>><?php esc_html_e('Centré', 'sidebar-jlg'); ?></option>
+                                    <option value="flex-end" <?php selected($options['horizontal_bar_alignment'], 'flex-end'); ?>><?php esc_html_e('Aligné à droite', 'sidebar-jlg'); ?></option>
+                                    <option value="space-between" <?php selected($options['horizontal_bar_alignment'], 'space-between'); ?>><?php esc_html_e('Espacé (Space-between)', 'sidebar-jlg'); ?></option>
+                                </select>
+                            </p>
+                            <p>
+                                <label><input type="checkbox" name="sidebar_jlg_settings[horizontal_bar_sticky]" value="1" <?php checked( ! empty( $options['horizontal_bar_sticky'] ) ); ?>> <?php esc_html_e( 'Rendre la barre collante (reste visible en scrollant)', 'sidebar-jlg' ); ?></label>
+                            </p>
                         </div>
                     </td>
                 </tr>

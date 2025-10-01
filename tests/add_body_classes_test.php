@@ -62,6 +62,15 @@ $scenarios = [
 
         return $renderer->addBodyClasses($baselineClasses);
     },
+    'Horizontal layout adds horizontal classes' => function (array $settings) use ($settingsRepository, $renderer, $baselineClasses): array {
+        $settings['enable_sidebar'] = true;
+        $settings['layout_style'] = 'horizontal-bar';
+        $settings['horizontal_bar_position'] = 'bottom';
+        $settings['horizontal_bar_sticky'] = true;
+        $settingsRepository->saveOptions($settings);
+
+        return $renderer->addBodyClasses($baselineClasses);
+    },
 ];
 
 $expectedResults = [
@@ -69,6 +78,7 @@ $expectedResults = [
     'Push behavior adds active and push classes' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-push'],
     'Overlay behavior adds overlay class instead of push' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-overlay'],
     'Floating layout adds floating class' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-push', 'jlg-sidebar-floating'],
+    'Horizontal layout adds horizontal classes' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-horizontal-bar', 'jlg-horizontal-position-bottom', 'jlg-horizontal-sticky'],
 ];
 
 foreach ($scenarios as $label => $runner) {

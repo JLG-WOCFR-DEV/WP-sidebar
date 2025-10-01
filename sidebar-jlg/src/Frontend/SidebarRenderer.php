@@ -47,6 +47,9 @@ class SidebarRenderer
         'neon_spread' => 5,
         'hover_effect_desktop' => 'none',
         'hover_effect_mobile' => 'none',
+        'horizontal_bar_height' => '4rem',
+        'horizontal_bar_alignment' => 'space-between',
+        'horizontal_bar_position' => 'top',
     ];
 
     private SettingsRepository $settings;
@@ -191,6 +194,14 @@ class SidebarRenderer
         $this->assignVariable($variables, '--menu-alignment-desktop', $this->sanitizeCssString($this->resolveOption($options, 'menu_alignment_desktop')));
         $this->assignVariable($variables, '--menu-alignment-mobile', $this->sanitizeCssString($this->resolveOption($options, 'menu_alignment_mobile')));
         $this->assignVariable($variables, '--search-alignment', $this->sanitizeCssString($this->resolveOption($options, 'search_alignment')));
+
+        $horizontalHeight = $this->sanitizeCssString($this->resolveOption($options, 'horizontal_bar_height'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['horizontal_bar_height'];
+        $this->assignVariable($variables, '--horizontal-bar-height', $horizontalHeight);
+
+        $horizontalAlignment = $this->sanitizeCssString($this->resolveOption($options, 'horizontal_bar_alignment'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['horizontal_bar_alignment'];
+        $this->assignVariable($variables, '--horizontal-bar-alignment', $horizontalAlignment);
 
         $rawSocialIconSize = $this->resolveOption($options, 'social_icon_size');
         if (!is_numeric($rawSocialIconSize)) {
@@ -415,14 +426,29 @@ class SidebarRenderer
         }
 
         $classes[] = 'jlg-sidebar-active';
-        if (($options['desktop_behavior'] ?? 'push') === 'push') {
-            $classes[] = 'jlg-sidebar-push';
-        } else {
-            $classes[] = 'jlg-sidebar-overlay';
-        }
+        $layoutStyle = $options['layout_style'] ?? 'full';
 
-        if (($options['layout_style'] ?? 'full') === 'floating') {
-            $classes[] = 'jlg-sidebar-floating';
+        if ($layoutStyle === 'horizontal-bar') {
+            $classes[] = 'jlg-sidebar-horizontal-bar';
+            $position = sanitize_key($options['horizontal_bar_position'] ?? 'top');
+            if ($position !== 'top' && $position !== 'bottom') {
+                $position = 'top';
+            }
+            $classes[] = 'jlg-horizontal-position-' . $position;
+
+            if (!empty($options['horizontal_bar_sticky'])) {
+                $classes[] = 'jlg-horizontal-sticky';
+            }
+        } else {
+            if (($options['desktop_behavior'] ?? 'push') === 'push') {
+                $classes[] = 'jlg-sidebar-push';
+            } else {
+                $classes[] = 'jlg-sidebar-overlay';
+            }
+
+            if ($layoutStyle === 'floating') {
+                $classes[] = 'jlg-sidebar-floating';
+            }
         }
 
         return $classes;
