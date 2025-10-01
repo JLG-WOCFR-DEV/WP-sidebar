@@ -26,6 +26,8 @@
         settings_fields( 'sidebar_jlg_options_group' );
         $defaults = $defaults ?? [];
         $options = wp_parse_args( $options ?? [], $defaults );
+        $navMenus = is_array( $navMenus ?? null ) ? $navMenus : [];
+        $selectedWpMenuId = isset( $options['wp_menu_id'] ) ? absint( $options['wp_menu_id'] ) : 0;
         ?>
 
         <!-- Onglet Général -->
@@ -252,11 +254,41 @@
 
         <!-- Onglet Contenu du Menu -->
         <div id="tab-menu" class="tab-content" role="tabpanel" aria-labelledby="tab-menu-tab" aria-hidden="true" hidden>
+            <h2><?php esc_html_e('Menu WordPress', 'sidebar-jlg'); ?></h2>
+            <p class="description"><?php esc_html_e('Sélectionnez un menu existant pour remplacer le contenu personnalisé de la sidebar. Si aucun menu n’est choisi, le constructeur personnalisé sera utilisé.', 'sidebar-jlg'); ?></p>
+            <?php if ( ! empty( $navMenus ) ) : ?>
+                <select name="sidebar_jlg_settings[wp_menu_id]">
+                    <option value="0" <?php selected( $selectedWpMenuId, 0 ); ?>><?php esc_html_e('Utiliser le menu personnalisé de la sidebar', 'sidebar-jlg'); ?></option>
+                    <?php foreach ( $navMenus as $menu ) : ?>
+                        <?php
+                        $menuId = 0;
+                        $menuName = '';
+                        if ( is_object( $menu ) ) {
+                            $menuId = isset( $menu->term_id ) ? absint( $menu->term_id ) : 0;
+                            $menuName = isset( $menu->name ) ? (string) $menu->name : '';
+                        } elseif ( is_array( $menu ) ) {
+                            $menuId = isset( $menu['term_id'] ) ? absint( $menu['term_id'] ) : 0;
+                            $menuName = isset( $menu['name'] ) ? (string) $menu['name'] : '';
+                        }
+                        if ( $menuId <= 0 ) {
+                            continue;
+                        }
+                        ?>
+                        <option value="<?php echo esc_attr( $menuId ); ?>" <?php selected( $selectedWpMenuId, $menuId ); ?>><?php echo esc_html( $menuName ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            <?php else : ?>
+                <p class="description"><?php esc_html_e('Aucun menu WordPress n’a été trouvé. Créez un menu via Apparence → Menus pour l’utiliser ici.', 'sidebar-jlg'); ?></p>
+                <input type="hidden" name="sidebar_jlg_settings[wp_menu_id]" value="0" />
+            <?php endif; ?>
+
+            <hr style="margin: 20px 0;">
+
             <h2><?php esc_html_e('Construire le menu', 'sidebar-jlg'); ?></h2>
-            <p class="description"><?php esc_html_e('Ajoutez, organisez et supprimez les éléments de votre menu. Glissez-déposez pour réorganiser.', 'sidebar-jlg'); ?></p>
+            <p class="description"><?php esc_html_e('Ajoutez, organisez et supprimez les éléments de votre menu. Glissez-déposez pour réorganiser. Cette version personnalisée sert de repli si aucun menu WordPress n’est sélectionné.', 'sidebar-jlg'); ?></p>
             <div id="menu-items-container"></div>
             <button type="button" class="button button-primary" id="add-menu-item"><?php esc_html_e('Ajouter un élément', 'sidebar-jlg'); ?></button>
-            
+
             <hr style="margin: 20px 0;">
 
             <h2><?php esc_html_e('Alignement du Menu', 'sidebar-jlg'); ?></h2>

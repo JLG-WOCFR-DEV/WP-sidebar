@@ -313,6 +313,14 @@ $existing_menu_enums = array_merge($defaults->all(), [
     'menu_alignment_mobile' => 'flex-end',
 ]);
 
+$GLOBALS['wp_test_function_overrides']['wp_get_nav_menu_object'] = static function ($menuId) {
+    if ((int) $menuId === 42) {
+        return (object) ['term_id' => 42];
+    }
+
+    return false;
+};
+
 $input_invalid_menu_alignments = [
     'menu_alignment_desktop' => 'space-between',
     'menu_alignment_mobile' => 'space-around',
@@ -334,6 +342,34 @@ $input_invalid_menu_mobile = [
 $result_menu_default = $menuMethod->invoke($sanitizer, $input_invalid_menu_mobile, $existing_menu_defaults);
 
 assertSame('flex-start', $result_menu_default['menu_alignment_mobile'] ?? null, 'Invalid mobile menu alignment with invalid existing value falls back to default');
+
+$input_valid_wp_menu = [
+    'wp_menu_id' => '42',
+];
+
+$result_valid_wp_menu = $menuMethod->invoke($sanitizer, $input_valid_wp_menu, $existing_menu_enums);
+
+assertSame(42, $result_valid_wp_menu['wp_menu_id'] ?? null, 'Valid WordPress menu id is preserved');
+
+$existing_menu_defaults_with_selection = array_merge($defaults->all(), [
+    'wp_menu_id' => 84,
+]);
+
+$input_invalid_wp_menu = [
+    'wp_menu_id' => '999',
+];
+
+$result_invalid_wp_menu = $menuMethod->invoke($sanitizer, $input_invalid_wp_menu, $existing_menu_defaults_with_selection);
+
+assertSame(0, $result_invalid_wp_menu['wp_menu_id'] ?? null, 'Unknown WordPress menu id resets to zero');
+
+$input_non_scalar_wp_menu = [
+    'wp_menu_id' => ['nested' => true],
+];
+
+$result_non_scalar_wp_menu = $menuMethod->invoke($sanitizer, $input_non_scalar_wp_menu, $existing_menu_defaults_with_selection);
+
+assertSame(0, $result_non_scalar_wp_menu['wp_menu_id'] ?? null, 'Non scalar WordPress menu id is rejected');
 
 $existing_social_enums = array_merge($defaults->all(), [
     'social_orientation' => 'vertical',

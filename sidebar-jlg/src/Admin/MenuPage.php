@@ -113,6 +113,14 @@ class MenuPage
         $defaults = $this->settings->getDefaultSettings();
         $options = $this->settings->getOptionsWithRevalidation();
         $allIcons = $this->icons->getAllIcons();
+        $navMenus = [];
+
+        if (function_exists('wp_get_nav_menus')) {
+            $fetchedMenus = wp_get_nav_menus();
+            if (is_array($fetchedMenus)) {
+                $navMenus = $fetchedMenus;
+            }
+        }
 
         require plugin_dir_path($this->pluginFile) . 'includes/admin-page.php';
     }

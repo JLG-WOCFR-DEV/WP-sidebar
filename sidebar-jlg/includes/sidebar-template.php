@@ -8,6 +8,7 @@ $allIcons = $allIcons ?? [];
 $layoutStyle = $options['layout_style'] ?? 'full';
 $horizontalPosition = $options['horizontal_bar_position'] ?? 'top';
 $horizontalSticky = !empty($options['horizontal_bar_sticky']);
+$wpMenuId = isset($options['wp_menu_id']) ? absint($options['wp_menu_id']) : 0;
 
 $navigationClasses = ['sidebar-navigation'];
 if ($layoutStyle === 'horizontal-bar') {
@@ -20,13 +21,56 @@ if ($layoutStyle === 'horizontal-bar') {
     $menuClasses[] = 'is-horizontal';
 }
 $menuClassAttr = implode(' ', array_map('sanitize_html_class', $menuClasses));
+$menuItems = [];
+if (!empty($options['menu_items']) && is_array($options['menu_items'])) {
+    $menuItems = $options['menu_items'];
+}
+
+$menuSocialItemsMarkup = '';
+if (($options['social_position'] ?? '') === 'in-menu' && !empty($options['social_icons']) && is_array($options['social_icons'])) {
+    $menuSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $options['social_orientation']);
+    if ($menuSocialIcons !== '') {
+        $menuSocialItemsMarkup = '<li class="menu-separator" aria-hidden="true"><hr></li>';
+        $menuSocialItemsMarkup .= '<li class="social-icons-wrapper">' . $menuSocialIcons . '</li>';
+    }
+}
 
 ob_start();
 ?>
 <nav class="<?php echo esc_attr($navigationClassAttr); ?>" role="navigation" aria-label="<?php esc_attr_e('Navigation principale', 'sidebar-jlg'); ?>">
+    <?php
+    $renderedWpMenu = '';
+    if ($wpMenuId > 0 && function_exists('wp_get_nav_menu_object') && function_exists('wp_nav_menu')) {
+        $menuObject = wp_get_nav_menu_object($wpMenuId);
+        if ($menuObject && !is_wp_error($menuObject)) {
+            $itemsWrap = '<ul id="%1$s" class="%2$s">%3$s';
+            if ($menuSocialItemsMarkup !== '') {
+                $itemsWrap .= $menuSocialItemsMarkup;
+            }
+            $itemsWrap .= '</ul>';
+
+            $renderedWpMenu = wp_nav_menu([
+                'menu' => $menuObject,
+                'container' => false,
+                'echo' => false,
+                'menu_class' => $menuClassAttr,
+                'items_wrap' => $itemsWrap,
+                'fallback_cb' => '__return_empty_string',
+            ]);
+
+            if (!is_string($renderedWpMenu)) {
+                $renderedWpMenu = '';
+            }
+        }
+    }
+
+    if ($renderedWpMenu !== '') :
+        echo $renderedWpMenu;
+    else :
+    ?>
     <ul class="<?php echo esc_attr($menuClassAttr); ?>">
-        <?php if (!empty($options['menu_items']) && is_array($options['menu_items'])) : ?>
-            <?php foreach ($options['menu_items'] as $item) : ?>
+        <?php if (!empty($menuItems)) : ?>
+            <?php foreach ($menuItems as $item) : ?>
                 <?php
                 $url = '#';
                 $raw_url = '';
@@ -72,15 +116,9 @@ ob_start();
                 </li>
             <?php endforeach; ?>
         <?php endif; ?>
-
-        <?php if (($options['social_position'] ?? '') === 'in-menu' && !empty($options['social_icons']) && is_array($options['social_icons'])) : ?>
-            <?php $menuSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $options['social_orientation']); ?>
-            <?php if ($menuSocialIcons !== '') : ?>
-                <li class="menu-separator" aria-hidden="true"><hr></li>
-                <li class="social-icons-wrapper"><?php echo $menuSocialIcons; ?></li>
-            <?php endif; ?>
-        <?php endif; ?>
+        <?php echo $menuSocialItemsMarkup; ?>
     </ul>
+    <?php endif; ?>
 </nav>
 
 <?php

@@ -19,6 +19,8 @@ $GLOBALS['wp_test_translations'] = $GLOBALS['wp_test_translations'] ?? [
         'Fermer le menu'        => 'Fermer le menu',
     ],
 ];
+$GLOBALS['wp_test_nav_menus'] = $GLOBALS['wp_test_nav_menus'] ?? [];
+$GLOBALS['wp_test_nav_menu_items'] = $GLOBALS['wp_test_nav_menu_items'] ?? [];
 $GLOBALS['wp_test_function_overrides'] = $GLOBALS['wp_test_function_overrides'] ?? [];
 $GLOBALS['wp_test_inline_styles'] = $GLOBALS['wp_test_inline_styles'] ?? [];
 
@@ -167,6 +169,111 @@ if (!function_exists('wp_parse_args')) {
         }
 
         return array_merge($defaults, $args);
+    }
+}
+
+if (!function_exists('wp_get_nav_menus')) {
+    function wp_get_nav_menus($args = [])
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        return array_values($GLOBALS['wp_test_nav_menus'] ?? []);
+    }
+}
+
+if (!function_exists('wp_get_nav_menu_object')) {
+    function wp_get_nav_menu_object($menu)
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        $menus = $GLOBALS['wp_test_nav_menus'] ?? [];
+
+        if (is_object($menu) && isset($menu->term_id)) {
+            $id = (int) $menu->term_id;
+        } elseif (is_array($menu) && isset($menu['term_id'])) {
+            $id = (int) $menu['term_id'];
+        } else {
+            $id = (int) $menu;
+        }
+
+        return $menus[$id] ?? false;
+    }
+}
+
+if (!function_exists('wp_nav_menu')) {
+    function wp_nav_menu($args = [])
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        $defaults = [
+            'menu' => 0,
+            'echo' => true,
+            'container' => '',
+            'container_class' => '',
+            'menu_class' => 'menu',
+            'menu_id' => '',
+            'items_wrap' => '<ul id="%1$s" class="%2$s">%3$s</ul>',
+        ];
+        $args = wp_parse_args($args, $defaults);
+
+        $menuId = 0;
+        if (is_object($args['menu']) && isset($args['menu']->term_id)) {
+            $menuId = (int) $args['menu']->term_id;
+        } elseif (is_array($args['menu']) && isset($args['menu']['term_id'])) {
+            $menuId = (int) $args['menu']['term_id'];
+        } elseif (is_scalar($args['menu'])) {
+            $menuId = (int) $args['menu'];
+        }
+
+        $items = $GLOBALS['wp_test_nav_menu_items'][$menuId] ?? [];
+
+        $itemsHtml = '';
+        foreach ($items as $item) {
+            $title = htmlspecialchars((string) ($item['title'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $url = htmlspecialchars((string) ($item['url'] ?? '#'), ENT_QUOTES, 'UTF-8');
+            $itemsHtml .= '<li><a href="' . $url . '">' . $title . '</a></li>';
+        }
+
+        $menuIdAttr = htmlspecialchars((string) ($args['menu_id'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $menuClassAttr = htmlspecialchars((string) ($args['menu_class'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $wrap = (string) $args['items_wrap'];
+
+        if (strpos($wrap, '%') !== false) {
+            $replacements = [
+                '%1$s' => $menuIdAttr,
+                '%2$s' => $menuClassAttr,
+                '%3$s' => $itemsHtml,
+            ];
+            $menuHtml = strtr($wrap, $replacements);
+        } else {
+            $menuHtml = $wrap . $itemsHtml;
+        }
+
+        if (!empty($args['container'])) {
+            $containerTag = htmlspecialchars((string) $args['container'], ENT_QUOTES, 'UTF-8');
+            $containerClass = htmlspecialchars((string) ($args['container_class'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $menuHtml = sprintf('<%1$s class="%2$s">%3$s</%1$s>', $containerTag, $containerClass, $menuHtml);
+        }
+
+        if (!empty($args['echo'])) {
+            echo $menuHtml;
+
+            return null;
+        }
+
+        return $menuHtml;
     }
 }
 
@@ -561,6 +668,30 @@ if (!function_exists('esc_url')) {
     }
 }
 
+if (!function_exists('sanitize_html_class')) {
+    function sanitize_html_class($class, $fallback = '')
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        if (!is_string($class) && !is_numeric($class)) {
+            return (string) $fallback;
+        }
+
+        return preg_replace('/[^A-Za-z0-9_-]/', '', (string) $class);
+    }
+}
+
+if (!function_exists('__return_empty_string')) {
+    function __return_empty_string()
+    {
+        return '';
+    }
+}
+
 if (!function_exists('esc_attr_e')) {
     function esc_attr_e($text, $domain = 'default'): void
     {
@@ -571,6 +702,19 @@ if (!function_exists('esc_attr_e')) {
         }
 
         echo esc_attr(__($text, $domain));
+    }
+}
+
+if (!function_exists('esc_attr__')) {
+    function esc_attr__($text, $domain = 'default')
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        return esc_attr(__($text, $domain));
     }
 }
 

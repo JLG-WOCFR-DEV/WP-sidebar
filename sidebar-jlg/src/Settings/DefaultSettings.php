@@ -70,6 +70,7 @@ class DefaultSettings
             'animation_type'    => 'slide-left',
             'neon_blur'         => 15,
             'neon_spread'       => 5,
+            'wp_menu_id'        => 0,
             'menu_items'        => [],
             'menu_alignment_desktop' => 'flex-start',
             'menu_alignment_mobile'  => 'flex-start',

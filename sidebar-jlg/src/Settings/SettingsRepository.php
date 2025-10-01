@@ -31,6 +31,7 @@ class SettingsRepository
         'neon_blur',
         'neon_spread',
         'social_icon_size',
+        'wp_menu_id',
     ];
 
     private const COLOR_OPTION_KEYS = [
@@ -203,6 +204,18 @@ class SettingsRepository
             if ($shouldUpdate) {
                 $revalidated[$intKey] = $normalizedValue;
             }
+        }
+
+        $menuId = absint($revalidated['wp_menu_id'] ?? 0);
+        if ($menuId > 0 && function_exists('wp_get_nav_menu_object')) {
+            $menuObject = wp_get_nav_menu_object($menuId);
+            if (!$menuObject || is_wp_error($menuObject)) {
+                $menuId = 0;
+            }
+        }
+
+        if ($menuId !== ($revalidated['wp_menu_id'] ?? 0)) {
+            $revalidated['wp_menu_id'] = $menuId;
         }
 
         foreach (OptionChoices::getAll() as $choiceKey => $allowedValues) {

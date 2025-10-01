@@ -326,6 +326,10 @@ class SettingsSanitizer
         $availableIcons = $this->icons->getAllIcons();
         $defaults = $this->defaults->all();
 
+        $sanitized['wp_menu_id'] = $this->sanitizeMenuId(
+            $input['wp_menu_id'] ?? ($existingOptions['wp_menu_id'] ?? ($defaults['wp_menu_id'] ?? 0))
+        );
+
         $sanitized['menu_alignment_desktop'] = $this->sanitizeChoice(
             $input['menu_alignment_desktop'] ?? null,
             $this->allowedChoices['menu_alignment_desktop'],
@@ -408,6 +412,32 @@ class SettingsSanitizer
         $sanitized['menu_items'] = $sanitizedMenuItems;
 
         return $sanitized;
+    }
+
+    /**
+     * @param mixed $rawMenuId
+     */
+    private function sanitizeMenuId($rawMenuId): int
+    {
+        if (!is_scalar($rawMenuId)) {
+            return 0;
+        }
+
+        $menuId = absint($rawMenuId);
+        if ($menuId <= 0) {
+            return 0;
+        }
+
+        if (!function_exists('wp_get_nav_menu_object')) {
+            return $menuId;
+        }
+
+        $menuObject = wp_get_nav_menu_object($menuId);
+        if (!$menuObject || is_wp_error($menuObject)) {
+            return 0;
+        }
+
+        return $menuId;
     }
 
     /**
