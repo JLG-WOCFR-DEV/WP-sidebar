@@ -14,6 +14,55 @@ body.sidebar-open .pro-sidebar {
     touch-action: pan-y;
 }
 body.jlg-sidebar-active.jlg-sidebar-horizontal-bar { padding-left: 0 !important; }
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-delay: 0 !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        animation-name: none !important;
+        animation-play-state: paused !important;
+        transition-delay: 0 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    body,
+    .sidebar-overlay,
+    .pro-sidebar {
+        transition: none !important;
+    }
+
+    .pro-sidebar {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+    }
+}
+
+html.jlg-prefers-reduced-motion *,
+html.jlg-prefers-reduced-motion *::before,
+html.jlg-prefers-reduced-motion *::after {
+    animation-delay: 0 !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-name: none !important;
+    animation-play-state: paused !important;
+    transition-delay: 0 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+html.jlg-prefers-reduced-motion body,
+html.jlg-prefers-reduced-motion .sidebar-overlay,
+html.jlg-prefers-reduced-motion .pro-sidebar {
+    transition: none !important;
+}
+
+html.jlg-prefers-reduced-motion .pro-sidebar {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
 @media (min-width: 993px) {
     body.jlg-sidebar-active.jlg-sidebar-horizontal-bar.jlg-horizontal-position-top {
         padding-top: var(--horizontal-bar-height, 4rem) !important;
