@@ -86,6 +86,18 @@ class SidebarRenderer
             return;
         }
 
+        /**
+         * Filters whether the public-facing assets should be enqueued. Default true.
+         *
+         * @param bool  $shouldEnqueue Whether the assets should be registered on the front-end.
+         * @param array $options       The sidebar options currently applied.
+         */
+        $shouldEnqueue = apply_filters('sidebar_jlg_should_enqueue_public_assets', true, $options);
+
+        if (!$shouldEnqueue) {
+            return;
+        }
+
         wp_enqueue_style(
             'sidebar-jlg-public-css',
             plugin_dir_url($this->pluginFile) . 'assets/css/public-style.css',
