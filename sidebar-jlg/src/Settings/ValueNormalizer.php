@@ -49,6 +49,139 @@ final class ValueNormalizer
     }
 
     /**
+     * Normalizes a CSS dimension into a structured array containing the numeric value and the unit.
+     *
+     * @param mixed        $value    Submitted value.
+     * @param mixed        $existing Previously stored value (used as fallback).
+     * @param mixed        $default  Default value if nothing else is available.
+     * @param string[]|null $allowedUnits Restricts the allowed units. Defaults to internal list.
+     *
+     * @return array{value:string,unit:string}
+     */
+    public static function normalizeDimensionStructure($value, $existing, $default, ?array $allowedUnits = null): array
+    {
+        $units = $allowedUnits && is_array($allowedUnits) && !empty($allowedUnits)
+            ? array_values(array_unique(array_filter(array_map('strval', $allowedUnits))))
+            : self::ALLOWED_UNITS;
+
+        $fallbackStructure = self::prepareDimensionStructure($default, $units, null);
+        if ($fallbackStructure === null) {
+            $firstUnit = $units[0] ?? 'px';
+            $fallbackStructure = ['value' => '0', 'unit' => $firstUnit];
+        }
+
+        $existingStructure = self::prepareDimensionStructure($existing, $units, $fallbackStructure);
+        if ($existingStructure === null) {
+            $existingStructure = $fallbackStructure;
+        }
+
+        $candidateStructure = self::prepareDimensionStructure($value, $units, $existingStructure);
+        if ($candidateStructure !== null) {
+            return $candidateStructure;
+        }
+
+        return $existingStructure;
+    }
+
+    /**
+     * Converts a structured dimension into a CSS-ready string.
+     *
+     * @param array|mixed $dimension Structured array or any other representation.
+     * @param string      $fallback  Fallback value if the dimension is invalid.
+     */
+    public static function dimensionToCss($dimension, string $fallback = ''): string
+    {
+        if (!is_array($dimension)) {
+            return is_string($dimension) || is_numeric($dimension)
+                ? trim((string) $dimension)
+                : $fallback;
+        }
+
+        $value = isset($dimension['value']) ? trim((string) $dimension['value']) : '';
+        if ($value === '' || !is_numeric($value)) {
+            return $fallback;
+        }
+
+        $unit = isset($dimension['unit']) ? trim((string) $dimension['unit']) : '';
+
+        return $value . $unit;
+    }
+
+    /**
+     * @param mixed       $value
+     * @param string[]    $allowedUnits
+     * @param array|null  $fallback
+     *
+     * @return array{value:string,unit:string}|null
+     */
+    private static function prepareDimensionStructure($value, array $allowedUnits, ?array $fallback): ?array
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $rawValue = null;
+        $rawUnit = null;
+
+        if (is_array($value)) {
+            $rawValue = $value['value'] ?? ($value['amount'] ?? null);
+            $rawUnit = $value['unit'] ?? ($value['units'] ?? ($value['suffix'] ?? null));
+        } elseif (is_string($value) || is_numeric($value)) {
+            $stringValue = trim((string) $value);
+
+            if ($stringValue === '') {
+                return null;
+            }
+
+            if (preg_match('/^(-?(?:\d+|\d*\.\d+))\s*([a-z%]*)$/i', $stringValue, $matches)) {
+                $rawValue = $matches[1];
+                $rawUnit = $matches[2] !== '' ? $matches[2] : null;
+            } else {
+                return null;
+            }
+        }
+
+        if ($rawValue === null) {
+            return null;
+        }
+
+        $numericValue = null;
+        if (is_numeric($rawValue)) {
+            $numericValue = (float) $rawValue;
+        } elseif (is_string($rawValue)) {
+            $trimmed = trim($rawValue);
+            if ($trimmed !== '' && is_numeric($trimmed)) {
+                $numericValue = (float) $trimmed;
+            }
+        }
+
+        if ($numericValue === null || !is_finite($numericValue)) {
+            return null;
+        }
+
+        $unit = is_string($rawUnit) ? strtolower(trim($rawUnit)) : '';
+
+        if ($unit === '' && $fallback !== null && isset($fallback['unit'])) {
+            $unit = (string) $fallback['unit'];
+        }
+
+        if ($unit === '' || !in_array($unit, $allowedUnits, true)) {
+            $unit = $allowedUnits[0] ?? 'px';
+        }
+
+        if (abs($numericValue - round($numericValue)) < 0.0001) {
+            $valueString = (string) round($numericValue);
+        } else {
+            $valueString = rtrim(rtrim(sprintf('%.4f', $numericValue), '0'), '.');
+        }
+
+        return [
+            'value' => $valueString,
+            'unit' => $unit,
+        ];
+    }
+
+    /**
      * @param mixed $value
      * @param mixed $existingValue
      */

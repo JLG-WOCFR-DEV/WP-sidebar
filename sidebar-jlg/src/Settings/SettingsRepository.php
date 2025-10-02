@@ -9,12 +9,16 @@ use JLG\Sidebar\Settings\ValueNormalizer;
 
 class SettingsRepository
 {
-    private const DIMENSION_OPTION_KEYS = [
+    private const STRUCTURED_DIMENSION_KEYS = [
         'content_margin',
         'floating_vertical_margin',
         'border_radius',
         'hamburger_top_position',
         'header_padding_top',
+        'horizontal_bar_height',
+    ];
+
+    private const SIMPLE_DIMENSION_OPTION_KEYS = [
         'letter_spacing',
     ];
 
@@ -151,7 +155,19 @@ class SettingsRepository
             }
         }
 
-        foreach (self::DIMENSION_OPTION_KEYS as $dimensionKey) {
+        foreach (self::STRUCTURED_DIMENSION_KEYS as $dimensionKey) {
+            $defaultValue = $defaults[$dimensionKey] ?? [];
+            $existing = $revalidated[$dimensionKey] ?? $defaultValue;
+            $normalizedValue = ValueNormalizer::normalizeDimensionStructure(
+                $revalidated[$dimensionKey] ?? null,
+                $existing,
+                $defaultValue
+            );
+
+            $revalidated[$dimensionKey] = $normalizedValue;
+        }
+
+        foreach (self::SIMPLE_DIMENSION_OPTION_KEYS as $dimensionKey) {
             $defaultValue = $defaults[$dimensionKey] ?? '';
             $normalizedValue = ValueNormalizer::normalizeCssDimension($revalidated[$dimensionKey] ?? null, $defaultValue);
 

@@ -10,6 +10,14 @@ use JLG\Sidebar\Settings\ValueNormalizer;
 class SettingsSanitizer
 {
     private const NAV_MENU_ALLOWED_FILTERS = ['all', 'top-level', 'current-branch'];
+    private const DIMENSION_UNITS = [
+        'floating_vertical_margin' => ['px', 'rem', 'em', '%', 'vh', 'vw'],
+        'horizontal_bar_height' => ['px', 'rem', 'em', 'vh', 'vw'],
+        'border_radius' => ['px', 'rem', 'em', '%'],
+        'content_margin' => ['px', 'rem', 'em', '%'],
+        'hamburger_top_position' => ['px', 'rem', 'em', 'vh', 'vw'],
+        'header_padding_top' => ['px', 'rem', 'em', '%'],
+    ];
 
     private DefaultSettings $defaults;
     private IconLibrary $icons;
@@ -80,9 +88,11 @@ class SettingsSanitizer
             $existingOptions['sidebar_position'] ?? ($defaults['sidebar_position'] ?? ''),
             $defaults['sidebar_position'] ?? ''
         );
-        $sanitized['horizontal_bar_height'] = ValueNormalizer::normalizeCssDimension(
-            $input['horizontal_bar_height'] ?? $existingOptions['horizontal_bar_height'],
-            $existingOptions['horizontal_bar_height']
+        $sanitized['horizontal_bar_height'] = $this->sanitizeDimension(
+            $input,
+            'horizontal_bar_height',
+            $existingOptions,
+            $defaults
         );
         $sanitized['horizontal_bar_alignment'] = $this->sanitizeChoice(
             $input['horizontal_bar_alignment'] ?? null,
@@ -97,13 +107,17 @@ class SettingsSanitizer
             $defaults['horizontal_bar_position'] ?? ''
         );
         $sanitized['horizontal_bar_sticky'] = !empty($input['horizontal_bar_sticky']);
-        $sanitized['floating_vertical_margin'] = ValueNormalizer::normalizeCssDimension(
-            $input['floating_vertical_margin'] ?? $existingOptions['floating_vertical_margin'],
-            $existingOptions['floating_vertical_margin']
+        $sanitized['floating_vertical_margin'] = $this->sanitizeDimension(
+            $input,
+            'floating_vertical_margin',
+            $existingOptions,
+            $defaults
         );
-        $sanitized['border_radius'] = ValueNormalizer::normalizeCssDimension(
-            $input['border_radius'] ?? $existingOptions['border_radius'],
-            $existingOptions['border_radius']
+        $sanitized['border_radius'] = $this->sanitizeDimension(
+            $input,
+            'border_radius',
+            $existingOptions,
+            $defaults
         );
         $sanitized['border_width'] = $this->sanitizeIntegerOption(
             $input,
@@ -134,9 +148,11 @@ class SettingsSanitizer
         $sanitized['overlay_opacity'] = is_numeric($input['overlay_opacity'] ?? null)
             ? max(0.0, min(1.0, (float) $input['overlay_opacity']))
             : max(0.0, min(1.0, $existingOverlayOpacity));
-        $sanitized['content_margin'] = ValueNormalizer::normalizeCssDimension(
-            $input['content_margin'] ?? $existingOptions['content_margin'],
-            $existingOptions['content_margin']
+        $sanitized['content_margin'] = $this->sanitizeDimension(
+            $input,
+            'content_margin',
+            $existingOptions,
+            $defaults
         );
         $sanitized['width_desktop'] = $this->sanitizeIntegerOption(
             $input,
@@ -168,9 +184,11 @@ class SettingsSanitizer
         $sanitized['show_close_button'] = !empty($input['show_close_button']);
         // Checkbox -> boolean conversion for the automatic closing behaviour.
         $sanitized['close_on_link_click'] = !empty($input['close_on_link_click']);
-        $sanitized['hamburger_top_position'] = ValueNormalizer::normalizeCssDimension(
-            $input['hamburger_top_position'] ?? $existingOptions['hamburger_top_position'],
-            $existingOptions['hamburger_top_position']
+        $sanitized['hamburger_top_position'] = $this->sanitizeDimension(
+            $input,
+            'hamburger_top_position',
+            $existingOptions,
+            $defaults
         );
         $sanitized['hamburger_color'] = ValueNormalizer::normalizeColorWithExisting(
             $input['hamburger_color'] ?? null,
@@ -202,9 +220,11 @@ class SettingsSanitizer
             $existingOptions['header_alignment_mobile'] ?? ($defaults['header_alignment_mobile'] ?? ''),
             $defaults['header_alignment_mobile'] ?? ''
         );
-        $sanitized['header_padding_top'] = ValueNormalizer::normalizeCssDimension(
-            $input['header_padding_top'] ?? $existingOptions['header_padding_top'],
-            $existingOptions['header_padding_top']
+        $sanitized['header_padding_top'] = $this->sanitizeDimension(
+            $input,
+            'header_padding_top',
+            $existingOptions,
+            $defaults
         );
 
         return $sanitized;
@@ -678,6 +698,25 @@ class SettingsSanitizer
         );
 
         return $sanitized;
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @param array<string, mixed> $existingOptions
+     * @param array<string, mixed> $defaults
+     */
+    private function sanitizeDimension(array $input, string $key, array $existingOptions, array $defaults): array
+    {
+        $allowedUnits = self::DIMENSION_UNITS[$key] ?? null;
+        $existing = $existingOptions[$key] ?? ($defaults[$key] ?? []);
+        $default = $defaults[$key] ?? [];
+
+        return ValueNormalizer::normalizeDimensionStructure(
+            $input[$key] ?? null,
+            $existing,
+            $default,
+            $allowedUnits
+        );
     }
 
     /**

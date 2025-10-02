@@ -104,6 +104,131 @@ function joinMessages(...messages) {
     return messages.filter(Boolean).join(' ');
 }
 
+function normalizeNumericString(value) {
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value)) {
+            return '';
+        }
+
+        if (Math.abs(value - Math.round(value)) < 0.0001) {
+            return String(Math.round(value));
+        }
+
+        return String(parseFloat(value.toFixed(4)));
+    }
+
+    if (typeof value !== 'string') {
+        return '';
+    }
+
+    const trimmed = value.trim();
+    if (trimmed === '') {
+        return '';
+    }
+
+    const numeric = Number(trimmed);
+    if (!Number.isFinite(numeric)) {
+        return '';
+    }
+
+    if (Math.abs(numeric - Math.round(numeric)) < 0.0001) {
+        return String(Math.round(numeric));
+    }
+
+    return String(parseFloat(numeric.toFixed(4)));
+}
+
+function parseDimensionValue(value, fallbackUnit = 'px', allowedUnits = null) {
+    const fallback = typeof fallbackUnit === 'string' && fallbackUnit.trim() !== ''
+        ? fallbackUnit.trim()
+        : 'px';
+
+    const normalizedUnits = Array.isArray(allowedUnits) && allowedUnits.length
+        ? allowedUnits.map((unit) => (typeof unit === 'string' ? unit.trim() : '')).filter(Boolean)
+        : null;
+
+    const normalizeUnit = (unitCandidate) => {
+        const unitString = typeof unitCandidate === 'string' ? unitCandidate.trim() : '';
+        if (normalizedUnits && normalizedUnits.length) {
+            if (normalizedUnits.includes(unitString)) {
+                return unitString;
+            }
+
+            return normalizedUnits[0];
+        }
+
+        return unitString || fallback;
+    };
+
+    const finalize = (numericValue, unitCandidate) => {
+        const normalizedValue = normalizeNumericString(numericValue);
+        return {
+            value: normalizedValue,
+            unit: normalizeUnit(unitCandidate),
+        };
+    };
+
+    if (value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'value')) {
+        return finalize(value.value, value.unit);
+    }
+
+    if (typeof value === 'number') {
+        return finalize(value, fallback);
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed === '') {
+            return { value: '', unit: fallback };
+        }
+
+        const match = trimmed.match(/^(-?(?:\d+|\d*\.\d+))\s*([a-z%]*)$/i);
+        if (match) {
+            return finalize(match[1], match[2] || fallback);
+        }
+    }
+
+    return { value: '', unit: normalizedUnits && normalizedUnits.length ? normalizedUnits[0] : fallback };
+}
+
+function dimensionToCssString(dimension, fallback = '') {
+    if (dimension === null || dimension === undefined) {
+        return fallback;
+    }
+
+    if (typeof dimension === 'string') {
+        return dimension.trim();
+    }
+
+    if (typeof dimension === 'number') {
+        if (!Number.isFinite(dimension)) {
+            return fallback;
+        }
+        return `${dimension}px`;
+    }
+
+    if (typeof dimension === 'object' && Object.prototype.hasOwnProperty.call(dimension, 'value')) {
+        const numeric = normalizeNumericString(dimension.value);
+        if (numeric === '') {
+            return fallback;
+        }
+
+        const unit = typeof dimension.unit === 'string' ? dimension.unit : '';
+        return `${numeric}${unit}`;
+    }
+
+    return fallback;
+}
+
+function triggerFieldUpdate(element) {
+    if (!element) {
+        return;
+    }
+
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 function isUrlWithinAllowedArea(urlObject, originalValue, restrictions) {
     const allowedPath = normalizeAllowedPath(restrictions.allowed_path);
     if (!allowedPath) {
@@ -370,6 +495,21 @@ class SidebarPreviewModule {
         this.defaultFontStack = typeof args.defaultFontStack === 'string' && args.defaultFontStack !== ''
             ? args.defaultFontStack
             : 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+        this.dimensionKeys = [
+            'content_margin',
+            'floating_vertical_margin',
+            'border_radius',
+            'hamburger_top_position',
+            'header_padding_top',
+            'horizontal_bar_height',
+        ];
+
+        this.dimensionKeys.forEach((key) => {
+            const initial = parseDimensionValue(this.initialOptions[key], 'px');
+            this.initialOptions[key] = initial;
+            this.currentOptions[key] = parseDimensionValue(this.currentOptions[key], initial.unit);
+        });
 
         this.$ = typeof window !== 'undefined' ? window.jQuery : null;
 
@@ -901,6 +1041,8 @@ class SidebarPreviewModule {
             this.currentOptions.width_tablet = value;
         });
 
+        this.bindDimensionField('sidebar_jlg_settings[horizontal_bar_height]', 'horizontal_bar_height');
+
         this.bindField('sidebar_jlg_settings[overlay_color]', (value) => {
             this.currentOptions.overlay_color = value;
         });
@@ -913,21 +1055,13 @@ class SidebarPreviewModule {
             this.currentOptions.hamburger_color = value;
         });
 
-        this.bindField('sidebar_jlg_settings[hamburger_top_position]', (value) => {
-            this.currentOptions.hamburger_top_position = value;
-        });
+        this.bindDimensionField('sidebar_jlg_settings[hamburger_top_position]', 'hamburger_top_position');
 
-        this.bindField('sidebar_jlg_settings[content_margin]', (value) => {
-            this.currentOptions.content_margin = value;
-        });
+        this.bindDimensionField('sidebar_jlg_settings[content_margin]', 'content_margin');
 
-        this.bindField('sidebar_jlg_settings[floating_vertical_margin]', (value) => {
-            this.currentOptions.floating_vertical_margin = value;
-        });
+        this.bindDimensionField('sidebar_jlg_settings[floating_vertical_margin]', 'floating_vertical_margin');
 
-        this.bindField('sidebar_jlg_settings[border_radius]', (value) => {
-            this.currentOptions.border_radius = value;
-        });
+        this.bindDimensionField('sidebar_jlg_settings[border_radius]', 'border_radius');
 
         this.bindField('sidebar_jlg_settings[border_width]', (value) => {
             this.currentOptions.border_width = value;
@@ -969,9 +1103,7 @@ class SidebarPreviewModule {
             this.currentOptions.header_alignment_mobile = value || 'center';
         });
 
-        this.bindField('sidebar_jlg_settings[header_padding_top]', (value) => {
-            this.currentOptions.header_padding_top = value;
-        });
+        this.bindDimensionField('sidebar_jlg_settings[header_padding_top]', 'header_padding_top');
 
         this.bindField('sidebar_jlg_settings[social_position]', (value) => {
             this.currentOptions.social_position = value || 'footer';
@@ -1035,6 +1167,45 @@ class SidebarPreviewModule {
         update();
     }
 
+    bindDimensionField(name, optionKey) {
+        if (!this.form) {
+            return;
+        }
+
+        const baseName = name.replace(/"/g, '\"');
+        const valueSelector = `[name="${baseName}[value]"]`;
+        const unitSelector = `[name="${baseName}[unit]"]`;
+        const valueElement = this.form.querySelector(valueSelector);
+        const unitElement = this.form.querySelector(unitSelector);
+
+        if (!valueElement || !unitElement) {
+            return;
+        }
+
+        const update = () => {
+            const fallbackUnit = this.initialOptions[optionKey] && typeof this.initialOptions[optionKey].unit === 'string'
+                ? this.initialOptions[optionKey].unit
+                : 'px';
+            const dimension = parseDimensionValue({
+                value: valueElement.value,
+                unit: unitElement.value,
+            }, fallbackUnit);
+
+            this.currentOptions[optionKey] = dimension;
+
+            if (!this.isInitializing) {
+                this.applyOptions();
+            }
+        };
+
+        valueElement.addEventListener('input', update);
+        valueElement.addEventListener('change', update);
+        unitElement.addEventListener('input', update);
+        unitElement.addEventListener('change', update);
+
+        update();
+    }
+
     getFieldValue(elements) {
         if (!elements.length) {
             return null;
@@ -1094,8 +1265,9 @@ class SidebarPreviewModule {
             ['--sidebar-logo-size', this.formatDimension(this.currentOptions.header_logo_size)],
             ['--sidebar-header-align-desktop', this.currentOptions.header_alignment_desktop],
             ['--sidebar-header-align-mobile', this.currentOptions.header_alignment_mobile],
-            ['--sidebar-header-padding-top', this.currentOptions.header_padding_top],
-            ['--sidebar-horizontal-alignment', this.currentOptions.horizontal_bar_alignment]
+            ['--sidebar-header-padding-top', this.formatDimension(this.currentOptions.header_padding_top)],
+            ['--sidebar-horizontal-alignment', this.currentOptions.horizontal_bar_alignment],
+            ['--sidebar-horizontal-bar-height', this.formatDimension(this.currentOptions.horizontal_bar_height)]
         ];
 
         assignments.forEach(([variable, value]) => {
@@ -1124,15 +1296,35 @@ class SidebarPreviewModule {
     }
 
     formatDimension(value) {
-        if (value === null || value === undefined || value === '') {
+        if (value === null || value === undefined) {
             return '';
         }
 
-        if (typeof value === 'number' || /^-?\d+(?:\.\d+)?$/.test(String(value))) {
+        if (typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'value')) {
+            return dimensionToCssString(value, '');
+        }
+
+        if (value === '') {
+            return '';
+        }
+
+        if (typeof value === 'number') {
+            if (!Number.isFinite(value)) {
+                return '';
+            }
             return `${value}px`;
         }
 
-        return String(value);
+        const stringValue = String(value).trim();
+        if (stringValue === '') {
+            return '';
+        }
+
+        if (/^-?\d+(?:\.\d+)?$/.test(stringValue)) {
+            return `${stringValue}px`;
+        }
+
+        return stringValue;
     }
 
     formatOpacity(value) {
@@ -1508,6 +1700,9 @@ jQuery(document).ready(function($) {
 
     previewModule.init();
 
+    initializeUnitControls();
+    initializeRangeControls();
+
     if (typeof window !== 'undefined') {
         window.SidebarJLGPreview = previewModule;
     }
@@ -1552,6 +1747,197 @@ jQuery(document).ready(function($) {
         if (debugMode) {
             console.log(`[Sidebar JLG Debug] ${message}`, data);
         }
+    }
+
+    function parseAllowedUnitsAttribute(raw) {
+        if (typeof raw !== 'string' || raw.trim() === '') {
+            return [];
+        }
+
+        try {
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+
+            return parsed
+                .filter((unit) => typeof unit === 'string' && unit.trim() !== '')
+                .map((unit) => unit.trim());
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function initializeUnitControls() {
+        if (!window.wp || !wp.element || !wp.components || !wp.components.UnitControl) {
+            return;
+        }
+
+        const { createElement, useMemo, useState } = wp.element;
+        const { UnitControl } = wp.components;
+
+        document.querySelectorAll('[data-sidebar-unit-control]').forEach((container) => {
+            const valueInput = container.querySelector('input[data-dimension-value]');
+            const unitInput = container.querySelector('input[data-dimension-unit]');
+
+            if (!valueInput || !unitInput) {
+                return;
+            }
+
+            const label = container.dataset.label || '';
+            const helpText = container.dataset.help || '';
+            const errorMessage = container.dataset.errorMessage || '';
+            const defaultValue = container.dataset.defaultValue || '';
+            const defaultUnit = container.dataset.defaultUnit || 'px';
+            const allowedUnits = parseAllowedUnitsAttribute(container.dataset.allowedUnits || '');
+
+            const initialDimension = parseDimensionValue(
+                { value: valueInput.value, unit: unitInput.value },
+                defaultUnit,
+                allowedUnits
+            );
+
+            const defaultDimension = parseDimensionValue(
+                { value: defaultValue, unit: defaultUnit },
+                defaultUnit,
+                allowedUnits
+            );
+
+            const UnitField = () => {
+                const [currentValue, setCurrentValue] = useState(initialDimension.value);
+                const [currentUnit, setCurrentUnit] = useState(initialDimension.unit);
+                const [feedback, setFeedback] = useState('');
+
+                const units = useMemo(() => {
+                    const list = allowedUnits && allowedUnits.length
+                        ? allowedUnits
+                        : [initialDimension.unit || defaultDimension.unit || defaultUnit];
+                    return list.map((unit) => ({ value: unit, label: unit }));
+                }, [allowedUnits, initialDimension.unit, defaultDimension.unit]);
+
+                const updateValue = (nextValue) => {
+                    const normalized = normalizeNumericString(nextValue);
+                    if (normalized === '') {
+                        setCurrentValue('');
+                        valueInput.value = '';
+                        setFeedback(errorMessage || helpText);
+                    } else {
+                        setCurrentValue(normalized);
+                        valueInput.value = normalized;
+                        setFeedback('');
+                    }
+
+                    triggerFieldUpdate(valueInput);
+                };
+
+                const updateUnit = (nextUnit) => {
+                    const normalized = parseDimensionValue(
+                        { value: currentValue || defaultDimension.value, unit: nextUnit },
+                        defaultUnit,
+                        allowedUnits
+                    ).unit;
+                    setCurrentUnit(normalized);
+                    unitInput.value = normalized;
+                    triggerFieldUpdate(unitInput);
+                };
+
+                const handleBlur = () => {
+                    if (currentValue === '') {
+                        const fallbackValue = defaultDimension.value !== '' ? defaultDimension.value : '0';
+                        const fallbackUnit = defaultDimension.unit || currentUnit || defaultUnit;
+                        setCurrentValue(fallbackValue);
+                        valueInput.value = fallbackValue;
+                        const normalizedUnit = parseDimensionValue(
+                            { value: fallbackValue, unit: fallbackUnit },
+                            defaultUnit,
+                            allowedUnits
+                        ).unit;
+                        setCurrentUnit(normalizedUnit);
+                        unitInput.value = normalizedUnit;
+                        setFeedback('');
+                        triggerFieldUpdate(valueInput);
+                        triggerFieldUpdate(unitInput);
+                    }
+                };
+
+                return createElement(UnitControl, {
+                    label,
+                    value: currentValue === '' ? '' : parseFloat(currentValue),
+                    unit: currentUnit,
+                    units,
+                    onChange: updateValue,
+                    onUnitChange: updateUnit,
+                    onBlur: handleBlur,
+                    isInvalid: currentValue === '',
+                    help: feedback || helpText,
+                });
+            };
+
+            wp.element.render(createElement(UnitField), container);
+        });
+    }
+
+    function initializeRangeControls() {
+        if (!window.wp || !wp.element || !wp.components || !wp.components.RangeControl) {
+            return;
+        }
+
+        const { createElement, useState } = wp.element;
+        const { RangeControl } = wp.components;
+
+        document.querySelectorAll('[data-sidebar-range-control]').forEach((container) => {
+            const hiddenInput = container.querySelector('input[data-range-value]');
+            if (!hiddenInput) {
+                return;
+            }
+
+            const label = container.dataset.label || '';
+            const helpText = container.dataset.help || '';
+            const errorMessage = container.dataset.errorMessage || '';
+            const min = Number.parseFloat(container.dataset.min);
+            const max = Number.parseFloat(container.dataset.max);
+            const step = Number.parseFloat(container.dataset.step);
+
+            const safeMin = Number.isFinite(min) ? min : 0;
+            const safeMax = Number.isFinite(max) ? max : 1;
+            const safeStep = Number.isFinite(step) && step > 0 ? step : 0.01;
+
+            const initialValue = Number.parseFloat(hiddenInput.value);
+            const normalizedInitial = Number.isFinite(initialValue) ? initialValue : safeMin;
+            hiddenInput.value = normalizeNumericString(normalizedInitial);
+
+            const RangeField = () => {
+                const [currentValue, setCurrentValue] = useState(normalizedInitial);
+                const [feedback, setFeedback] = useState('');
+
+                const updateValue = (nextValue) => {
+                    const parsed = typeof nextValue === 'number' ? nextValue : Number.parseFloat(nextValue);
+                    if (!Number.isFinite(parsed)) {
+                        setFeedback(errorMessage || helpText);
+                        return;
+                    }
+
+                    const clamped = Math.min(safeMax, Math.max(safeMin, parsed));
+                    const normalized = parseFloat(clamped.toFixed(3));
+                    setCurrentValue(normalized);
+                    hiddenInput.value = normalizeNumericString(normalized);
+                    setFeedback('');
+                    triggerFieldUpdate(hiddenInput);
+                };
+
+                return createElement(RangeControl, {
+                    label,
+                    value: currentValue,
+                    onChange: updateValue,
+                    min: safeMin,
+                    max: safeMax,
+                    step: safeStep,
+                    help: feedback || helpText,
+                });
+            };
+
+            wp.element.render(createElement(RangeField), container);
+        });
     }
 
     function renderNotice(type, message) {

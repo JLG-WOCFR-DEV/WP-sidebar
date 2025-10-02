@@ -1,9 +1,27 @@
 <?php
 
 use JLG\Sidebar\Settings\TypographyOptions;
+use JLG\Sidebar\Settings\ValueNormalizer;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
+}
+
+if ( ! function_exists( 'sidebar_jlg_prepare_dimension_option' ) ) {
+    /**
+     * @param array<string, mixed> $options
+     * @param array<string, mixed> $defaults
+     * @param string               $key
+     * @param string[]|null        $allowedUnits
+     *
+     * @return array{value:string,unit:string}
+     */
+    function sidebar_jlg_prepare_dimension_option( array $options, array $defaults, string $key, ?array $allowedUnits = null ): array {
+        $default = $defaults[ $key ] ?? [];
+        $current = $options[ $key ] ?? $default;
+
+        return ValueNormalizer::normalizeDimensionStructure( $current, $current, $default, $allowedUnits );
+    }
 }
 
 $fontFamilies = TypographyOptions::getFontFamilies();
@@ -76,6 +94,20 @@ $textTransformLabels = [
         settings_fields( 'sidebar_jlg_options_group' );
         $defaults = $defaults ?? [];
         $options = wp_parse_args( $options ?? [], $defaults );
+
+        $dimensionUnits = [
+            'floating_vertical_margin' => ['px', 'rem', 'em', '%', 'vh', 'vw'],
+            'border_radius'           => ['px', 'rem', 'em', '%'],
+            'horizontal_bar_height'   => ['px', 'rem', 'em', 'vh', 'vw'],
+            'content_margin'          => ['px', 'rem', 'em', '%'],
+            'hamburger_top_position'  => ['px', 'rem', 'em', 'vh', 'vw'],
+            'header_padding_top'      => ['px', 'rem', 'em', '%'],
+        ];
+
+        $dimensionValues = [];
+        foreach ( $dimensionUnits as $dimensionKey => $units ) {
+            $dimensionValues[ $dimensionKey ] = sidebar_jlg_prepare_dimension_option( $options, $defaults, $dimensionKey, $units );
+        }
         ?>
 
         <!-- Onglet Général -->
@@ -102,13 +134,67 @@ $textTransformLabels = [
                             <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="horizontal-bar" <?php checked($options['layout_style'], 'horizontal-bar'); ?>> <?php esc_html_e('Barre horizontale', 'sidebar-jlg'); ?></label>
                         </p>
                         <div class="floating-options-field" style="<?php echo $options['layout_style'] === 'floating' ? '' : 'display:none;'; ?>">
-                            <p><label><?php esc_html_e( 'Marge verticale', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[floating_vertical_margin]" value="<?php echo esc_attr( $options['floating_vertical_margin'] ); ?>" class="small-text"/> <em class="description"><?php esc_html_e( 'Ex: 4rem, 15px', 'sidebar-jlg' ); ?></em></p>
-                            <p><label><?php esc_html_e( 'Arrondi des coins', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[border_radius]" value="<?php echo esc_attr( $options['border_radius'] ); ?>" class="small-text"/> <em class="description"><?php esc_html_e( 'Ex: 12px, 1rem', 'sidebar-jlg' ); ?></em></p>
+                            <?php $floatingMargin = $dimensionValues['floating_vertical_margin']; ?>
+                            <p>
+                                <label><?php esc_html_e( 'Marge verticale', 'sidebar-jlg' ); ?></label>
+                                <div
+                                    class="sidebar-jlg-unit-control"
+                                    data-sidebar-unit-control
+                                    data-setting-name="sidebar_jlg_settings[floating_vertical_margin]"
+                                    data-label="<?php esc_attr_e( 'Marge verticale', 'sidebar-jlg' ); ?>"
+                                    data-help="<?php esc_attr_e( 'Définit la distance entre la sidebar flottante et le bord de l’écran.', 'sidebar-jlg' ); ?>"
+                                    data-error-message="<?php esc_attr_e( 'La marge verticale ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                    data-default-value="<?php echo esc_attr( $defaults['floating_vertical_margin']['value'] ?? '4' ); ?>"
+                                    data-default-unit="<?php echo esc_attr( $defaults['floating_vertical_margin']['unit'] ?? 'rem' ); ?>"
+                                    data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['floating_vertical_margin'] ) ); ?>"
+                                >
+                                    <input type="hidden" data-dimension-value name="sidebar_jlg_settings[floating_vertical_margin][value]" value="<?php echo esc_attr( $floatingMargin['value'] ); ?>" />
+                                    <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[floating_vertical_margin][unit]" value="<?php echo esc_attr( $floatingMargin['unit'] ); ?>" />
+                                </div>
+                                <em class="description"><?php esc_html_e( 'Ex: 4rem, 15px', 'sidebar-jlg' ); ?></em>
+                            </p>
+                            <?php $borderRadius = $dimensionValues['border_radius']; ?>
+                            <p>
+                                <label><?php esc_html_e( 'Arrondi des coins', 'sidebar-jlg' ); ?></label>
+                                <div
+                                    class="sidebar-jlg-unit-control"
+                                    data-sidebar-unit-control
+                                    data-setting-name="sidebar_jlg_settings[border_radius]"
+                                    data-label="<?php esc_attr_e( 'Arrondi des coins', 'sidebar-jlg' ); ?>"
+                                    data-help="<?php esc_attr_e( 'Contrôle la courbure des angles de la sidebar.', 'sidebar-jlg' ); ?>"
+                                    data-error-message="<?php esc_attr_e( 'L’arrondi ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                    data-default-value="<?php echo esc_attr( $defaults['border_radius']['value'] ?? '12' ); ?>"
+                                    data-default-unit="<?php echo esc_attr( $defaults['border_radius']['unit'] ?? 'px' ); ?>"
+                                    data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['border_radius'] ) ); ?>"
+                                >
+                                    <input type="hidden" data-dimension-value name="sidebar_jlg_settings[border_radius][value]" value="<?php echo esc_attr( $borderRadius['value'] ); ?>" />
+                                    <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[border_radius][unit]" value="<?php echo esc_attr( $borderRadius['unit'] ); ?>" />
+                                </div>
+                                <em class="description"><?php esc_html_e( 'Ex: 12px, 1rem', 'sidebar-jlg' ); ?></em>
+                            </p>
                             <p><label><?php esc_html_e( 'Épaisseur de la bordure', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[border_width]" value="<?php echo esc_attr( $options['border_width'] ); ?>" class="small-text"/> px</p>
                             <p><label><?php esc_html_e( 'Couleur de la bordure', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[border_color]" value="<?php echo esc_attr( $options['border_color'] ); ?>" class="color-picker-rgba"/></p>
                         </div>
                         <div class="horizontal-options-field" style="<?php echo $options['layout_style'] === 'horizontal-bar' ? '' : 'display:none;'; ?>">
-                            <p><label><?php esc_html_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[horizontal_bar_height]" value="<?php echo esc_attr( $options['horizontal_bar_height'] ); ?>" class="small-text"/> <em class="description"><?php esc_html_e( 'Utilisez des unités CSS (ex : 4rem, 72px).', 'sidebar-jlg' ); ?></em></p>
+                            <?php $horizontalHeight = $dimensionValues['horizontal_bar_height']; ?>
+                            <p>
+                                <label><?php esc_html_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?></label>
+                                <div
+                                    class="sidebar-jlg-unit-control"
+                                    data-sidebar-unit-control
+                                    data-setting-name="sidebar_jlg_settings[horizontal_bar_height]"
+                                    data-label="<?php esc_attr_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?>"
+                                    data-help="<?php esc_attr_e( 'Détermine la hauteur de la barre horizontale.', 'sidebar-jlg' ); ?>"
+                                    data-error-message="<?php esc_attr_e( 'La hauteur de barre ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                    data-default-value="<?php echo esc_attr( $defaults['horizontal_bar_height']['value'] ?? '4' ); ?>"
+                                    data-default-unit="<?php echo esc_attr( $defaults['horizontal_bar_height']['unit'] ?? 'rem' ); ?>"
+                                    data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['horizontal_bar_height'] ) ); ?>"
+                                >
+                                    <input type="hidden" data-dimension-value name="sidebar_jlg_settings[horizontal_bar_height][value]" value="<?php echo esc_attr( $horizontalHeight['value'] ); ?>" />
+                                    <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[horizontal_bar_height][unit]" value="<?php echo esc_attr( $horizontalHeight['unit'] ); ?>" />
+                                </div>
+                                <em class="description"><?php esc_html_e( 'Utilisez des unités CSS (ex : 4rem, 72px).', 'sidebar-jlg' ); ?></em>
+                            </p>
                             <p>
                                 <label><?php esc_html_e( 'Position sur l\'écran', 'sidebar-jlg' ); ?></label>
                                 <select name="sidebar_jlg_settings[horizontal_bar_position]">
@@ -150,22 +236,47 @@ $textTransformLabels = [
                             <option value="overlay" <?php selected($options['desktop_behavior'], 'overlay'); ?>><?php esc_html_e('Superposer au contenu (Overlay)', 'sidebar-jlg'); ?></option>
                         </select>
                         <p class="description"><?php esc_html_e('Choisissez si la sidebar pousse le contenu de votre site ou passe par-dessus.', 'sidebar-jlg'); ?></p>
-                        <p class="push-option-field" style="<?php echo $options['desktop_behavior'] === 'push' ? '' : 'display:none;'; ?>">
+                        <?php $contentMargin = $dimensionValues['content_margin']; ?>
+                        <div class="push-option-field" style="<?php echo $options['desktop_behavior'] === 'push' ? '' : 'display:none;'; ?>">
                             <label><?php esc_html_e( 'Marge de sécurité du contenu', 'sidebar-jlg' ); ?></label>
-                            <input type="text" name="sidebar_jlg_settings[content_margin]" value="<?php echo esc_attr( $options['content_margin'] ); ?>" class="small-text"/>
+                            <div
+                                class="sidebar-jlg-unit-control"
+                                data-sidebar-unit-control
+                                data-setting-name="sidebar_jlg_settings[content_margin]"
+                                data-label="<?php esc_attr_e( 'Marge de sécurité du contenu', 'sidebar-jlg' ); ?>"
+                                data-help="<?php esc_attr_e( 'Évite que la sidebar ne chevauche votre mise en page.', 'sidebar-jlg' ); ?>"
+                                data-error-message="<?php esc_attr_e( 'La marge de contenu ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                data-default-value="<?php echo esc_attr( $defaults['content_margin']['value'] ?? '2' ); ?>"
+                                data-default-unit="<?php echo esc_attr( $defaults['content_margin']['unit'] ?? 'rem' ); ?>"
+                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['content_margin'] ) ); ?>"
+                            >
+                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[content_margin][value]" value="<?php echo esc_attr( $contentMargin['value'] ); ?>" />
+                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[content_margin][unit]" value="<?php echo esc_attr( $contentMargin['unit'] ); ?>" />
+                            </div>
                             <em class="description"><?php esc_html_e( 'Espace entre la sidebar et le contenu (ex: 2rem, 30px).', 'sidebar-jlg' ); ?></em>
-                        </p>
+                        </div>
                     </td>
                 </tr>
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Fond de superposition', 'sidebar-jlg' ); ?></th>
                     <td>
                         <p><label><?php esc_html_e( 'Couleur', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[overlay_color]" value="<?php echo esc_attr( $options['overlay_color'] ); ?>" class="color-picker-rgba"/></p>
-                        <p>
+                        <div class="sidebar-jlg-range-field">
                             <label><?php esc_html_e( 'Opacité', 'sidebar-jlg' ); ?></label>
-                            <input type="range" name="sidebar_jlg_settings[overlay_opacity]" min="0" max="1" step="0.05" value="<?php echo esc_attr( $options['overlay_opacity'] ); ?>">
-                            <span class="range-value"><?php echo esc_html($options['overlay_opacity']); ?></span>
-                        </p>
+                            <div
+                                class="sidebar-jlg-range-control"
+                                data-sidebar-range-control
+                                data-setting-name="sidebar_jlg_settings[overlay_opacity]"
+                                data-label="<?php esc_attr_e( 'Opacité de la superposition', 'sidebar-jlg' ); ?>"
+                                data-help="<?php esc_attr_e( '0 = totalement transparent, 1 = totalement opaque.', 'sidebar-jlg' ); ?>"
+                                data-error-message="<?php esc_attr_e( 'L’opacité doit rester comprise entre 0 et 1.', 'sidebar-jlg' ); ?>"
+                                data-min="0"
+                                data-max="1"
+                                data-step="0.05"
+                            >
+                                <input type="hidden" data-range-value name="sidebar_jlg_settings[overlay_opacity]" value="<?php echo esc_attr( $options['overlay_opacity'] ); ?>" />
+                            </div>
+                        </div>
                         <p class="description"><?php esc_html_e( 'Ajuste le fond affiché derrière la sidebar en mode overlay.', 'sidebar-jlg' ); ?></p>
                     </td>
                 </tr>
@@ -179,7 +290,25 @@ $textTransformLabels = [
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Bouton Hamburger (Mobile)', 'sidebar-jlg' ); ?></th>
                     <td>
-                        <p><label><?php esc_html_e( 'Position verticale', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[hamburger_top_position]" value="<?php echo esc_attr( $options['hamburger_top_position'] ); ?>" class="small-text"/> <em class="description"><?php esc_html_e( 'Unités CSS (ex: 4rem, 15px).', 'sidebar-jlg' ); ?></em></p>
+                        <?php $hamburgerOffset = $dimensionValues['hamburger_top_position']; ?>
+                        <p>
+                            <label><?php esc_html_e( 'Position verticale', 'sidebar-jlg' ); ?></label>
+                            <div
+                                class="sidebar-jlg-unit-control"
+                                data-sidebar-unit-control
+                                data-setting-name="sidebar_jlg_settings[hamburger_top_position]"
+                                data-label="<?php esc_attr_e( 'Position verticale', 'sidebar-jlg' ); ?>"
+                                data-help="<?php esc_attr_e( 'Contrôle l’emplacement du bouton hamburger sur l’axe vertical.', 'sidebar-jlg' ); ?>"
+                                data-error-message="<?php esc_attr_e( 'La position verticale ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                data-default-value="<?php echo esc_attr( $defaults['hamburger_top_position']['value'] ?? '4' ); ?>"
+                                data-default-unit="<?php echo esc_attr( $defaults['hamburger_top_position']['unit'] ?? 'rem' ); ?>"
+                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['hamburger_top_position'] ) ); ?>"
+                            >
+                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[hamburger_top_position][value]" value="<?php echo esc_attr( $hamburgerOffset['value'] ); ?>" />
+                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_top_position][unit]" value="<?php echo esc_attr( $hamburgerOffset['unit'] ); ?>" />
+                            </div>
+                            <em class="description"><?php esc_html_e( 'Unités CSS (ex: 4rem, 15px).', 'sidebar-jlg' ); ?></em>
+                        </p>
                         <p><label><?php esc_html_e( 'Couleur des barres', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[hamburger_color]" value="<?php echo esc_attr( $options['hamburger_color'] ); ?>" class="color-picker-rgba"/> <em class="description"><?php esc_html_e( 'Utilisez une couleur contrastée pour les barres du bouton.', 'sidebar-jlg' ); ?></em></p>
                         <p><label><input type="checkbox" name="sidebar_jlg_settings[show_close_button]" value="1" <?php checked( $options['show_close_button'], 1 ); ?> /> <?php esc_html_e( 'Afficher le bouton de fermeture (X) dans la sidebar.', 'sidebar-jlg' ); ?></label></p>
                     </td>
@@ -274,7 +403,25 @@ $textTransformLabels = [
                                 <option value="flex-end" <?php selected($options['header_alignment_mobile'], 'flex-end'); ?>><?php esc_html_e('Droite', 'sidebar-jlg'); ?></option>
                             </select>
                         </p>
-                        <p><label><?php esc_html_e( 'Marge supérieure du header', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[header_padding_top]" value="<?php echo esc_attr( $options['header_padding_top'] ); ?>" class="small-text"/> <em class="description"><?php esc_html_e( 'Unités CSS (ex: 2.5rem, 30px).', 'sidebar-jlg' ); ?></em></p>
+                        <?php $headerPadding = $dimensionValues['header_padding_top']; ?>
+                        <p>
+                            <label><?php esc_html_e( 'Marge supérieure du header', 'sidebar-jlg' ); ?></label>
+                            <div
+                                class="sidebar-jlg-unit-control"
+                                data-sidebar-unit-control
+                                data-setting-name="sidebar_jlg_settings[header_padding_top]"
+                                data-label="<?php esc_attr_e( 'Marge supérieure du header', 'sidebar-jlg' ); ?>"
+                                data-help="<?php esc_attr_e( 'Ajuste l’espace au-dessus du bloc d’en-tête.', 'sidebar-jlg' ); ?>"
+                                data-error-message="<?php esc_attr_e( 'La marge supérieure ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                data-default-value="<?php echo esc_attr( $defaults['header_padding_top']['value'] ?? '2.5' ); ?>"
+                                data-default-unit="<?php echo esc_attr( $defaults['header_padding_top']['unit'] ?? 'rem' ); ?>"
+                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['header_padding_top'] ) ); ?>"
+                            >
+                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[header_padding_top][value]" value="<?php echo esc_attr( $headerPadding['value'] ); ?>" />
+                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[header_padding_top][unit]" value="<?php echo esc_attr( $headerPadding['unit'] ); ?>" />
+                            </div>
+                            <em class="description"><?php esc_html_e( 'Unités CSS (ex: 2.5rem, 30px).', 'sidebar-jlg' ); ?></em>
+                        </p>
                     </td>
                 </tr>
                 <tr>
