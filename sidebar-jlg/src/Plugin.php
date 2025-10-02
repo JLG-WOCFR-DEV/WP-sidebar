@@ -51,7 +51,7 @@ class Plugin
             $pluginFile,
             $version
         );
-        $this->ajax = new Endpoints($this->settings, $this->cache, $this->icons);
+        $this->ajax = new Endpoints($this->settings, $this->cache, $this->icons, $this->sanitizer, $pluginFile);
         $this->searchBlock = new SearchBlock($this->settings, $pluginFile, $version);
     }
 
@@ -160,6 +160,11 @@ class Plugin
     public function getMenuCache(): MenuCache
     {
         return $this->cache;
+    }
+
+    public function getPluginFile(): string
+    {
+        return $this->pluginFile;
     }
 
     public function renderActivationErrorNotice(): void

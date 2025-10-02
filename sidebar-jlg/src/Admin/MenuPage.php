@@ -76,6 +76,13 @@ class MenuPage
             $this->version
         );
 
+        wp_enqueue_style(
+            'sidebar-jlg-admin-preview-css',
+            plugin_dir_url($this->pluginFile) . 'assets/css/admin-preview.css',
+            ['sidebar-jlg-admin-css'],
+            $this->version
+        );
+
         wp_enqueue_script(
             'sidebar-jlg-admin-js',
             plugin_dir_url($this->pluginFile) . 'assets/js/admin-script.js',
@@ -92,11 +99,13 @@ class MenuPage
             'nonce' => wp_create_nonce('jlg_ajax_nonce'),
             'reset_nonce' => wp_create_nonce('jlg_reset_nonce'),
             'tools_nonce' => wp_create_nonce('jlg_tools_nonce'),
+            'preview_nonce' => wp_create_nonce('jlg_preview_nonce'),
             'options' => wp_parse_args($options, $defaults),
             'icons_manifest' => $this->icons->getIconManifest(),
             'icon_fetch_action' => 'jlg_get_icon_svg',
             'icon_upload_action' => 'jlg_upload_custom_icon',
             'icon_upload_max_size' => IconLibrary::MAX_CUSTOM_ICON_FILESIZE,
+            'preview_action' => 'jlg_render_preview',
             'svg_url_restrictions' => $this->sanitizer->getSvgUrlRestrictions(),
             'i18n' => [
                 'menuItemDefaultTitle' => __('Nouvel élément', 'sidebar-jlg'),
@@ -125,6 +134,12 @@ class MenuPage
                 'importSuccess' => __('Réglages importés avec succès. Rechargement de la page…', 'sidebar-jlg'),
                 'importError' => __('L’import des réglages a échoué.', 'sidebar-jlg'),
                 'importMissingFile' => __('Veuillez sélectionner un fichier JSON avant de lancer l’import.', 'sidebar-jlg'),
+            ],
+            'preview_messages' => [
+                'loading' => __('Chargement de l’aperçu…', 'sidebar-jlg'),
+                'error' => __('Impossible de charger l’aperçu. Vérifiez vos droits ou votre connexion réseau.', 'sidebar-jlg'),
+                'emptyMenu' => __('Ajoutez des éléments de menu pour alimenter la prévisualisation.', 'sidebar-jlg'),
+                'refresh' => __('Actualiser l’aperçu', 'sidebar-jlg'),
             ],
         ]);
     }

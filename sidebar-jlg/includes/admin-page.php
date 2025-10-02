@@ -48,6 +48,15 @@ $textTransformLabels = [
         <a href="#tab-tools" class="nav-tab" id="tab-tools-tab" role="tab" aria-controls="tab-tools" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Outils', 'sidebar-jlg' ); ?></a>
     </div>
 
+    <div id="sidebar-jlg-preview" class="sidebar-jlg-preview" data-state="idle">
+        <div class="sidebar-jlg-preview__header">
+            <h2><?php esc_html_e( 'Aperçu en direct', 'sidebar-jlg' ); ?></h2>
+            <p class="description"><?php esc_html_e( 'L’aperçu se met à jour automatiquement lorsque vous modifiez les réglages.', 'sidebar-jlg' ); ?></p>
+        </div>
+        <div class="sidebar-jlg-preview__status" role="status" aria-live="polite"></div>
+        <div class="sidebar-jlg-preview__viewport" aria-label="<?php esc_attr_e( 'Aperçu de la sidebar', 'sidebar-jlg' ); ?>"></div>
+    </div>
+
     <form action="options.php" method="post" id="sidebar-jlg-form">
         <?php
         settings_fields( 'sidebar_jlg_options_group' );

@@ -2,6 +2,7 @@
 
 namespace JLG\Sidebar\Ajax;
 
+use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
@@ -9,8 +10,17 @@ use function __;
 use function current_time;
 use function gmdate;
 use function home_url;
+use function is_readable;
+use function json_decode;
+use function ob_end_clean;
+use function ob_get_clean;
+use function ob_get_level;
+use function ob_start;
+use function plugin_dir_path;
 use function sanitize_option;
 use function time;
+use function wp_parse_args;
+use function wp_unslash;
 
 class Endpoints
 {
@@ -20,12 +30,22 @@ class Endpoints
     private SettingsRepository $settings;
     private MenuCache $cache;
     private IconLibrary $icons;
+    private SettingsSanitizer $sanitizer;
+    private string $pluginFile;
 
-    public function __construct(SettingsRepository $settings, MenuCache $cache, IconLibrary $icons)
+    public function __construct(
+        SettingsRepository $settings,
+        MenuCache $cache,
+        IconLibrary $icons,
+        SettingsSanitizer $sanitizer,
+        string $pluginFile
+    )
     {
         $this->settings = $settings;
         $this->cache = $cache;
         $this->icons = $icons;
+        $this->sanitizer = $sanitizer;
+        $this->pluginFile = $pluginFile;
     }
 
     public function registerHooks(): void
@@ -37,6 +57,7 @@ class Endpoints
         add_action('wp_ajax_jlg_upload_custom_icon', [$this, 'ajax_upload_custom_icon']);
         add_action('wp_ajax_jlg_export_settings', [$this, 'ajax_export_settings']);
         add_action('wp_ajax_jlg_import_settings', [$this, 'ajax_import_settings']);
+        add_action('wp_ajax_jlg_render_preview', [$this, 'ajax_render_preview']);
     }
 
     /**
@@ -597,6 +618,81 @@ class Endpoints
 
         wp_send_json_success([
             'message' => __('Réglages importés avec succès.', 'sidebar-jlg'),
+        ]);
+    }
+
+    public function ajax_render_preview(): void
+    {
+        $capability = $this->get_ajax_capability();
+
+        if (!current_user_can($capability)) {
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
+        }
+
+        check_ajax_referer('jlg_preview_nonce', 'nonce');
+
+        $rawOptions = $_POST['options'] ?? [];
+
+        if (is_string($rawOptions)) {
+            $decoded = json_decode(wp_unslash($rawOptions), true);
+        } elseif (is_array($rawOptions)) {
+            $decoded = $rawOptions;
+        } else {
+            $decoded = [];
+        }
+
+        if (!is_array($decoded)) {
+            $decoded = [];
+        }
+
+        $sanitized = $this->sanitizer->sanitize_settings($decoded);
+        if (!is_array($sanitized)) {
+            $sanitized = [];
+        }
+
+        $defaults = $this->settings->getDefaultSettings();
+        $options = wp_parse_args($sanitized, $defaults);
+        $allIcons = $this->icons->getAllIcons();
+
+        $templatePath = plugin_dir_path($this->pluginFile) . 'includes/sidebar-template.php';
+
+        if (!is_readable($templatePath)) {
+            wp_send_json_error([
+                'message' => __('Le template d’aperçu est introuvable.', 'sidebar-jlg'),
+            ]);
+        }
+
+        $bufferStarted = ob_start();
+        if ($bufferStarted === false) {
+            wp_send_json_error([
+                'message' => __('Impossible de générer l’aperçu.', 'sidebar-jlg'),
+            ]);
+        }
+
+        $bufferLevel = ob_get_level();
+
+        $optionsForTemplate = $options;
+        $allIconsForTemplate = $allIcons;
+        $options = $optionsForTemplate;
+        $allIcons = $allIconsForTemplate;
+
+        require $templatePath;
+
+        $html = ob_get_clean();
+
+        if ($html === false || $html === null) {
+            if (ob_get_level() >= $bufferLevel) {
+                ob_end_clean();
+            }
+
+            wp_send_json_error([
+                'message' => __('La génération de l’aperçu a échoué.', 'sidebar-jlg'),
+            ]);
+        }
+
+        wp_send_json_success([
+            'html' => $html,
+            'options' => $options,
         ]);
     }
 
