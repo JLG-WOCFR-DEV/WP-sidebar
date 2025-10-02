@@ -262,6 +262,33 @@ class SidebarRenderer
             $this->assignVariable($variables, '--neon-spread', $this->formatPixelValue($this->resolveOption($options, 'neon_spread')));
         }
 
+        $safeAreaFallbackDefaults = [
+            'block_start' => '0px',
+            'block_end' => '0px',
+            'inline_start' => '0px',
+            'inline_end' => '0px',
+        ];
+
+        $safeAreaFallbacks = apply_filters('sidebar_jlg_safe_area_fallbacks', $safeAreaFallbackDefaults, $options);
+        if (!is_array($safeAreaFallbacks)) {
+            $safeAreaFallbacks = $safeAreaFallbackDefaults;
+        } else {
+            $safeAreaFallbacks = array_merge($safeAreaFallbackDefaults, $safeAreaFallbacks);
+        }
+
+        $safeAreaVariables = [
+            'block_start' => '--jlg-safe-area-inset-block-start-fallback',
+            'block_end' => '--jlg-safe-area-inset-block-end-fallback',
+            'inline_start' => '--jlg-safe-area-inset-inline-start-fallback',
+            'inline_end' => '--jlg-safe-area-inset-inline-end-fallback',
+        ];
+
+        foreach ($safeAreaVariables as $key => $variableName) {
+            $fallbackValue = $safeAreaFallbacks[$key] ?? $safeAreaFallbackDefaults[$key];
+            $sanitizedValue = $this->sanitizeCssString($fallbackValue) ?? $safeAreaFallbackDefaults[$key];
+            $this->assignVariable($variables, $variableName, $sanitizedValue);
+        }
+
         if ($variables === []) {
             return '';
         }
