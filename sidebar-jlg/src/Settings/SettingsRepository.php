@@ -13,6 +13,7 @@ class SettingsRepository
         'border_radius',
         'hamburger_top_position',
         'header_padding_top',
+        'letter_spacing',
     ];
 
     private const OPACITY_OPTION_KEYS = [

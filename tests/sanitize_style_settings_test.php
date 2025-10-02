@@ -32,6 +32,10 @@ $existing_options = array_merge((new DefaultSettings())->all(), [
     'font_color_end'           => '#ffffff',
     'font_hover_color_type'    => 'solid',
     'font_hover_color'         => '#ff0000',
+    'font_family'              => 'arial',
+    'font_weight'              => '500',
+    'text_transform'           => 'uppercase',
+    'letter_spacing'           => '0.1em',
     'header_logo_type'         => 'text',
     'app_name'                 => 'Existing App',
     'header_logo_image'        => 'http://example.com/logo.png',
@@ -56,6 +60,10 @@ $input = [
     'font_color_end'           => 'not-a-color',
     'font_hover_color_type'    => 'solid',
     'font_hover_color'         => 'rgba(1,2,3,0.5)',
+    'font_family'              => 'google-roboto',
+    'font_weight'              => '700',
+    'text_transform'           => 'lowercase',
+    'letter_spacing'           => 'calc(0.2em + 1px)',
     'header_logo_type'         => 'image',
     'app_name'                 => 'New App',
     'header_logo_image'        => 'http://example.com/new-logo.png',
@@ -96,6 +104,10 @@ assertSame('#ffffff', $result['font_color_end'], 'Fallback preserves existing gr
 assertSame('#445566', $result['accent_color'], 'Valid solid color is sanitized normally');
 assertSame('rgba(0,0,0,0.6)', $result['mobile_bg_color'], 'Fallback preserves existing mobile background color');
 assertSame(0.8, $result['mobile_bg_opacity'], 'Valid opacity within range is preserved');
+assertSame('google-roboto', $result['font_family'], 'Allowed Google font choice is preserved');
+assertSame('700', $result['font_weight'], 'Allowed font weight is preserved');
+assertSame('lowercase', $result['text_transform'], 'Allowed text transform is preserved');
+assertSame('calc(0.2em + 1px)', $result['letter_spacing'], 'Letter spacing accepts calc expressions');
 
 $inputBelowMin = $input;
 $inputBelowMin['mobile_bg_opacity'] = -0.5;
@@ -127,6 +139,11 @@ $inputWithoutAccent = $input;
 unset($inputWithoutAccent['accent_color']);
 $resultSanitizedAccentPayload = $method->invoke($sanitizer, $inputWithoutAccent, $existingAccentPayload);
 assertSame('', $resultSanitizedAccentPayload['accent_color'], 'Existing accent color payload is sanitized to empty string');
+
+$inputInvalidSpacing = $input;
+$inputInvalidSpacing['letter_spacing'] = 'javascript:alert(1)';
+$resultInvalidSpacing = $method->invoke($sanitizer, $inputInvalidSpacing, $existing_options);
+assertSame('0.1em', $resultInvalidSpacing['letter_spacing'], 'Invalid letter spacing falls back to existing value');
 
 if ($testsPassed) {
     echo "All sanitize_style_settings tests passed.\n";

@@ -355,7 +355,7 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     display: flex;
     flex-direction: column;
 }
-.sidebar-menu a { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; text-decoration: none; color: var(--sidebar-text-color); font-size: var(--sidebar-font-size); transition: all 0.3s; position: relative; z-index: 1; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+.sidebar-menu a { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; text-decoration: none; color: var(--sidebar-text-color); font-size: var(--sidebar-font-size); font-family: var(--sidebar-font-family, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif); font-weight: var(--sidebar-font-weight, 400); letter-spacing: var(--sidebar-letter-spacing, 0em); text-transform: var(--sidebar-text-transform, none); transition: all 0.3s; position: relative; z-index: 1; overflow: hidden; -webkit-tap-highlight-color: transparent; }
 .sidebar-menu a:hover,
 .sidebar-menu a:focus,
 .sidebar-menu a:focus-visible {

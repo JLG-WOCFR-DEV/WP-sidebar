@@ -2,6 +2,8 @@
 
 namespace JLG\Sidebar\Settings;
 
+use JLG\Sidebar\Settings\TypographyOptions;
+
 final class OptionChoices
 {
     /**
@@ -57,7 +59,13 @@ final class OptionChoices
      */
     public static function getAll(): array
     {
-        return self::ALLOWED_CHOICES;
+        $choices = self::ALLOWED_CHOICES;
+
+        $choices['font_family'] = TypographyOptions::getFontFamilyChoices();
+        $choices['font_weight'] = TypographyOptions::getFontWeights();
+        $choices['text_transform'] = TypographyOptions::getTextTransformChoices();
+
+        return $choices;
     }
 
     /**
