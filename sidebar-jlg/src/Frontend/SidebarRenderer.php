@@ -62,6 +62,7 @@ class SidebarRenderer
     private SettingsRepository $settings;
     private IconLibrary $icons;
     private MenuCache $cache;
+    private ProfileSelector $profileSelector;
     private string $pluginFile;
     private string $version;
     private bool $bodyDataPrinted = false;
@@ -70,12 +71,14 @@ class SidebarRenderer
         SettingsRepository $settings,
         IconLibrary $icons,
         MenuCache $cache,
+        ProfileSelector $profileSelector,
         string $pluginFile,
         string $version
     ) {
         $this->settings = $settings;
         $this->icons = $icons;
         $this->cache = $cache;
+        $this->profileSelector = $profileSelector;
         $this->pluginFile = $pluginFile;
         $this->version = $version;
     }
@@ -91,7 +94,8 @@ class SidebarRenderer
 
     public function enqueueAssets(): void
     {
-        $options = $this->settings->getOptions();
+        $profile = $this->profileSelector->selectProfile();
+        $options = $profile['settings'];
         if (empty($options['enable_sidebar'])) {
             return;
         }
@@ -135,6 +139,8 @@ class SidebarRenderer
             'close_on_link_click' => $options['close_on_link_click'] ?? '',
             'debug_mode' => (string) ($options['debug_mode'] ?? '0'),
             'sidebar_position' => $this->resolveSidebarPosition($options),
+            'active_profile_id' => isset($profile['id']) ? (string) $profile['id'] : 'default',
+            'is_fallback_profile' => (bool) ($profile['is_fallback'] ?? false),
             'messages' => [
                 'missingElements' => __('Sidebar JLG : menu introuvable.', 'sidebar-jlg'),
             ],
@@ -450,7 +456,8 @@ class SidebarRenderer
 
     public function render(): void
     {
-        $options = $this->settings->getOptions();
+        $profile = $this->profileSelector->selectProfile();
+        $options = $profile['settings'];
         if (empty($options['enable_sidebar'])) {
             return;
         }

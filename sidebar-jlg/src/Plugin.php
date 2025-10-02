@@ -8,6 +8,7 @@ use JLG\Sidebar\Admin\View\ColorPickerField;
 use JLG\Sidebar\Ajax\Endpoints;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\Blocks\SearchBlock;
+use JLG\Sidebar\Frontend\ProfileSelector;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
@@ -23,6 +24,7 @@ class Plugin
     private MenuCache $cache;
     private SettingsSanitizer $sanitizer;
     private MenuPage $menuPage;
+    private ProfileSelector $profileSelector;
     private SidebarRenderer $renderer;
     private Endpoints $ajax;
     private SearchBlock $searchBlock;
@@ -36,6 +38,7 @@ class Plugin
         $this->settings = new SettingsRepository($this->defaults, $this->icons);
         $this->cache = new MenuCache();
         $this->sanitizer = new SettingsSanitizer($this->defaults, $this->icons);
+        $this->profileSelector = new ProfileSelector($this->settings);
         $this->menuPage = new MenuPage(
             $this->settings,
             $this->sanitizer,
@@ -48,6 +51,7 @@ class Plugin
             $this->settings,
             $this->icons,
             $this->cache,
+            $this->profileSelector,
             $pluginFile,
             $version
         );
