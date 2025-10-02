@@ -1,4 +1,29 @@
-<?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
+<?php
+
+use JLG\Sidebar\Settings\TypographyOptions;
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+$fontFamilies = TypographyOptions::getFontFamilies();
+$safeFontFamilies = array_filter(
+    $fontFamilies,
+    static fn( $font ) => isset( $font['type'] ) && $font['type'] === 'system'
+);
+$googleFontFamilies = array_filter(
+    $fontFamilies,
+    static fn( $font ) => isset( $font['type'] ) && $font['type'] === 'google'
+);
+$availableFontWeights = TypographyOptions::getFontWeights();
+$availableTextTransforms = TypographyOptions::getTextTransformChoices();
+$textTransformLabels = [
+    'none'       => __( 'Aucune', 'sidebar-jlg' ),
+    'uppercase'  => __( 'Majuscules', 'sidebar-jlg' ),
+    'lowercase'  => __( 'Minuscules', 'sidebar-jlg' ),
+    'capitalize' => __( 'Capitaliser', 'sidebar-jlg' ),
+];
+?>
 <div class="wrap sidebar-jlg-admin-wrap">
     <h1><?php esc_html_e( 'Réglages de la Sidebar JLG', 'sidebar-jlg' ); ?></h1>
 
@@ -243,6 +268,46 @@
                     <th scope="row"><?php esc_html_e( 'Typographie du menu', 'sidebar-jlg' ); ?></th>
                     <td>
                         <p><label><?php esc_html_e( 'Taille de police', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[font_size]" value="<?php echo esc_attr($options['font_size']); ?>" class="small-text" /> px</p>
+                        <p>
+                            <label><?php esc_html_e( 'Famille de police', 'sidebar-jlg' ); ?></label>
+                            <select name="sidebar_jlg_settings[font_family]">
+                                <?php if ( ! empty( $safeFontFamilies ) ) : ?>
+                                    <optgroup label="<?php esc_attr_e( 'Polices système', 'sidebar-jlg' ); ?>">
+                                        <?php foreach ( $safeFontFamilies as $fontKey => $fontData ) : ?>
+                                            <option value="<?php echo esc_attr( $fontKey ); ?>" <?php selected( $options['font_family'], $fontKey ); ?>><?php echo esc_html( $fontData['label'] ?? $fontKey ); ?></option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endif; ?>
+                                <?php if ( ! empty( $googleFontFamilies ) ) : ?>
+                                    <optgroup label="<?php esc_attr_e( 'Google Fonts', 'sidebar-jlg' ); ?>">
+                                        <?php foreach ( $googleFontFamilies as $fontKey => $fontData ) : ?>
+                                            <option value="<?php echo esc_attr( $fontKey ); ?>" <?php selected( $options['font_family'], $fontKey ); ?>><?php echo esc_html( $fontData['label'] ?? $fontKey ); ?></option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endif; ?>
+                            </select>
+                        </p>
+                        <p>
+                            <label><?php esc_html_e( 'Graisse', 'sidebar-jlg' ); ?></label>
+                            <select name="sidebar_jlg_settings[font_weight]" class="small-text">
+                                <?php foreach ( $availableFontWeights as $weight ) : ?>
+                                    <option value="<?php echo esc_attr( $weight ); ?>" <?php selected( $options['font_weight'], $weight ); ?>><?php echo esc_html( $weight ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </p>
+                        <p>
+                            <label><?php esc_html_e( 'Espacement des lettres', 'sidebar-jlg' ); ?></label>
+                            <input type="text" name="sidebar_jlg_settings[letter_spacing]" value="<?php echo esc_attr( $options['letter_spacing'] ); ?>" class="small-text" placeholder="0.05em" />
+                            <em class="description"><?php esc_html_e( 'Accepte les unités CSS (`px`, `em`, `rem`, etc.) ou une valeur `calc()`.', 'sidebar-jlg' ); ?></em>
+                        </p>
+                        <p>
+                            <label><?php esc_html_e( 'Casse du texte', 'sidebar-jlg' ); ?></label>
+                            <select name="sidebar_jlg_settings[text_transform]">
+                                <?php foreach ( $availableTextTransforms as $transform ) : ?>
+                                    <option value="<?php echo esc_attr( $transform ); ?>" <?php selected( $options['text_transform'], $transform ); ?>><?php echo esc_html( $textTransformLabels[ $transform ] ?? $transform ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </p>
                         <p><label><?php esc_html_e( 'Couleur du texte', 'sidebar-jlg' ); ?></label> <?php $colorPicker->render('font_color', $options); ?></p>
                         <p><label><?php esc_html_e( 'Couleur du texte (survol)', 'sidebar-jlg' ); ?></label> <?php $colorPicker->render('font_hover_color', $options); ?></p>
                     </td>

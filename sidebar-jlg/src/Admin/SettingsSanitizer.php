@@ -240,6 +240,29 @@ class SettingsSanitizer
             $existingOptions,
             $defaults
         );
+        $sanitized['font_family'] = $this->sanitizeChoice(
+            $input['font_family'] ?? null,
+            $this->allowedChoices['font_family'],
+            $existingOptions['font_family'] ?? ($defaults['font_family'] ?? ''),
+            $defaults['font_family'] ?? ''
+        );
+        $sanitized['font_weight'] = $this->sanitizeChoice(
+            $input['font_weight'] ?? null,
+            $this->allowedChoices['font_weight'],
+            $existingOptions['font_weight'] ?? ($defaults['font_weight'] ?? ''),
+            $defaults['font_weight'] ?? ''
+        );
+        $sanitized['text_transform'] = $this->sanitizeChoice(
+            $input['text_transform'] ?? null,
+            $this->allowedChoices['text_transform'],
+            $existingOptions['text_transform'] ?? ($defaults['text_transform'] ?? ''),
+            $defaults['text_transform'] ?? ''
+        );
+        $existingLetterSpacing = $existingOptions['letter_spacing'] ?? ($defaults['letter_spacing'] ?? '0');
+        $sanitized['letter_spacing'] = ValueNormalizer::normalizeCssDimension(
+            $input['letter_spacing'] ?? $existingLetterSpacing,
+            $existingLetterSpacing
+        );
         $sanitized['font_color_type'] = $this->sanitizeChoice(
             $input['font_color_type'] ?? null,
             $this->allowedChoices['font_color_type'],

@@ -5,6 +5,7 @@ namespace JLG\Sidebar\Frontend;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
+use JLG\Sidebar\Settings\TypographyOptions;
 
 class SidebarRenderer
 {
@@ -20,6 +21,10 @@ class SidebarRenderer
         'accent_color_start' => '#60a5fa',
         'accent_color_end' => '#c084fc',
         'font_size' => 16,
+        'font_family' => 'system-ui',
+        'font_weight' => '400',
+        'text_transform' => 'none',
+        'letter_spacing' => '0em',
         'font_color' => 'rgba(224, 224, 224, 1)',
         'font_hover_color' => 'rgba(255, 255, 255, 1)',
         'animation_speed' => 400,
@@ -97,6 +102,8 @@ class SidebarRenderer
         if (!$shouldEnqueue) {
             return;
         }
+
+        $this->maybeEnqueueGoogleFont($options);
 
         wp_enqueue_style(
             'sidebar-jlg-public-css',
@@ -176,6 +183,27 @@ class SidebarRenderer
         }
 
         $this->assignVariable($variables, '--sidebar-font-size', $this->formatPixelValue($this->resolveOption($options, 'font_size')));
+        $fontFamilyKey = $this->resolveOption($options, 'font_family');
+        $fontStack = null;
+        if (is_string($fontFamilyKey) && $fontFamilyKey !== '') {
+            $fontStack = TypographyOptions::getFontStack($fontFamilyKey);
+        }
+        if ($fontStack === null) {
+            $fontStack = TypographyOptions::getFontStack(self::DYNAMIC_STYLE_DEFAULTS['font_family']);
+        }
+        if ($fontStack !== null) {
+            $this->assignVariable($variables, '--sidebar-font-family', $fontStack);
+        }
+        $fontWeight = $this->resolveOption($options, 'font_weight');
+        if (is_string($fontWeight) || is_numeric($fontWeight)) {
+            $this->assignVariable($variables, '--sidebar-font-weight', (string) $fontWeight);
+        }
+        $textTransform = $this->sanitizeCssString($this->resolveOption($options, 'text_transform'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['text_transform'];
+        $this->assignVariable($variables, '--sidebar-text-transform', $textTransform);
+        $letterSpacing = $this->sanitizeCssString($this->resolveOption($options, 'letter_spacing'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['letter_spacing'];
+        $this->assignVariable($variables, '--sidebar-letter-spacing', $letterSpacing);
         $this->assignVariable($variables, '--sidebar-text-color', $this->sanitizeCssString($this->resolveOption($options, 'font_color')));
         $this->assignVariable($variables, '--sidebar-text-hover-color', $this->sanitizeCssString($this->resolveOption($options, 'font_hover_color')));
         $this->assignVariable($variables, '--transition-speed', $this->formatMillisecondsValue($this->resolveOption($options, 'animation_speed')));
@@ -243,6 +271,40 @@ class SidebarRenderer
         $styles .= '}';
 
         return $styles;
+    }
+
+    private function maybeEnqueueGoogleFont(array $options): void
+    {
+        $fontKey = $options['font_family'] ?? '';
+
+        if (!is_string($fontKey) || $fontKey === '') {
+            return;
+        }
+
+        $query = TypographyOptions::getGoogleFontQuery($fontKey);
+        if ($query === null) {
+            return;
+        }
+
+        $handleKey = sanitize_key($fontKey);
+        if ($handleKey === '') {
+            $handleKey = md5($fontKey);
+        }
+
+        $url = $this->buildGoogleFontUrl($query);
+        wp_enqueue_style(
+            'sidebar-jlg-google-font-' . $handleKey,
+            $url,
+            [],
+            null
+        );
+    }
+
+    private function buildGoogleFontUrl(string $query): string
+    {
+        $encodedFamily = str_replace(' ', '+', $query);
+
+        return 'https://fonts.googleapis.com/css2?family=' . $encodedFamily . '&display=swap';
     }
 
     private function assignVariable(array &$variables, string $name, ?string $value): void
