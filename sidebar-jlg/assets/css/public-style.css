@@ -1,7 +1,11 @@
 /* Les variables sont injectées en ligne par PHP */
 
 /* --- Base --- */
-body { transition: padding-left var(--transition-speed, 0.4s) ease; }
+body {
+    transition:
+        padding-left var(--transition-speed, 0.4s) ease,
+        padding-right var(--transition-speed, 0.4s) ease;
+}
 body.sidebar-open {
     touch-action: pan-y;
     padding-right: var(--sidebar-scrollbar-compensation, 0);
@@ -72,13 +76,23 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     }
 }
 @media (min-width: 993px) {
-    body.jlg-sidebar-active.jlg-sidebar-push {
+    body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-left {
         padding-left: var(--sidebar-width-desktop) !important;
     }
-    body.jlg-sidebar-active.jlg-sidebar-push #page,
-    body.jlg-sidebar-active.jlg-sidebar-push .site-content,
-    body.jlg-sidebar-active.jlg-sidebar-push main {
+    body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-right {
+        padding-right: var(--sidebar-width-desktop) !important;
+    }
+    body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-left #page,
+    body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-left .site-content,
+    body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-left main {
         margin-left: var(--content-margin, 2rem);
+        margin-right: 0;
+    }
+    body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-right #page,
+    body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-right .site-content,
+    body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-right main {
+        margin-right: var(--content-margin, 2rem);
+        margin-left: 0;
     }
 }
 
@@ -96,12 +110,16 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 
 /* --- Sidebar Container --- */
 .pro-sidebar {
-    position: fixed; top: 0; left: 0;
+    position: fixed; top: 0; left: 0; right: auto;
     width: 100%; height: 100vh; /* Mobile first */
     background-color: var(--sidebar-bg-color);
     background-image: var(--sidebar-bg-image);
     display: flex; flex-direction: column; z-index: 1000;
     transition: transform var(--transition-speed, 0.4s) ease, opacity var(--transition-speed, 0.4s) ease;
+}
+.jlg-sidebar-position-right .pro-sidebar {
+    left: auto;
+    right: 0;
 }
 .sidebar-inner {
     display: flex;
@@ -114,9 +132,15 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     body.jlg-sidebar-floating .pro-sidebar {
         top: var(--floating-vertical-margin, 1rem) !important;
         height: calc(100vh - (var(--floating-vertical-margin, 1rem) * 2)) !important;
-        border-radius: 0 var(--border-radius, 12px) var(--border-radius, 12px) 0;
         border: var(--border-width, 1px) solid var(--border-color, rgba(255,255,255,0.2));
+    }
+    body.jlg-sidebar-floating.jlg-sidebar-position-left .pro-sidebar {
+        border-radius: 0 var(--border-radius, 12px) var(--border-radius, 12px) 0;
         border-left: none;
+    }
+    body.jlg-sidebar-floating.jlg-sidebar-position-right .pro-sidebar {
+        border-radius: var(--border-radius, 12px) 0 0 var(--border-radius, 12px);
+        border-right: none;
     }
 }
 
@@ -130,7 +154,8 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
         backdrop-filter: blur(var(--mobile-blur));
     }
     body.sidebar-open .pro-sidebar { visibility: visible; }
-    .pro-sidebar.animation-slide-left { transform: translateX(-100%); }
+    body.jlg-sidebar-position-left .pro-sidebar.animation-slide-left { transform: translateX(-100%); }
+    body.jlg-sidebar-position-right .pro-sidebar.animation-slide-left { transform: translateX(100%); }
     body.sidebar-open .pro-sidebar.animation-slide-left { transform: translateX(0); }
     .pro-sidebar.animation-fade { opacity: 0; }
     body.sidebar-open .pro-sidebar.animation-fade { opacity: 1; }
@@ -167,6 +192,7 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     }
     body.jlg-sidebar-push:not(.sidebar-open) {
         padding-left: 0;
+        padding-right: 0;
     }
 }
 
@@ -399,11 +425,18 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 .hamburger-menu {
     display: block; position: fixed;
     top: var(--hamburger-top-position, 2rem);
-    left: 15px; z-index: 1001;
+    left: 15px; right: auto; z-index: 1001;
     background: none; border: none;
     padding: 0; cursor: pointer;
     width: 50px; height: 50px;
     display: flex; align-items: center; justify-content: center;
+}
+.hamburger-menu.orientation-right {
+    left: auto;
+    right: 15px;
+}
+.hamburger-menu.orientation-left {
+    right: auto;
 }
 
 .hamburger-menu:hover,

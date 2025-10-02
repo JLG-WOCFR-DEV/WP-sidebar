@@ -54,6 +54,13 @@ $scenarios = [
 
         return $renderer->addBodyClasses($baselineClasses);
     },
+    'Right orientation adds right class' => function (array $settings) use ($settingsRepository, $renderer, $baselineClasses): array {
+        $settings['enable_sidebar'] = true;
+        $settings['sidebar_position'] = 'right';
+        $settingsRepository->saveOptions($settings);
+
+        return $renderer->addBodyClasses($baselineClasses);
+    },
     'Floating layout adds floating class' => function (array $settings) use ($settingsRepository, $renderer, $baselineClasses): array {
         $settings['enable_sidebar'] = true;
         $settings['desktop_behavior'] = 'push';
@@ -75,10 +82,11 @@ $scenarios = [
 
 $expectedResults = [
     'Disabled sidebar leaves classes unchanged' => ['baseline-class'],
-    'Push behavior adds active and push classes' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-push'],
-    'Overlay behavior adds overlay class instead of push' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-overlay'],
-    'Floating layout adds floating class' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-push', 'jlg-sidebar-floating'],
-    'Horizontal layout adds horizontal classes' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-horizontal-bar', 'jlg-horizontal-position-bottom', 'jlg-horizontal-sticky'],
+    'Push behavior adds active and push classes' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-position-left', 'jlg-sidebar-push'],
+    'Overlay behavior adds overlay class instead of push' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-position-left', 'jlg-sidebar-overlay'],
+    'Right orientation adds right class' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-position-right', 'jlg-sidebar-push'],
+    'Floating layout adds floating class' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-position-left', 'jlg-sidebar-push', 'jlg-sidebar-floating'],
+    'Horizontal layout adds horizontal classes' => ['baseline-class', 'jlg-sidebar-active', 'jlg-sidebar-position-left', 'jlg-sidebar-horizontal-bar', 'jlg-horizontal-position-bottom', 'jlg-horizontal-sticky'],
 ];
 
 foreach ($scenarios as $label => $runner) {

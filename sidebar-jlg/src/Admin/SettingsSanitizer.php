@@ -72,6 +72,12 @@ class SettingsSanitizer
             $existingOptions['layout_style'] ?? ($defaults['layout_style'] ?? ''),
             $defaults['layout_style'] ?? ''
         );
+        $sanitized['sidebar_position'] = $this->sanitizeChoice(
+            $input['sidebar_position'] ?? null,
+            $this->allowedChoices['sidebar_position'],
+            $existingOptions['sidebar_position'] ?? ($defaults['sidebar_position'] ?? ''),
+            $defaults['sidebar_position'] ?? ''
+        );
         $sanitized['horizontal_bar_height'] = ValueNormalizer::normalizeCssDimension(
             $input['horizontal_bar_height'] ?? $existingOptions['horizontal_bar_height'],
             $existingOptions['horizontal_bar_height']

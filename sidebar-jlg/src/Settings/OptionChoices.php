@@ -9,6 +9,7 @@ final class OptionChoices
      */
     public const ALLOWED_CHOICES = [
         'layout_style' => ['full', 'floating', 'horizontal-bar'],
+        'sidebar_position' => ['left', 'right'],
         'desktop_behavior' => ['push', 'overlay'],
         'search_method' => ['default', 'shortcode', 'hook'],
         'search_alignment' => ['flex-start', 'center', 'flex-end'],

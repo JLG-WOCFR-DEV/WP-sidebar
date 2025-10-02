@@ -13,6 +13,7 @@ class DefaultSettings
             'enable_sidebar'    => true,
             'app_name'          => 'Sidebar JLG',
             'layout_style'      => 'full',
+            'sidebar_position'  => 'left',
             'floating_vertical_margin'   => '4rem',
             'horizontal_bar_height'      => '4rem',
             'horizontal_bar_alignment'   => 'space-between',

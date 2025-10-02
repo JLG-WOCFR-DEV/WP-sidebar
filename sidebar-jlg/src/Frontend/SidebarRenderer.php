@@ -50,6 +50,7 @@ class SidebarRenderer
         'horizontal_bar_height' => '4rem',
         'horizontal_bar_alignment' => 'space-between',
         'horizontal_bar_position' => 'top',
+        'sidebar_position' => 'left',
     ];
 
     private SettingsRepository $settings;
@@ -122,6 +123,7 @@ class SidebarRenderer
             'animation_type' => $options['animation_type'] ?? 'slide-left',
             'close_on_link_click' => $options['close_on_link_click'] ?? '',
             'debug_mode' => (string) ($options['debug_mode'] ?? '0'),
+            'sidebar_position' => $this->resolveSidebarPosition($options),
             'messages' => [
                 'missingElements' => __('Sidebar JLG : menu introuvable.', 'sidebar-jlg'),
             ],
@@ -725,6 +727,7 @@ class SidebarRenderer
         }
 
         $classes[] = 'jlg-sidebar-active';
+        $classes[] = 'jlg-sidebar-position-' . $this->resolveSidebarPosition($options);
         $layoutStyle = $options['layout_style'] ?? 'full';
 
         if ($layoutStyle === 'horizontal-bar') {
@@ -777,5 +780,12 @@ class SidebarRenderer
         }
 
         return (bool) \apply_filters('sidebar_jlg_is_dynamic', $isDynamic, $options);
+    }
+
+    private function resolveSidebarPosition(array $options): string
+    {
+        $position = \sanitize_key($options['sidebar_position'] ?? '');
+
+        return $position === 'right' ? 'right' : 'left';
     }
 }

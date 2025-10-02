@@ -33,6 +33,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    const sidebarPositionAttr = sidebar.getAttribute('data-position');
+    const sidebarPosition = sidebarPositionAttr === 'right' ? 'right' : 'left';
+    document.body.classList.remove('jlg-sidebar-position-left', 'jlg-sidebar-position-right');
+    document.body.classList.add(`jlg-sidebar-position-${sidebarPosition}`);
+    hamburgerBtn.classList.remove('orientation-left', 'orientation-right');
+    hamburgerBtn.classList.add(`orientation-${sidebarPosition}`);
+
     const prefersReducedMotionQuery = typeof window.matchMedia === 'function'
         ? window.matchMedia('(prefers-reduced-motion: reduce)')
         : null;
