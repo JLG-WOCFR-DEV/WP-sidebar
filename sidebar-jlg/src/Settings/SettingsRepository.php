@@ -16,11 +16,10 @@ class SettingsRepository
         'hamburger_top_position',
         'header_padding_top',
         'horizontal_bar_height',
-    ];
-
-    private const SIMPLE_DIMENSION_OPTION_KEYS = [
         'letter_spacing',
     ];
+
+    private const SIMPLE_DIMENSION_OPTION_KEYS = [];
 
     private const OPACITY_OPTION_KEYS = [
         'overlay_opacity',

@@ -35,7 +35,7 @@ $existing_options = array_merge((new DefaultSettings())->all(), [
     'font_family'              => 'arial',
     'font_weight'              => '500',
     'text_transform'           => 'uppercase',
-    'letter_spacing'           => '0.1em',
+    'letter_spacing'           => ['value' => '0.1', 'unit' => 'em'],
     'header_logo_type'         => 'text',
     'app_name'                 => 'Existing App',
     'header_logo_image'        => 'http://example.com/logo.png',
@@ -63,7 +63,7 @@ $input = [
     'font_family'              => 'google-roboto',
     'font_weight'              => '700',
     'text_transform'           => 'lowercase',
-    'letter_spacing'           => 'calc(0.2em + 1px)',
+    'letter_spacing'           => ['value' => '0.2', 'unit' => 'rem'],
     'header_logo_type'         => 'image',
     'app_name'                 => 'New App',
     'header_logo_image'        => 'http://example.com/new-logo.png',
@@ -107,7 +107,7 @@ assertSame(0.8, $result['mobile_bg_opacity'], 'Valid opacity within range is pre
 assertSame('google-roboto', $result['font_family'], 'Allowed Google font choice is preserved');
 assertSame('700', $result['font_weight'], 'Allowed font weight is preserved');
 assertSame('lowercase', $result['text_transform'], 'Allowed text transform is preserved');
-assertSame('calc(0.2em + 1px)', $result['letter_spacing'], 'Letter spacing accepts calc expressions');
+assertSame(['value' => '0.2', 'unit' => 'rem'], $result['letter_spacing'], 'Letter spacing structure is normalized');
 
 $inputBelowMin = $input;
 $inputBelowMin['mobile_bg_opacity'] = -0.5;
@@ -143,7 +143,7 @@ assertSame('', $resultSanitizedAccentPayload['accent_color'], 'Existing accent c
 $inputInvalidSpacing = $input;
 $inputInvalidSpacing['letter_spacing'] = 'javascript:alert(1)';
 $resultInvalidSpacing = $method->invoke($sanitizer, $inputInvalidSpacing, $existing_options);
-assertSame('0.1em', $resultInvalidSpacing['letter_spacing'], 'Invalid letter spacing falls back to existing value');
+assertSame(['value' => '0.1', 'unit' => 'em'], $resultInvalidSpacing['letter_spacing'], 'Invalid letter spacing falls back to existing value');
 
 if ($testsPassed) {
     echo "All sanitize_style_settings tests passed.\n";

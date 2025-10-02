@@ -57,7 +57,7 @@ class DefaultSettings
             'font_family'       => 'system-ui',
             'font_weight'       => '400',
             'text_transform'    => 'none',
-            'letter_spacing'    => '0em',
+            'letter_spacing'    => ['value' => '0', 'unit' => 'em'],
             'font_color_type'   => 'solid',
             'font_color'        => 'rgba(224, 224, 224, 1)',
             'font_color_start'  => '#fafafa',

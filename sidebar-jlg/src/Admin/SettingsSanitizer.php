@@ -17,6 +17,7 @@ class SettingsSanitizer
         'content_margin' => ['px', 'rem', 'em', '%'],
         'hamburger_top_position' => ['px', 'rem', 'em', 'vh', 'vw'],
         'header_padding_top' => ['px', 'rem', 'em', '%'],
+        'letter_spacing' => ['px', 'rem', 'em'],
     ];
 
     private DefaultSettings $defaults;
@@ -286,10 +287,11 @@ class SettingsSanitizer
             $existingOptions['text_transform'] ?? ($defaults['text_transform'] ?? ''),
             $defaults['text_transform'] ?? ''
         );
-        $existingLetterSpacing = $existingOptions['letter_spacing'] ?? ($defaults['letter_spacing'] ?? '0');
-        $sanitized['letter_spacing'] = ValueNormalizer::normalizeCssDimension(
-            $input['letter_spacing'] ?? $existingLetterSpacing,
-            $existingLetterSpacing
+        $sanitized['letter_spacing'] = $this->sanitizeDimension(
+            $input,
+            'letter_spacing',
+            $existingOptions,
+            $defaults
         );
         $sanitized['font_color_type'] = $this->sanitizeChoice(
             $input['font_color_type'] ?? null,
