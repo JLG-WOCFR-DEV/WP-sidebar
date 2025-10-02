@@ -28,82 +28,87 @@ if ($layoutStyle === 'horizontal-bar') {
 $menuClassAttr = implode(' ', array_map('sanitize_html_class', $menuClasses));
 
 $currentRequestContext = SidebarRenderer::getCurrentRequestContext();
+$menuNodes = SidebarRenderer::buildMenuTree($options, $allIcons, $currentRequestContext);
+
+$socialOrientation = '';
+if (isset($options['social_orientation']) && is_string($options['social_orientation'])) {
+    $socialOrientation = $options['social_orientation'];
+}
+
+$renderMenuNodes = static function (array $nodes, string $layout) use (&$renderMenuNodes): string {
+    if ($nodes === []) {
+        return '';
+    }
+
+    $html = '';
+
+    foreach ($nodes as $node) {
+        if (!is_array($node)) {
+            continue;
+        }
+
+        $classes = ['menu-item'];
+        if (!empty($node['classes']) && is_array($node['classes'])) {
+            $classes = array_merge($classes, $node['classes']);
+        }
+        $classes = array_unique(array_filter(array_map('sanitize_html_class', $classes)));
+        $classAttr = '';
+        if (!empty($classes)) {
+            $classAttr = ' class="' . esc_attr(implode(' ', $classes)) . '"';
+        }
+
+        $url = isset($node['url']) && is_string($node['url']) && $node['url'] !== '' ? $node['url'] : '#';
+        $ariaCurrent = !empty($node['is_current']) ? ' aria-current="page"' : '';
+
+        ob_start();
+        ?>
+        <li<?php echo $classAttr; ?>>
+            <a href="<?php echo esc_url($url); ?>"<?php echo $ariaCurrent; ?>>
+                <?php
+                $icon = $node['icon'] ?? null;
+                if (is_array($icon)) {
+                    if (($icon['type'] ?? '') === 'svg_url' && !empty($icon['url'])) {
+                        ?>
+                        <span class="menu-icon svg-icon"><img src="<?php echo esc_url($icon['url']); ?>" alt=""></span>
+                        <?php
+                    } elseif (($icon['type'] ?? '') === 'svg_inline' && !empty($icon['markup'])) {
+                        $iconClass = ($icon['is_custom'] ?? false) ? 'menu-icon svg-icon' : 'menu-icon';
+                        ?>
+                        <span class="<?php echo esc_attr($iconClass); ?>"><?php echo wp_kses_post((string) $icon['markup']); ?></span>
+                        <?php
+                    }
+                }
+                ?>
+                <span><?php echo esc_html((string) ($node['label'] ?? '')); ?></span>
+            </a>
+            <?php if (!empty($node['children']) && is_array($node['children'])) : ?>
+                <?php
+                $submenuClasses = ['submenu'];
+                if ($layout === 'horizontal-bar') {
+                    $submenuClasses[] = 'is-mega';
+                }
+                $submenuClassAttr = implode(' ', array_unique(array_filter(array_map('sanitize_html_class', $submenuClasses))));
+                ?>
+                <ul class="<?php echo esc_attr($submenuClassAttr); ?>">
+                    <?php echo $renderMenuNodes($node['children'], $layout); ?>
+                </ul>
+            <?php endif; ?>
+        </li>
+        <?php
+        $html .= ob_get_clean();
+    }
+
+    return $html;
+};
 
 ob_start();
 ?>
 <nav class="<?php echo esc_attr($navigationClassAttr); ?>" role="navigation" aria-label="<?php esc_attr_e('Navigation principale', 'sidebar-jlg'); ?>">
     <ul class="<?php echo esc_attr($menuClassAttr); ?>">
-        <?php if (!empty($options['menu_items']) && is_array($options['menu_items'])) : ?>
-            <?php foreach ($options['menu_items'] as $item) : ?>
-                <?php
-                $url = '#';
-                $raw_url = '';
-
-                if (($item['type'] ?? '') === 'custom') {
-                    $raw_url = $item['value'] ?? '';
-                } elseif (($item['type'] ?? '') === 'post' || ($item['type'] ?? '') === 'page') {
-                    $raw_url = get_permalink(absint($item['value']));
-                } elseif (($item['type'] ?? '') === 'category') {
-                    $raw_url = get_category_link(absint($item['value']));
-                }
-
-                $is_valid_url = true;
-
-                if (function_exists('is_wp_error') && is_wp_error($raw_url)) {
-                    $is_valid_url = false;
-                }
-
-                if (!is_string($raw_url) || $raw_url === '') {
-                    $is_valid_url = false;
-                }
-
-                if ($is_valid_url) {
-                    $url = $raw_url;
-                }
-
-                $is_current_item = false;
-                if (is_array($item)) {
-                    if (($item['type'] ?? '') === 'custom' && !$is_valid_url) {
-                        $is_current_item = false;
-                    } else {
-                        $is_current_item = SidebarRenderer::isMenuItemCurrent($item, $currentRequestContext);
-                    }
-                }
-
-                $itemClasses = [];
-                if ($is_current_item) {
-                    $itemClasses[] = 'current-menu-item';
-                }
-
-                $liClassAttribute = '';
-                if (!empty($itemClasses)) {
-                    $liClassAttribute = ' class="' . esc_attr(implode(' ', array_map('sanitize_html_class', $itemClasses))) . '"';
-                }
-
-                $ariaCurrentAttribute = $is_current_item ? ' aria-current="page"' : '';
-                ?>
-                <li<?php echo $liClassAttribute; ?>>
-                    <a href="<?php echo esc_url($url); ?>"<?php echo $ariaCurrentAttribute; ?>>
-                        <?php if (!empty($item['icon'])) : ?>
-                            <?php if (!empty($item['icon_type']) && $item['icon_type'] === 'svg_url' && filter_var($item['icon'], FILTER_VALIDATE_URL)) : ?>
-                                <span class="menu-icon svg-icon"><img src="<?php echo esc_url($item['icon']); ?>" alt=""></span>
-                            <?php elseif (isset($allIcons[$item['icon']])) : ?>
-                                <?php $icon_markup = (string) $allIcons[$item['icon']]; ?>
-                                <?php if (strpos($item['icon'], 'custom_') === 0) : ?>
-                                    <span class="menu-icon svg-icon"><?php echo $icon_markup; ?></span>
-                                <?php else : ?>
-                                    <span class="menu-icon"><?php echo $icon_markup; ?></span>
-                                <?php endif; ?>
-                            <?php endif; ?>
-                        <?php endif; ?>
-                        <span><?php echo esc_html($item['label'] ?? ''); ?></span>
-                    </a>
-                </li>
-            <?php endforeach; ?>
-        <?php endif; ?>
+        <?php echo $renderMenuNodes($menuNodes, $layoutStyle); ?>
 
         <?php if (($options['social_position'] ?? '') === 'in-menu' && !empty($options['social_icons']) && is_array($options['social_icons'])) : ?>
-            <?php $menuSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $options['social_orientation']); ?>
+            <?php $menuSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $socialOrientation); ?>
             <?php if ($menuSocialIcons !== '') : ?>
                 <li class="menu-separator" aria-hidden="true"><hr></li>
                 <li class="social-icons-wrapper"><?php echo $menuSocialIcons; ?></li>
@@ -114,7 +119,7 @@ ob_start();
 
 <?php
 if ($options['social_position'] === 'footer' && !empty($options['social_icons']) && is_array($options['social_icons'])) {
-    $footerSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $options['social_orientation']);
+    $footerSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $socialOrientation);
     if ($footerSocialIcons !== '') {
         echo '<div class="sidebar-footer">' . $footerSocialIcons . '</div>';
     }

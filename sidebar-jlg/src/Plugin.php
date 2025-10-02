@@ -63,6 +63,7 @@ class Plugin
         add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
         add_action('update_option_sidebar_jlg_settings', [$this, 'handleSettingsUpdated'], 10, 3);
         add_action('sidebar_jlg_custom_icons_changed', [$this->cache, 'clear'], 10, 0);
+        add_action('wp_update_nav_menu', [$this->cache, 'clear'], 10, 0);
 
         $this->settings->revalidateStoredOptions();
         $this->menuPage->registerHooks();

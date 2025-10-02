@@ -2,6 +2,7 @@
 
 namespace JLG\Sidebar\Settings;
 
+use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\OptionChoices;
 use JLG\Sidebar\Settings\ValueNormalizer;
@@ -237,6 +238,8 @@ class SettingsRepository
         $menuItemsChanged = false;
         $socialIconsChanged = false;
 
+        $navFilters = SettingsSanitizer::getAllowedNavMenuFilters();
+
         if (!empty($options['menu_items']) && is_array($options['menu_items'])) {
             foreach ($options['menu_items'] as $index => $item) {
                 if (!is_array($item)) {
@@ -248,20 +251,58 @@ class SettingsRepository
                 $iconType = $item['icon_type'] ?? '';
                 $iconValue = $item['icon'] ?? '';
 
-                if ($iconType === 'svg_url' || $iconValue === '') {
-                    continue;
+                if ($iconType !== 'svg_url' && $iconValue !== '') {
+                    if (strpos($iconValue, 'custom_') === 0) {
+                        $iconKey = sanitize_key($iconValue);
+
+                        if ($iconKey === '' || !isset($availableIcons[$iconKey])) {
+                            $options['menu_items'][$index]['icon'] = '';
+                            $options['menu_items'][$index]['icon_type'] = 'svg_inline';
+                            $menuItemsChanged = true;
+                        } elseif ($iconKey !== $iconValue) {
+                            $options['menu_items'][$index]['icon'] = $iconKey;
+                            $menuItemsChanged = true;
+                        }
+                    }
                 }
 
-                if (strpos($iconValue, 'custom_') === 0) {
-                    $iconKey = sanitize_key($iconValue);
+                if (($item['type'] ?? '') === 'nav_menu') {
+                    $rawMenuId = isset($item['value']) ? $item['value'] : 0;
+                    $menuId = absint($rawMenuId);
 
-                    if ($iconKey === '' || !isset($availableIcons[$iconKey])) {
-                        $options['menu_items'][$index]['icon'] = '';
-                        $options['menu_items'][$index]['icon_type'] = 'svg_inline';
+                    if ($menuId > 0 && function_exists('wp_get_nav_menu_object')) {
+                        $menuObject = wp_get_nav_menu_object($menuId);
+                        if (!$menuObject) {
+                            $menuId = 0;
+                        }
+                    }
+
+                    if (($options['menu_items'][$index]['value'] ?? null) !== $menuId) {
+                        $options['menu_items'][$index]['value'] = $menuId;
                         $menuItemsChanged = true;
-                    } elseif ($iconKey !== $iconValue) {
-                        $options['menu_items'][$index]['icon'] = $iconKey;
+                    }
+
+                    $depth = absint($item['nav_menu_max_depth'] ?? 0);
+                    if (($options['menu_items'][$index]['nav_menu_max_depth'] ?? null) !== $depth) {
+                        $options['menu_items'][$index]['nav_menu_max_depth'] = $depth;
                         $menuItemsChanged = true;
+                    }
+
+                    $rawFilter = isset($item['nav_menu_filter']) ? sanitize_key($item['nav_menu_filter']) : '';
+                    if (!in_array($rawFilter, $navFilters, true)) {
+                        $rawFilter = $navFilters[0];
+                    }
+
+                    if (($options['menu_items'][$index]['nav_menu_filter'] ?? null) !== $rawFilter) {
+                        $options['menu_items'][$index]['nav_menu_filter'] = $rawFilter;
+                        $menuItemsChanged = true;
+                    }
+
+                    if (!array_key_exists('nav_menu_max_depth', $options['menu_items'][$index])) {
+                        $options['menu_items'][$index]['nav_menu_max_depth'] = 0;
+                    }
+                    if (!array_key_exists('nav_menu_filter', $options['menu_items'][$index])) {
+                        $options['menu_items'][$index]['nav_menu_filter'] = $navFilters[0];
                     }
                 }
             }

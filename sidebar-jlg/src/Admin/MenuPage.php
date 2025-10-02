@@ -86,7 +86,7 @@ class MenuPage
         wp_enqueue_script(
             'sidebar-jlg-admin-js',
             plugin_dir_url($this->pluginFile) . 'assets/js/admin-script.js',
-            ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util'],
+            ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'wp-data', 'wp-api-fetch'],
             $this->version,
             true
         );
@@ -134,6 +134,14 @@ class MenuPage
                 'importSuccess' => __('Réglages importés avec succès. Rechargement de la page…', 'sidebar-jlg'),
                 'importError' => __('L’import des réglages a échoué.', 'sidebar-jlg'),
                 'importMissingFile' => __('Veuillez sélectionner un fichier JSON avant de lancer l’import.', 'sidebar-jlg'),
+                'navMenuFieldLabel' => __('Menu WordPress', 'sidebar-jlg'),
+                'navMenuSelectPlaceholder' => __('Sélectionnez un menu…', 'sidebar-jlg'),
+                'navMenuDepthLabel' => __('Profondeur maximale', 'sidebar-jlg'),
+                'navMenuDepthHelp' => __('0 = illimité', 'sidebar-jlg'),
+                'navMenuFilterLabel' => __('Filtrage', 'sidebar-jlg'),
+                'navMenuFilterAll' => __('Tous les éléments', 'sidebar-jlg'),
+                'navMenuFilterTopLevel' => __('Uniquement le niveau 1', 'sidebar-jlg'),
+                'navMenuFilterBranch' => __('Branche de la page courante', 'sidebar-jlg'),
             ],
             'preview_messages' => [
                 'loading' => __('Chargement de l’aperçu…', 'sidebar-jlg'),
