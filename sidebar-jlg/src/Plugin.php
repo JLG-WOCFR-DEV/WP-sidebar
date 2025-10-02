@@ -94,7 +94,7 @@ class Plugin
      * @param mixed $oldValue
      * @param mixed $value
      */
-    public function handleSettingsUpdated($oldValue, $value, string $optionName = ''): void
+    public function handleSettingsUpdated($oldValue = null, $value = null, string $optionName = ''): void
     {
         $this->cache->clear();
 
