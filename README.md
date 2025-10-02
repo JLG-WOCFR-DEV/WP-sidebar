@@ -46,9 +46,9 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 ### Navigation imbriquée et UX
 
 - Les éléments `menu-item-has-children` affichent désormais un bouton dédié (toggle) placé à droite du lien parent. Le bouton expose les attributs `aria-expanded`, `aria-controls` et met à jour son libellé automatiquement pour refléter l'état du sous-menu.
-- Les sous-menus sont masqués par défaut via une classe `is-open` et bénéficient d'une indentation, de séparateurs visuels et de transitions douces. Les états ouverts sont conservés pour les éléments de navigation correspondant à la page courante.
-- Le script public gère les interactions clavier (Esc pour refermer, flèche bas pour ouvrir et focaliser le premier lien) et différencie mobile/desktop : sur les écrans tactiles étroits, l'ouverture d'un sous-menu referme ses frères afin de limiter le défilement.
-- Vérification manuelle : navigation testée en mode tactile (émulation iPhone 12 Pro Max dans Chromium) pour valider les appuis successifs sur les toggles et la conservation du focus clavier.
+- Les sous-menus sont masqués par défaut via une classe `is-open` et bénéficient d'une indentation, de séparateurs visuels et de transitions douces. Les états ouverts sont conservés pour les éléments de navigation correspondant à la page courante et leurs hauteurs sont recalculées dynamiquement (ResizeObserver) pour suivre les variations de contenu.
+- Le script public gère les interactions clavier (Esc pour refermer, flèche bas pour ouvrir et focaliser le premier lien) et différencie mobile/desktop : sur les écrans tactiles étroits, l'ouverture d'un sous-menu referme ses frères afin de limiter le défilement. Les sous-menus fermés sont rendus inactifs (`pointer-events: none`) pour éviter les pièges de focus.
+- Vérification manuelle : navigation testée en mode tactile (émulation iPhone 12 Pro Max dans Chromium) pour valider les appuis successifs sur les toggles, la fluidité des transitions et la conservation du focus clavier.
 
 ## Désinstallation
 

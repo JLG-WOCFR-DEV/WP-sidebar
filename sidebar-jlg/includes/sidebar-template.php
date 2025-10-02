@@ -127,6 +127,7 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
                     aria-expanded="<?php echo esc_attr($toggleExpandedAttr); ?>"
                     aria-controls="<?php echo esc_attr($submenuId); ?>"
                     aria-haspopup="true"
+                    aria-label="<?php echo esc_attr($toggleExpandedAttr === 'true' ? $toggleLabelCollapse : $toggleLabelExpand); ?>"
                     data-label-expand="<?php echo esc_attr($toggleLabelExpand); ?>"
                     data-label-collapse="<?php echo esc_attr($toggleLabelCollapse); ?>"
                 >

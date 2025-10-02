@@ -94,6 +94,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const LABEL_EXPAND_ATTR = 'data-label-expand';
     const LABEL_COLLAPSE_ATTR = 'data-label-collapse';
     const menuItemsWithChildren = Array.from(sidebar.querySelectorAll('.menu-item-has-children, .has-submenu-toggle'));
+    const supportsResizeObserver = typeof window.ResizeObserver === 'function';
+    const submenuResizeObservers = supportsResizeObserver ? new Map() : null;
 
     function isAriaHidden(element) {
         const ariaHidden = element.getAttribute('aria-hidden');
@@ -193,6 +195,39 @@ document.addEventListener('DOMContentLoaded', function() {
         submenu.style.setProperty('--submenu-max-height', `${height}px`);
     }
 
+    function observeSubmenuSize(submenu) {
+        if (!supportsResizeObserver || !submenu) {
+            return;
+        }
+
+        if (submenuResizeObservers.has(submenu)) {
+            return;
+        }
+
+        const observer = new ResizeObserver(() => {
+            if (submenu.classList.contains(SUBMENU_OPEN_CLASS)) {
+                applySubmenuHeight(submenu);
+            }
+        });
+
+        observer.observe(submenu);
+        submenuResizeObservers.set(submenu, observer);
+    }
+
+    function unobserveSubmenuSize(submenu) {
+        if (!supportsResizeObserver || !submenu) {
+            return;
+        }
+
+        const observer = submenuResizeObservers.get(submenu);
+        if (!observer) {
+            return;
+        }
+
+        observer.disconnect();
+        submenuResizeObservers.delete(submenu);
+    }
+
     function handleSubmenuTransitionEnd(event) {
         if (!event || event.propertyName !== 'max-height') {
             return;
@@ -254,6 +289,12 @@ document.addEventListener('DOMContentLoaded', function() {
         submenu.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
         applyToggleLabel(toggle, shouldOpen);
 
+        if (shouldOpen) {
+            observeSubmenuSize(submenu);
+        } else {
+            unobserveSubmenuSize(submenu);
+        }
+
         if (!shouldOpen) {
             requestAnimationFrame(() => {
                 submenu.style.setProperty('--submenu-max-height', '0px');
@@ -286,6 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (submenu.classList.contains(SUBMENU_OPEN_CLASS) || toggle.getAttribute('aria-expanded') === 'true') {
                 applySubmenuHeight(submenu);
+                observeSubmenuSize(submenu);
             }
         });
     }
@@ -313,8 +355,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!isExpanded) {
             submenu.style.setProperty('--submenu-max-height', '0px');
+            unobserveSubmenuSize(submenu);
         } else {
             applySubmenuHeight(submenu);
+            observeSubmenuSize(submenu);
         }
 
         toggle.addEventListener('click', (event) => {
