@@ -102,6 +102,7 @@ $textTransformLabels = [
             'content_margin'          => ['px', 'rem', 'em', '%'],
             'hamburger_top_position'  => ['px', 'rem', 'em', 'vh', 'vw'],
             'header_padding_top'      => ['px', 'rem', 'em', '%'],
+            'letter_spacing'          => ['px', 'rem', 'em'],
         ];
 
         $dimensionValues = [];
@@ -439,11 +440,22 @@ $textTransformLabels = [
                     <th scope="row"><?php esc_html_e( 'Apparence sur Mobile', 'sidebar-jlg' ); ?></th>
                     <td>
                         <p><label><?php esc_html_e( 'Couleur de fond', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[mobile_bg_color]" value="<?php echo esc_attr( $options['mobile_bg_color'] ); ?>" class="color-picker-rgba"/></p>
-                        <p>
+                        <div class="sidebar-jlg-range-field">
                             <label><?php esc_html_e( 'Opacité du fond', 'sidebar-jlg' ); ?></label>
-                            <input type="range" name="sidebar_jlg_settings[mobile_bg_opacity]" min="0" max="1" step="0.05" value="<?php echo esc_attr($options['mobile_bg_opacity']); ?>">
-                            <span class="range-value"><?php echo esc_html($options['mobile_bg_opacity']); ?></span>
-                        </p>
+                            <div
+                                class="sidebar-jlg-range-control"
+                                data-sidebar-range-control
+                                data-setting-name="sidebar_jlg_settings[mobile_bg_opacity]"
+                                data-label="<?php esc_attr_e( 'Opacité du fond mobile', 'sidebar-jlg' ); ?>"
+                                data-help="<?php esc_attr_e( '0 = totalement transparent, 1 = totalement opaque.', 'sidebar-jlg' ); ?>"
+                                data-error-message="<?php esc_attr_e( 'L’opacité doit rester comprise entre 0 et 1.', 'sidebar-jlg' ); ?>"
+                                data-min="0"
+                                data-max="1"
+                                data-step="0.05"
+                            >
+                                <input type="hidden" data-range-value name="sidebar_jlg_settings[mobile_bg_opacity]" value="<?php echo esc_attr( $options['mobile_bg_opacity'] ); ?>" />
+                            </div>
+                        </div>
                         <p><label><?php esc_html_e( 'Intensité du flou', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[mobile_blur]" value="<?php echo esc_attr($options['mobile_blur']); ?>" class="small-text" /> px</p>
                     </td>
                 </tr>
@@ -478,10 +490,24 @@ $textTransformLabels = [
                                 <?php endforeach; ?>
                             </select>
                         </p>
+                        <?php $letterSpacing = $dimensionValues['letter_spacing']; ?>
                         <p>
                             <label><?php esc_html_e( 'Espacement des lettres', 'sidebar-jlg' ); ?></label>
-                            <input type="text" name="sidebar_jlg_settings[letter_spacing]" value="<?php echo esc_attr( $options['letter_spacing'] ); ?>" class="small-text" placeholder="0.05em" />
-                            <em class="description"><?php esc_html_e( 'Accepte les unités CSS (`px`, `em`, `rem`, etc.) ou une valeur `calc()`.', 'sidebar-jlg' ); ?></em>
+                            <div
+                                class="sidebar-jlg-unit-control"
+                                data-sidebar-unit-control
+                                data-setting-name="sidebar_jlg_settings[letter_spacing]"
+                                data-label="<?php esc_attr_e( 'Espacement des lettres', 'sidebar-jlg' ); ?>"
+                                data-help="<?php esc_attr_e( 'Contrôle la distance entre chaque lettre du menu.', 'sidebar-jlg' ); ?>"
+                                data-error-message="<?php esc_attr_e( 'L’espacement des lettres ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                data-default-value="<?php echo esc_attr( $defaults['letter_spacing']['value'] ?? '0' ); ?>"
+                                data-default-unit="<?php echo esc_attr( $defaults['letter_spacing']['unit'] ?? 'em' ); ?>"
+                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['letter_spacing'] ) ); ?>"
+                            >
+                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[letter_spacing][value]" value="<?php echo esc_attr( $letterSpacing['value'] ); ?>" />
+                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[letter_spacing][unit]" value="<?php echo esc_attr( $letterSpacing['unit'] ); ?>" />
+                            </div>
+                            <em class="description"><?php esc_html_e( 'Sélectionnez une valeur numérique et l’unité adaptée (`px`, `em` ou `rem`).', 'sidebar-jlg' ); ?></em>
                         </p>
                         <p>
                             <label><?php esc_html_e( 'Casse du texte', 'sidebar-jlg' ); ?></label>

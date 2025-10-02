@@ -503,6 +503,7 @@ class SidebarPreviewModule {
             'hamburger_top_position',
             'header_padding_top',
             'horizontal_bar_height',
+            'letter_spacing',
         ];
 
         this.dimensionKeys.forEach((key) => {
@@ -1013,10 +1014,6 @@ class SidebarPreviewModule {
             this.currentOptions.text_transform = value || 'none';
         });
 
-        this.bindField('sidebar_jlg_settings[letter_spacing]', (value) => {
-            this.currentOptions.letter_spacing = value;
-        });
-
         this.bindField('sidebar_jlg_settings[accent_color]', (value) => {
             this.currentOptions.accent_color = value;
         });
@@ -1031,6 +1028,18 @@ class SidebarPreviewModule {
 
         this.bindField('sidebar_jlg_settings[accent_color_end]', (value) => {
             this.currentOptions.accent_color_end = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[mobile_bg_color]', (value) => {
+            this.currentOptions.mobile_bg_color = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[mobile_bg_opacity]', (value) => {
+            this.currentOptions.mobile_bg_opacity = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[mobile_blur]', (value) => {
+            this.currentOptions.mobile_blur = value;
         });
 
         this.bindField('sidebar_jlg_settings[width_desktop]', (value) => {
@@ -1062,6 +1071,7 @@ class SidebarPreviewModule {
         this.bindDimensionField('sidebar_jlg_settings[floating_vertical_margin]', 'floating_vertical_margin');
 
         this.bindDimensionField('sidebar_jlg_settings[border_radius]', 'border_radius');
+        this.bindDimensionField('sidebar_jlg_settings[letter_spacing]', 'letter_spacing');
 
         this.bindField('sidebar_jlg_settings[border_width]', (value) => {
             this.currentOptions.border_width = value;
@@ -1260,7 +1270,10 @@ class SidebarPreviewModule {
             ['--sidebar-font-family', this.resolveFontFamily()],
             ['--sidebar-font-weight', this.currentOptions.font_weight],
             ['--sidebar-text-transform', this.currentOptions.text_transform],
-            ['--sidebar-letter-spacing', this.currentOptions.letter_spacing],
+            ['--sidebar-letter-spacing', this.formatDimension(this.currentOptions.letter_spacing)],
+            ['--mobile-bg-color', this.currentOptions.mobile_bg_color],
+            ['--mobile-bg-opacity', this.formatOpacity(this.currentOptions.mobile_bg_opacity)],
+            ['--mobile-blur', this.formatDimension(this.currentOptions.mobile_blur)],
             ['--sidebar-accent-color', this.resolveAccentBaseColor()],
             ['--sidebar-logo-size', this.formatDimension(this.currentOptions.header_logo_size)],
             ['--sidebar-header-align-desktop', this.currentOptions.header_alignment_desktop],
