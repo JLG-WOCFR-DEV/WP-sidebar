@@ -91,6 +91,27 @@ class SettingsRepository
         return $options;
     }
 
+    public function getProfiles(): array
+    {
+        $storedOptions = $this->getStoredOptions();
+
+        if (!isset($storedOptions['profiles']) || !is_array($storedOptions['profiles'])) {
+            return [];
+        }
+
+        $profiles = [];
+
+        foreach ($storedOptions['profiles'] as $profile) {
+            if (!is_array($profile)) {
+                continue;
+            }
+
+            $profiles[] = $profile;
+        }
+
+        return array_values($profiles);
+    }
+
     public function getOptionsWithRevalidation(): array
     {
         $optionsFromDb = $this->getStoredOptions();
