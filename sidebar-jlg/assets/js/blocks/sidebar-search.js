@@ -11,6 +11,7 @@ import {
     Notice,
 } from '@wordpress/components';
 import { useEffect, useMemo, useRef } from '@wordpress/element';
+import '../../css/sidebar-search-editor.scss';
 
 const METHOD_OPTIONS = [
     { value: 'default', label: __('Formulaire de recherche WordPress', 'sidebar-jlg') },
@@ -106,21 +107,20 @@ registerBlockType(metadata, {
             }
 
             return (
-                <form className="sidebar-search__preview-form" aria-label={ __('Formulaire de recherche', 'sidebar-jlg') }>
-                    <label htmlFor={`sidebar-search-input-${ clientId }`} className="screen-reader-text">
-                        { __('Rechercher :', 'sidebar-jlg') }
-                    </label>
-                    <div className="sidebar-search__preview-fields">
+                <form className="search-form" role="search" aria-label={ __('Formulaire de recherche', 'sidebar-jlg') }>
+                    <label htmlFor={`sidebar-search-input-${ clientId }`}>
+                        <span className="screen-reader-text">{ __('Rechercher :', 'sidebar-jlg') }</span>
                         <input
                             id={`sidebar-search-input-${ clientId }`}
+                            className="search-field"
                             type="search"
                             placeholder={ __('Rechercher…', 'sidebar-jlg') }
                             readOnly
                         />
-                        <button type="submit" disabled>
-                            { __('Recherche', 'sidebar-jlg') }
-                        </button>
-                    </div>
+                    </label>
+                    <button type="submit" className="search-submit" disabled>
+                        { __('Recherche', 'sidebar-jlg') }
+                    </button>
                 </form>
             );
         };
@@ -160,20 +160,11 @@ registerBlockType(metadata, {
                 </InspectorControls>
                 <div { ...blockProps } data-sidebar-search-block-name={ blockName }>
                     <div
-                        className={ `sidebar-search sidebar-search--block ${ alignmentClass }` }
+                        className={ `sidebar-search ${ alignmentClass }` }
                         data-sidebar-search-align={ normalizedAttributes.search_alignment }
-                        style={ { justifyContent: normalizedAttributes.search_alignment } }
+                        style={ { '--sidebar-search-alignment': normalizedAttributes.search_alignment } }
                     >
-                        <div
-                            className="sidebar-search__inner"
-                            style={ {
-                                display: 'flex',
-                                width: '100%',
-                                justifyContent: normalizedAttributes.search_alignment,
-                            } }
-                        >
-                            { renderPreviewContent() }
-                        </div>
+                        { renderPreviewContent() }
                     </div>
                 </div>
             </>

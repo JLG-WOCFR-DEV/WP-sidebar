@@ -34,5 +34,7 @@
     "customClassName": false
   },
   "editorScript": "file:../../build/sidebar-search.js",
-  "viewScript": "file:../../build/sidebar-search-view.js"
+  "viewScript": "file:../../build/sidebar-search-view.js",
+  "style": "sidebar-jlg-sidebar-search",
+  "editorStyle": "sidebar-jlg-sidebar-search"
 }

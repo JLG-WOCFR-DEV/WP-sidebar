@@ -36,10 +36,30 @@ class SearchBlock
         }
 
         $blockDir = plugin_dir_path($this->pluginFile) . 'assets/blocks/sidebar-search';
+        $styleHandle = 'sidebar-jlg-sidebar-search';
+        $stylePath = plugin_dir_path($this->pluginFile) . 'assets/build/sidebar-search.css';
 
-        $blockType = register_block_type($blockDir, [
+        if (file_exists($stylePath)) {
+            wp_register_style(
+                $styleHandle,
+                plugin_dir_url($this->pluginFile) . 'assets/build/sidebar-search.css',
+                [],
+                $this->version
+            );
+        } else {
+            $styleHandle = null;
+        }
+
+        $registerArgs = [
             'render_callback' => [$this, 'render'],
-        ]);
+        ];
+
+        if ($styleHandle !== null) {
+            $registerArgs['style'] = $styleHandle;
+            $registerArgs['editor_style'] = $styleHandle;
+        }
+
+        $blockType = register_block_type($blockDir, $registerArgs);
 
         if ($blockType instanceof WP_Block_Type) {
             $this->localizeEditorDefaults($blockType);
@@ -154,30 +174,28 @@ class SearchBlock
 
         $alignment = $options['search_alignment'] ?? 'flex-start';
         $alignmentClass = $this->getAlignmentClass($alignment);
-        $alignmentStyle = 'justify-content:' . $alignment . ';';
+        $alignmentStyle = '--sidebar-search-alignment:' . $alignment . ';';
 
         ob_start();
         ?>
-        <div class="sidebar-search sidebar-search--block <?php echo esc_attr($alignmentClass); ?>" data-sidebar-search-align="<?php echo esc_attr($alignment); ?>" style="<?php echo esc_attr($alignmentStyle); ?>">
-            <div class="sidebar-search__inner">
-                <?php
-                switch ($options['search_method']) {
-                    case 'shortcode':
-                        if ($options['search_shortcode'] !== '') {
-                            echo do_shortcode(wp_kses_post($options['search_shortcode']));
-                        }
-                        break;
-                    case 'hook':
-                        ob_start();
-                        do_action('jlg_sidebar_search_area');
-                        echo ob_get_clean();
-                        break;
-                    default:
-                        echo get_search_form(false);
-                        break;
-                }
-                ?>
-            </div>
+        <div class="sidebar-search <?php echo esc_attr($alignmentClass); ?>" data-sidebar-search-align="<?php echo esc_attr($alignment); ?>" style="<?php echo esc_attr($alignmentStyle); ?>">
+            <?php
+            switch ($options['search_method']) {
+                case 'shortcode':
+                    if ($options['search_shortcode'] !== '') {
+                        echo do_shortcode(wp_kses_post($options['search_shortcode']));
+                    }
+                    break;
+                case 'hook':
+                    ob_start();
+                    do_action('jlg_sidebar_search_area');
+                    echo ob_get_clean();
+                    break;
+                default:
+                    echo get_search_form(false);
+                    break;
+            }
+            ?>
         </div>
         <?php
 
