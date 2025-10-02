@@ -296,14 +296,14 @@ $textTransformLabels = [
                                 <?php if ( ! empty( $safeFontFamilies ) ) : ?>
                                     <optgroup label="<?php esc_attr_e( 'Polices système', 'sidebar-jlg' ); ?>">
                                         <?php foreach ( $safeFontFamilies as $fontKey => $fontData ) : ?>
-                                            <option value="<?php echo esc_attr( $fontKey ); ?>" <?php selected( $options['font_family'], $fontKey ); ?>><?php echo esc_html( $fontData['label'] ?? $fontKey ); ?></option>
+                                            <option value="<?php echo esc_attr( $fontKey ); ?>" data-font-stack="<?php echo esc_attr( $fontData['stack'] ?? '' ); ?>" <?php selected( $options['font_family'], $fontKey ); ?>><?php echo esc_html( $fontData['label'] ?? $fontKey ); ?></option>
                                         <?php endforeach; ?>
                                     </optgroup>
                                 <?php endif; ?>
                                 <?php if ( ! empty( $googleFontFamilies ) ) : ?>
                                     <optgroup label="<?php esc_attr_e( 'Google Fonts', 'sidebar-jlg' ); ?>">
                                         <?php foreach ( $googleFontFamilies as $fontKey => $fontData ) : ?>
-                                            <option value="<?php echo esc_attr( $fontKey ); ?>" <?php selected( $options['font_family'], $fontKey ); ?>><?php echo esc_html( $fontData['label'] ?? $fontKey ); ?></option>
+                                            <option value="<?php echo esc_attr( $fontKey ); ?>" data-font-stack="<?php echo esc_attr( $fontData['stack'] ?? '' ); ?>" <?php selected( $options['font_family'], $fontKey ); ?>><?php echo esc_html( $fontData['label'] ?? $fontKey ); ?></option>
                                         <?php endforeach; ?>
                                     </optgroup>
                                 <?php endif; ?>

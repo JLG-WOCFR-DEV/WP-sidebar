@@ -243,6 +243,10 @@ class SidebarPreviewModule {
 
         this.initialOptions = SidebarPreviewModule.cloneObject(args.options || {});
         this.currentOptions = SidebarPreviewModule.cloneObject(this.initialOptions);
+        this.fontStacks = SidebarPreviewModule.cloneObject(args.fontStacks || {});
+        this.defaultFontStack = typeof args.defaultFontStack === 'string' && args.defaultFontStack !== ''
+            ? args.defaultFontStack
+            : 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
         this.$ = typeof window !== 'undefined' ? window.jQuery : null;
 
@@ -269,6 +273,112 @@ class SidebarPreviewModule {
         } catch (error) {
             return Object.assign({}, object);
         }
+    }
+
+    captureFontStacksFromDom() {
+        if (!this.form) {
+            return;
+        }
+
+        const select = this.form.querySelector('select[name="sidebar_jlg_settings[font_family]"]');
+        if (!select) {
+            return;
+        }
+
+        const options = Array.from(select.options || []);
+        if (!options.length) {
+            return;
+        }
+
+        options.forEach((option) => {
+            if (!option || typeof option.value !== 'string') {
+                return;
+            }
+
+            const key = option.value;
+            const stack = option.getAttribute('data-font-stack') || '';
+            if (key !== '') {
+                this.fontStacks[key] = stack;
+            }
+
+            if (!this.defaultFontStack && stack) {
+                this.defaultFontStack = stack;
+            }
+        });
+    }
+
+    lookupFontStack(value) {
+        if (typeof value !== 'string' || value.trim() === '') {
+            return this.defaultFontStack;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(this.fontStacks, value)) {
+            const stack = this.fontStacks[value];
+            if (typeof stack === 'string' && stack.trim() !== '') {
+                return stack;
+            }
+        }
+
+        return this.defaultFontStack;
+    }
+
+    resolveFontFamily() {
+        if (this.currentOptions && typeof this.currentOptions.font_stack === 'string' && this.currentOptions.font_stack !== '') {
+            return this.currentOptions.font_stack;
+        }
+
+        const key = this.currentOptions ? this.currentOptions.font_family : '';
+        return this.lookupFontStack(key);
+    }
+
+    captureDefaultFontStackFromMarkup() {
+        if (this.defaultFontStack && this.defaultFontStack !== '') {
+            return;
+        }
+
+        if (typeof window === 'undefined' || !window.getComputedStyle) {
+            return;
+        }
+
+        if (!this.aside) {
+            return;
+        }
+
+        const computed = window.getComputedStyle(this.aside);
+        if (!computed) {
+            return;
+        }
+
+        const family = computed.getPropertyValue('font-family');
+        if (typeof family === 'string' && family.trim() !== '') {
+            this.defaultFontStack = family.trim();
+        }
+    }
+
+    resolveAccentBaseColor() {
+        const type = (this.currentOptions.accent_color_type || 'solid').toLowerCase();
+        if (type === 'gradient') {
+            return this.currentOptions.accent_color_start || this.currentOptions.accent_color || '';
+        }
+
+        return this.currentOptions.accent_color || '';
+    }
+
+    applyAccentGradient() {
+        if (!this.container) {
+            return;
+        }
+
+        const type = (this.currentOptions.accent_color_type || 'solid').toLowerCase();
+        const start = this.currentOptions.accent_color_start || '';
+        const end = this.currentOptions.accent_color_end || '';
+
+        if (type === 'gradient' && start && end) {
+            this.container.style.setProperty('--sidebar-accent-gradient', `linear-gradient(135deg, ${start} 0%, ${end} 100%)`);
+            return;
+        }
+
+        this.container.style.setProperty('--sidebar-accent-gradient', 'none');
     }
 
     init() {
@@ -416,6 +526,8 @@ class SidebarPreviewModule {
         if (this.menuList && this.menuSocialItem && !this.menuList.contains(this.menuSocialItem)) {
             this.menuList.appendChild(this.menuSocialItem);
         }
+
+        this.captureDefaultFontStackFromMarkup();
     }
 
     detachObservers() {
@@ -448,12 +560,26 @@ class SidebarPreviewModule {
 
         this.isInitializing = true;
 
+        this.captureFontStacksFromDom();
+
         this.bindField('sidebar_jlg_settings[layout_style]', (value) => {
             this.currentOptions.layout_style = value || 'full';
         });
 
         this.bindField('sidebar_jlg_settings[sidebar_position]', (value) => {
             this.currentOptions.sidebar_position = value === 'right' ? 'right' : 'left';
+        });
+
+        this.bindField('sidebar_jlg_settings[horizontal_bar_position]', (value) => {
+            this.currentOptions.horizontal_bar_position = value === 'bottom' ? 'bottom' : 'top';
+        });
+
+        this.bindField('sidebar_jlg_settings[horizontal_bar_alignment]', (value) => {
+            this.currentOptions.horizontal_bar_alignment = value || 'space-between';
+        });
+
+        this.bindField('sidebar_jlg_settings[horizontal_bar_sticky]', (value) => {
+            this.currentOptions.horizontal_bar_sticky = value === true || value === '1' || value === 'on';
         });
 
         this.bindField('sidebar_jlg_settings[bg_color]', (value) => {
@@ -480,6 +606,48 @@ class SidebarPreviewModule {
             this.currentOptions.font_hover_color = value;
         });
 
+        this.bindField('sidebar_jlg_settings[font_size]', (value) => {
+            this.currentOptions.font_size = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[font_family]', (value, elements) => {
+            this.currentOptions.font_family = value;
+            if (Array.isArray(elements) && elements.length) {
+                const stack = this.lookupFontStack(value);
+                this.currentOptions.font_stack = stack;
+            } else {
+                this.currentOptions.font_stack = this.lookupFontStack(value);
+            }
+        });
+
+        this.bindField('sidebar_jlg_settings[font_weight]', (value) => {
+            this.currentOptions.font_weight = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[text_transform]', (value) => {
+            this.currentOptions.text_transform = value || 'none';
+        });
+
+        this.bindField('sidebar_jlg_settings[letter_spacing]', (value) => {
+            this.currentOptions.letter_spacing = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[accent_color]', (value) => {
+            this.currentOptions.accent_color = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[accent_color_type]', (value) => {
+            this.currentOptions.accent_color_type = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[accent_color_start]', (value) => {
+            this.currentOptions.accent_color_start = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[accent_color_end]', (value) => {
+            this.currentOptions.accent_color_end = value;
+        });
+
         this.bindField('sidebar_jlg_settings[width_desktop]', (value) => {
             this.currentOptions.width_desktop = value;
         });
@@ -500,8 +668,28 @@ class SidebarPreviewModule {
             this.currentOptions.hamburger_color = value;
         });
 
+        this.bindField('sidebar_jlg_settings[hamburger_top_position]', (value) => {
+            this.currentOptions.hamburger_top_position = value;
+        });
+
         this.bindField('sidebar_jlg_settings[content_margin]', (value) => {
             this.currentOptions.content_margin = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[floating_vertical_margin]', (value) => {
+            this.currentOptions.floating_vertical_margin = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[border_radius]', (value) => {
+            this.currentOptions.border_radius = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[border_width]', (value) => {
+            this.currentOptions.border_width = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[border_color]', (value) => {
+            this.currentOptions.border_color = value;
         });
 
         this.bindField('sidebar_jlg_settings[menu_alignment_desktop]', (value) => {
@@ -522,6 +710,22 @@ class SidebarPreviewModule {
 
         this.bindField('sidebar_jlg_settings[header_logo_image]', (value) => {
             this.currentOptions.header_logo_image = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[header_logo_size]', (value) => {
+            this.currentOptions.header_logo_size = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[header_alignment_desktop]', (value) => {
+            this.currentOptions.header_alignment_desktop = value || 'flex-start';
+        });
+
+        this.bindField('sidebar_jlg_settings[header_alignment_mobile]', (value) => {
+            this.currentOptions.header_alignment_mobile = value || 'center';
+        });
+
+        this.bindField('sidebar_jlg_settings[header_padding_top]', (value) => {
+            this.currentOptions.header_padding_top = value;
         });
 
         this.bindField('sidebar_jlg_settings[social_position]', (value) => {
@@ -572,7 +776,7 @@ class SidebarPreviewModule {
 
         const update = () => {
             const value = this.getFieldValue(elements);
-            handler(value);
+            handler(value, elements);
             if (!this.isInitializing) {
                 this.applyOptions();
             }
@@ -627,10 +831,26 @@ class SidebarPreviewModule {
             ['--sidebar-overlay-color', this.currentOptions.overlay_color],
             ['--sidebar-overlay-opacity', this.formatOpacity(this.currentOptions.overlay_opacity)],
             ['--sidebar-hamburger-color', this.currentOptions.hamburger_color],
+            ['--sidebar-hamburger-top', this.formatDimension(this.currentOptions.hamburger_top_position)],
             ['--sidebar-content-margin', this.formatDimension(this.currentOptions.content_margin)],
+            ['--sidebar-floating-margin', this.formatDimension(this.currentOptions.floating_vertical_margin)],
+            ['--sidebar-border-radius', this.formatDimension(this.currentOptions.border_radius)],
+            ['--sidebar-border-width', this.formatDimension(this.currentOptions.border_width)],
+            ['--sidebar-border-color', this.currentOptions.border_color],
             ['--sidebar-menu-align-desktop', this.currentOptions.menu_alignment_desktop],
             ['--sidebar-menu-align-mobile', this.currentOptions.menu_alignment_mobile],
-            ['--sidebar-social-size', this.formatPercent(this.currentOptions.social_icon_size)]
+            ['--sidebar-social-size', this.formatPercent(this.currentOptions.social_icon_size)],
+            ['--sidebar-font-size', this.formatDimension(this.currentOptions.font_size)],
+            ['--sidebar-font-family', this.resolveFontFamily()],
+            ['--sidebar-font-weight', this.currentOptions.font_weight],
+            ['--sidebar-text-transform', this.currentOptions.text_transform],
+            ['--sidebar-letter-spacing', this.currentOptions.letter_spacing],
+            ['--sidebar-accent-color', this.resolveAccentBaseColor()],
+            ['--sidebar-logo-size', this.formatDimension(this.currentOptions.header_logo_size)],
+            ['--sidebar-header-align-desktop', this.currentOptions.header_alignment_desktop],
+            ['--sidebar-header-align-mobile', this.currentOptions.header_alignment_mobile],
+            ['--sidebar-header-padding-top', this.currentOptions.header_padding_top],
+            ['--sidebar-horizontal-alignment', this.currentOptions.horizontal_bar_alignment]
         ];
 
         assignments.forEach(([variable, value]) => {
@@ -654,6 +874,8 @@ class SidebarPreviewModule {
                 this.container.style.setProperty('--sidebar-bg-color', this.currentOptions.bg_color);
             }
         }
+
+        this.applyAccentGradient();
     }
 
     formatDimension(value) {
@@ -695,9 +917,19 @@ class SidebarPreviewModule {
 
         const layout = this.currentOptions.layout_style || 'full';
         const position = this.currentOptions.sidebar_position === 'right' ? 'right' : 'left';
+        const horizontalPosition = this.currentOptions.horizontal_bar_position === 'bottom' ? 'bottom' : 'top';
+        const horizontalAlignment = this.currentOptions.horizontal_bar_alignment || 'space-between';
+        const isSticky = Boolean(this.currentOptions.horizontal_bar_sticky);
 
         this.replaceClass(this.aside, 'layout-', layout);
         this.replaceClass(this.aside, 'orientation-', position);
+        this.replaceClass(this.aside, 'position-', layout === 'horizontal-bar' ? horizontalPosition : '');
+
+        if (layout === 'horizontal-bar' && isSticky) {
+            this.aside.classList.add('is-sticky');
+        } else {
+            this.aside.classList.remove('is-sticky');
+        }
 
         if (this.menuList) {
             if (layout === 'horizontal-bar') {
@@ -718,6 +950,10 @@ class SidebarPreviewModule {
         if (this.hamburger) {
             this.hamburger.dataset.position = position;
         }
+
+        this.aside.dataset.position = position;
+        this.aside.dataset.horizontalAlignment = horizontalAlignment;
+        this.aside.dataset.layout = layout;
     }
 
     replaceClass(element, prefix, suffix) {
