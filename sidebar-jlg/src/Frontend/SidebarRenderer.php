@@ -5,6 +5,7 @@ namespace JLG\Sidebar\Frontend;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
+use JLG\Sidebar\Settings\ValueNormalizer;
 use JLG\Sidebar\Settings\TypographyOptions;
 
 class SidebarRenderer
@@ -351,6 +352,11 @@ class SidebarRenderer
     private function resolveOption(array $options, string $key)
     {
         $value = $options[$key] ?? null;
+
+        if (is_array($value) && array_key_exists('value', $value)) {
+            $fallback = self::DYNAMIC_STYLE_DEFAULTS[$key] ?? '';
+            $value = ValueNormalizer::dimensionToCss($value, is_string($fallback) ? $fallback : '');
+        }
 
         if (is_string($value)) {
             $value = trim($value);

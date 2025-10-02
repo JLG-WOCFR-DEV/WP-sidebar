@@ -86,7 +86,7 @@ class MenuPage
         wp_enqueue_script(
             'sidebar-jlg-admin-js',
             plugin_dir_url($this->pluginFile) . 'assets/js/admin-script.js',
-            ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'wp-data', 'wp-api-fetch'],
+            ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'wp-data', 'wp-api-fetch', 'wp-element', 'wp-components'],
             $this->version,
             true
         );
