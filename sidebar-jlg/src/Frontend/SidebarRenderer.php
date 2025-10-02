@@ -192,6 +192,33 @@ class SidebarRenderer
 
         $this->assignVariable($variables, '--hamburger-color', $hamburgerColor);
 
+        $defaultSafeAreaFallbacks = [
+            'block_start' => '0px',
+            'block_end' => '0px',
+            'inline_start' => '0px',
+            'inline_end' => '0px',
+        ];
+
+        $safeAreaFallbacks = apply_filters('sidebar_jlg_safe_area_fallbacks', $defaultSafeAreaFallbacks, $options);
+        if (!is_array($safeAreaFallbacks)) {
+            $safeAreaFallbacks = $defaultSafeAreaFallbacks;
+        } else {
+            $safeAreaFallbacks = array_merge($defaultSafeAreaFallbacks, $safeAreaFallbacks);
+        }
+
+        $safeAreaVariableMap = [
+            'block_start' => '--sidebar-safe-area-inset-block-start',
+            'block_end' => '--sidebar-safe-area-inset-block-end',
+            'inline_start' => '--sidebar-safe-area-inset-inline-start',
+            'inline_end' => '--sidebar-safe-area-inset-inline-end',
+        ];
+
+        foreach ($safeAreaVariableMap as $key => $variableName) {
+            $value = $safeAreaFallbacks[$key] ?? $defaultSafeAreaFallbacks[$key];
+            $sanitizedValue = $this->sanitizeCssString($value) ?? $defaultSafeAreaFallbacks[$key];
+            $this->assignVariable($variables, $variableName, $sanitizedValue);
+        }
+
         $contentMargin = $this->resolveContentMargin($options);
         if ($contentMargin !== null) {
             $this->assignVariable($variables, '--content-margin', $contentMargin);

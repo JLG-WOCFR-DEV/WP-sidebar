@@ -159,11 +159,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyScrollLockCompensation() {
         const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
         const compensation = isDesktop ? getScrollbarWidth() : 0;
-        document.body.style.setProperty('--sidebar-scrollbar-compensation', `${compensation}px`);
+        const compensationValue = `${compensation}px`;
+        document.body.style.setProperty('--sidebar-scrollbar-compensation', compensationValue);
     }
 
     function clearScrollLockCompensation() {
-        document.body.style.removeProperty('--sidebar-scrollbar-compensation');
+        document.body.style.setProperty('--sidebar-scrollbar-compensation', '0px');
     }
 
     function applyScrollLock() {

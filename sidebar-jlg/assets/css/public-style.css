@@ -1,10 +1,11 @@
 /* Les variables sont injectées en ligne par PHP */
 
 /* --- Base --- */
-body { transition: padding-left var(--transition-speed, 0.4s) ease; }
+body { transition: padding-inline-start var(--transition-speed, 0.4s) ease; }
 body.sidebar-open {
     touch-action: pan-y;
-    padding-right: var(--sidebar-scrollbar-compensation, 0);
+    padding-inline-end: calc(var(--sidebar-safe-area-inset-inline-end, 0px) + var(--sidebar-scrollbar-compensation, 0px));
+    padding-inline-end: calc(env(safe-area-inset-right, 0px) + var(--sidebar-scrollbar-compensation, 0px));
 }
 body.sidebar-scroll-lock {
     overflow: hidden;
@@ -13,7 +14,7 @@ body.sidebar-scroll-lock {
 body.sidebar-open .pro-sidebar {
     touch-action: pan-y;
 }
-body.jlg-sidebar-active.jlg-sidebar-horizontal-bar { padding-left: 0 !important; }
+body.jlg-sidebar-active.jlg-sidebar-horizontal-bar { padding-inline-start: 0 !important; }
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -65,26 +66,38 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 }
 @media (min-width: 993px) {
     body.jlg-sidebar-active.jlg-sidebar-horizontal-bar.jlg-horizontal-position-top {
-        padding-top: var(--horizontal-bar-height, 4rem) !important;
+        padding-block-start: var(--horizontal-bar-height, 4rem) !important;
     }
     body.jlg-sidebar-active.jlg-sidebar-horizontal-bar.jlg-horizontal-position-bottom {
-        padding-bottom: var(--horizontal-bar-height, 4rem) !important;
+        padding-block-end: var(--horizontal-bar-height, 4rem) !important;
     }
 }
 @media (min-width: 993px) {
     body.jlg-sidebar-active.jlg-sidebar-push {
-        padding-left: var(--sidebar-width-desktop) !important;
+        padding-inline-start: var(--sidebar-width-desktop) !important;
     }
     body.jlg-sidebar-active.jlg-sidebar-push #page,
     body.jlg-sidebar-active.jlg-sidebar-push .site-content,
     body.jlg-sidebar-active.jlg-sidebar-push main {
-        margin-left: var(--content-margin, 2rem);
+        margin-inline-start: var(--content-margin, 2rem);
     }
 }
 
 /* --- Overlay pour Mobile/Tablette --- */
 .sidebar-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    position: fixed;
+    inset-block-start: 0;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    padding-block-start: var(--sidebar-safe-area-inset-block-start, 0px);
+    padding-block-start: env(safe-area-inset-top, var(--sidebar-safe-area-inset-block-start, 0px));
+    padding-block-end: var(--sidebar-safe-area-inset-block-end, 0px);
+    padding-block-end: env(safe-area-inset-bottom, var(--sidebar-safe-area-inset-block-end, 0px));
+    padding-inline-start: var(--sidebar-safe-area-inset-inline-start, 0px);
+    padding-inline-start: env(safe-area-inset-left, var(--sidebar-safe-area-inset-inline-start, 0px));
+    padding-inline-end: var(--sidebar-safe-area-inset-inline-end, 0px);
+    padding-inline-end: env(safe-area-inset-right, var(--sidebar-safe-area-inset-inline-end, 0px));
     background-color: var(--overlay-color, rgba(0, 0, 0, 0.5));
     background-color: color-mix(in srgb, var(--overlay-color, #000000) calc(var(--overlay-opacity, 0.5) * 100%), transparent);
     z-index: 999;
@@ -96,7 +109,17 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 
 /* --- Sidebar Container --- */
 .pro-sidebar {
-    position: fixed; top: 0; left: 0;
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    padding-block-start: var(--sidebar-safe-area-inset-block-start, 0px);
+    padding-block-start: env(safe-area-inset-top, var(--sidebar-safe-area-inset-block-start, 0px));
+    padding-block-end: var(--sidebar-safe-area-inset-block-end, 0px);
+    padding-block-end: env(safe-area-inset-bottom, var(--sidebar-safe-area-inset-block-end, 0px));
+    padding-inline-start: var(--sidebar-safe-area-inset-inline-start, 0px);
+    padding-inline-start: env(safe-area-inset-left, var(--sidebar-safe-area-inset-inline-start, 0px));
+    padding-inline-end: var(--sidebar-safe-area-inset-inline-end, 0px);
+    padding-inline-end: env(safe-area-inset-right, var(--sidebar-safe-area-inset-inline-end, 0px));
     width: 100%; height: 100vh; /* Mobile first */
     background-color: var(--sidebar-bg-color);
     background-image: var(--sidebar-bg-image);
@@ -112,11 +135,11 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 /* Style Flottant */
 @media (min-width: 993px) {
     body.jlg-sidebar-floating .pro-sidebar {
-        top: var(--floating-vertical-margin, 1rem) !important;
+        inset-block-start: var(--floating-vertical-margin, 1rem) !important;
         height: calc(100vh - (var(--floating-vertical-margin, 1rem) * 2)) !important;
         border-radius: 0 var(--border-radius, 12px) var(--border-radius, 12px) 0;
         border: var(--border-width, 1px) solid var(--border-color, rgba(255,255,255,0.2));
-        border-left: none;
+        border-inline-start: none;
     }
 }
 
@@ -138,8 +161,8 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     body.sidebar-open .pro-sidebar.animation-scale { transform: scale(1); opacity: 1; }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar {
-        left: 0;
-        right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
         width: 100%;
         height: auto;
         max-height: min(85vh, 640px);
@@ -166,7 +189,7 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
         transform: translateX(0);
     }
     body.jlg-sidebar-push:not(.sidebar-open) {
-        padding-left: 0;
+        padding-inline-start: 0;
     }
 }
 
@@ -174,8 +197,8 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     body.jlg-sidebar-horizontal-bar .pro-sidebar {
         height: var(--horizontal-bar-height, 4rem);
         width: 100%;
-        left: 0;
-        right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
         flex-direction: column;
         transform: translateX(0);
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
@@ -187,18 +210,18 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar.layout-horizontal-bar.position-bottom {
-        top: auto;
-        bottom: 0;
+        inset-block-start: auto;
+        inset-block-end: 0;
     }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar.layout-horizontal-bar.is-sticky.position-top {
         position: sticky;
-        top: 0;
+        inset-block-start: 0;
     }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar.layout-horizontal-bar.is-sticky.position-bottom {
         position: sticky;
-        bottom: 0;
+        inset-block-end: 0;
     }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar.layout-horizontal-bar:not(.is-sticky) {
@@ -211,7 +234,11 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
         justify-content: var(--horizontal-bar-alignment, space-between);
         gap: 1.5rem;
         width: 100%;
-        padding: 0 2rem;
+        padding-block: 0;
+        padding-inline-start: calc(2rem + var(--sidebar-safe-area-inset-inline-start, 0px));
+        padding-inline-start: calc(2rem + env(safe-area-inset-left, var(--sidebar-safe-area-inset-inline-start, 0px)));
+        padding-inline-end: calc(2rem + var(--sidebar-safe-area-inset-inline-end, 0px));
+        padding-inline-end: calc(2rem + env(safe-area-inset-right, var(--sidebar-safe-area-inset-inline-end, 0px)));
     }
 
     body.jlg-sidebar-horizontal-bar .sidebar-header,
@@ -251,7 +278,7 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     }
 
     body.jlg-sidebar-horizontal-bar .sidebar-footer {
-        margin-left: auto;
+        margin-inline-start: auto;
         padding: 0;
         border-top: none;
         display: flex;
@@ -302,8 +329,9 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     }
     .close-sidebar-btn {
         position: absolute;
-        right: 1.5rem;
-        top: 50%;
+        inset-inline-end: calc(1.5rem + var(--sidebar-safe-area-inset-inline-end, 0px));
+        inset-inline-end: calc(1.5rem + env(safe-area-inset-right, var(--sidebar-safe-area-inset-inline-end, 0px)));
+        inset-block-start: 50%;
         transform: translateY(-50%);
     }
 }
@@ -324,12 +352,15 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 
 /* --- Menu & Icons --- */
 .sidebar-navigation { flex-grow: 1; overflow-y: auto; min-height: 0; }
-.sidebar-menu { 
-    list-style: none; padding: 1rem 0; margin: 0; 
+.sidebar-menu {
+    list-style: none;
+    padding-block: 1rem;
+    padding-inline: 0;
+    margin: 0;
     display: flex;
     flex-direction: column;
 }
-.sidebar-menu a { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; text-decoration: none; color: var(--sidebar-text-color); font-size: var(--sidebar-font-size); transition: all 0.3s; position: relative; z-index: 1; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+.sidebar-menu a { display: flex; align-items: center; gap: 1rem; padding-block: 1rem; padding-inline: 1.5rem; text-decoration: none; color: var(--sidebar-text-color); font-size: var(--sidebar-font-size); transition: all 0.3s; position: relative; z-index: 1; overflow: hidden; -webkit-tap-highlight-color: transparent; }
 .sidebar-menu a:hover,
 .sidebar-menu a:focus,
 .sidebar-menu a:focus-visible {
@@ -370,10 +401,10 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 }
 
 /* Styles pour les icônes dans le menu */
-.sidebar-menu .menu-separator { padding: 0.5rem 1.5rem; margin: 0.5rem 0; }
+.sidebar-menu .menu-separator { padding-block: 0.5rem; padding-inline: 1.5rem; margin-block: 0.5rem; margin-inline: 0; }
 .sidebar-menu .menu-separator hr { border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-.sidebar-menu .social-icons-wrapper { padding-top: 0.5rem; }
-.sidebar-menu .social-icons-wrapper .social-icons { padding: 0 1.5rem; }
+.sidebar-menu .social-icons-wrapper { padding-block-start: 0.5rem; }
+.sidebar-menu .social-icons-wrapper .social-icons { padding-block: 0; padding-inline: 1.5rem; }
 
 /* --- Footer & Social Icons --- */
 .sidebar-footer { padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
@@ -398,8 +429,11 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 /* --- Hamburger --- */
 .hamburger-menu {
     display: block; position: fixed;
-    top: var(--hamburger-top-position, 2rem);
-    left: 15px; z-index: 1001;
+    inset-block-start: calc(var(--sidebar-safe-area-inset-block-start, 0px) + var(--hamburger-top-position, 2rem));
+    inset-block-start: calc(env(safe-area-inset-top, var(--sidebar-safe-area-inset-block-start, 0px)) + var(--hamburger-top-position, 2rem));
+    inset-inline-start: calc(var(--sidebar-safe-area-inset-inline-start, 0px) + 15px);
+    inset-inline-start: calc(env(safe-area-inset-left, var(--sidebar-safe-area-inset-inline-start, 0px)) + 15px);
+    z-index: 1001;
     background: none; border: none;
     padding: 0; cursor: pointer;
     width: 50px; height: 50px;
@@ -414,17 +448,17 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 }
 .hamburger-icon { position: relative; width: 32px; height: 24px; }
 .icon-1, .icon-2, .icon-3 {
-    position: absolute; left: 0;
+    position: absolute; inset-inline-start: 0;
     width: 32px; height: 3px;
     background-color: var(--hamburger-color, var(--sidebar-text-color, #fff));
     transition: all 400ms cubic-bezier(.84,.06,.52,1.8);
 }
-.icon-1 { top: 0; }
-.icon-2 { top: 50%; transform: translateY(-50%); }
-.icon-3 { bottom: 0; }
-.hamburger-menu.is-active .icon-1 { transform: rotate(40deg); top: 10px; }
+.icon-1 { inset-block-start: 0; }
+.icon-2 { inset-block-start: 50%; transform: translateY(-50%); }
+.icon-3 { inset-block-end: 0; }
+.hamburger-menu.is-active .icon-1 { transform: rotate(40deg); inset-block-start: 10px; }
 .hamburger-menu.is-active .icon-2 { opacity: 0; }
-.hamburger-menu.is-active .icon-3 { transform: rotate(-40deg); top: 10px; }
+.hamburger-menu.is-active .icon-3 { transform: rotate(-40deg); inset-block-start: 10px; }
 @media (min-width: 993px) { .hamburger-menu { display: none !important; } }
 
 /* --- Effets de survol --- */
@@ -464,7 +498,7 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 
 .pro-sidebar[data-hover-desktop="tile-slide"] .sidebar-menu a::before,
 .pro-sidebar[data-hover-mobile="tile-slide"] .sidebar-menu a::before {
-    content: ''; position: absolute; top: 0; left: 0;
+    content: ''; position: absolute; inset-block-start: 0; inset-inline-start: 0;
     width: 100%; height: 100%;
     background-color: var(--primary-accent-color);
     background-image: var(--primary-accent-image);
@@ -512,7 +546,7 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 .pro-sidebar[data-hover-mobile="glossy-tilt"] .sidebar-menu a::before {
     content: '';
     position: absolute;
-    top: 0; left: 0;
+    inset-block-start: 0; inset-inline-start: 0;
     width: 100%; height: 100%;
     background: linear-gradient(
         135deg,
@@ -564,8 +598,8 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 .pro-sidebar[data-hover-mobile="underline-center"] .sidebar-menu a::before {
     content: '';
     position: absolute;
-    bottom: 0.5rem;
-    left: 50%;
+    inset-block-end: 0.5rem;
+    inset-inline-start: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 2px;
@@ -585,8 +619,8 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 .pro-sidebar[data-hover-mobile="pill-center"] .sidebar-menu a::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
     width: 0;
     height: 80%;
     transform: translate(-50%, -50%);
