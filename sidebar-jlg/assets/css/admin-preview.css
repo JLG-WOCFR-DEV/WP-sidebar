@@ -6,6 +6,7 @@
     --sidebar-text-color: #f5f5f5;
     --sidebar-hover-color: #ffffff;
     --sidebar-accent-color: #0d6efd;
+    --sidebar-accent-gradient: none;
     --sidebar-font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --sidebar-font-size: 16px;
     --sidebar-font-weight: 400;
@@ -21,10 +22,14 @@
     --sidebar-border-width: 1px;
     --sidebar-border-color: rgba(255, 255, 255, 0.15);
     --sidebar-horizontal-bar-height: 4rem;
+    --sidebar-horizontal-alignment: space-between;
     --sidebar-menu-align-desktop: flex-start;
     --sidebar-menu-align-mobile: flex-start;
     --sidebar-social-size: 100%;
     --sidebar-logo-size: 150px;
+    --sidebar-header-align-desktop: flex-start;
+    --sidebar-header-align-mobile: center;
+    --sidebar-header-padding-top: 0;
 }
 
 .sidebar-jlg-preview {
@@ -127,6 +132,11 @@
     overflow: hidden;
 }
 
+#sidebar-jlg-preview .pro-sidebar.layout-floating {
+    margin-block: var(--sidebar-floating-margin);
+    margin-inline: auto;
+}
+
 #sidebar-jlg-preview .pro-sidebar.layout-horizontal-bar {
     flex-direction: row;
     align-items: center;
@@ -153,8 +163,9 @@
 #sidebar-jlg-preview .sidebar-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: var(--sidebar-header-align-desktop);
     gap: 16px;
+    margin-top: var(--sidebar-header-padding-top);
 }
 
 #sidebar-jlg-preview .sidebar-logo-image {
@@ -213,13 +224,35 @@
     border-radius: 8px;
     color: var(--sidebar-text-color);
     text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    background: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.05);
+    background-image: none;
+    border: 1px solid transparent;
+    transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 0 0 0 transparent;
+    letter-spacing: var(--sidebar-letter-spacing);
 }
 
 #sidebar-jlg-preview .sidebar-menu li a:hover {
     color: var(--sidebar-hover-color);
-    background: rgba(255, 255, 255, 0.12);
+    background-color: var(--sidebar-accent-color, rgba(255, 255, 255, 0.12));
+    background-image: var(--sidebar-accent-gradient);
+    border-color: var(--sidebar-accent-color, rgba(255, 255, 255, 0.25));
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
+}
+
+#sidebar-jlg-preview .sidebar-menu li a:focus,
+#sidebar-jlg-preview .sidebar-menu li a:focus-visible {
+    outline: 2px solid var(--sidebar-accent-color, #ffffff);
+    outline-offset: 3px;
+}
+
+#sidebar-jlg-preview .sidebar-menu li.current-menu-item a,
+#sidebar-jlg-preview .sidebar-menu li a:active {
+    color: var(--sidebar-hover-color);
+    background-color: var(--sidebar-accent-color, rgba(255, 255, 255, 0.12));
+    background-image: var(--sidebar-accent-gradient);
+    border-color: var(--sidebar-accent-color, rgba(255, 255, 255, 0.25));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 6px 16px rgba(15, 23, 42, 0.24);
 }
 
 #sidebar-jlg-preview .sidebar-menu .menu-icon {
@@ -268,13 +301,22 @@
     min-height: 32px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.08);
+    border: 1px solid transparent;
     color: inherit;
     transition: transform 0.2s ease, background 0.2s ease;
 }
 
 #sidebar-jlg-preview .social-icons a:hover {
     transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.18);
+    background: var(--sidebar-accent-gradient, rgba(255, 255, 255, 0.18));
+    border-color: var(--sidebar-accent-color, rgba(255, 255, 255, 0.25));
+    color: var(--sidebar-hover-color);
+}
+
+#sidebar-jlg-preview .social-icons a:focus,
+#sidebar-jlg-preview .social-icons a:focus-visible {
+    outline: 2px solid var(--sidebar-accent-color, #ffffff);
+    outline-offset: 3px;
 }
 
 #sidebar-jlg-preview .social-icons svg,
@@ -294,4 +336,26 @@
 #sidebar-jlg-preview[data-state="error"] .sidebar-jlg-preview__viewport {
     justify-content: flex-start;
     align-items: flex-start;
+}
+
+@media (max-width: 782px) {
+    #sidebar-jlg-preview .sidebar-header {
+        justify-content: var(--sidebar-header-align-mobile);
+    }
+
+    #sidebar-jlg-preview .sidebar-menu {
+        justify-content: var(--sidebar-menu-align-mobile);
+        flex-wrap: wrap;
+    }
+
+    #sidebar-jlg-preview .sidebar-footer .social-icons,
+    #sidebar-jlg-preview .social-icons-wrapper .social-icons {
+        justify-content: var(--sidebar-menu-align-mobile);
+    }
+}
+
+@media (max-width: 992px) {
+    #sidebar-jlg-preview .pro-sidebar {
+        width: min(var(--sidebar-width-tablet), 100%);
+    }
 }
