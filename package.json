@@ -5,6 +5,7 @@
   "scripts": {
     "test": "jest",
     "test:js": "jest",
+    "test:php": "composer test",
     "build": "npm run build:blocks",
     "build:blocks": "wp-scripts build sidebar-jlg/assets/js/blocks/sidebar-search.js sidebar-jlg/assets/js/blocks/sidebar-search-view.js --output-path=sidebar-jlg/assets/build",
     "start:blocks": "wp-scripts start sidebar-jlg/assets/js/blocks/sidebar-search.js sidebar-jlg/assets/js/blocks/sidebar-search-view.js --output-path=sidebar-jlg/assets/build"
