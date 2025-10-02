@@ -296,7 +296,9 @@ $pluginInstance = plugin();
 $endpoints = new Endpoints(
     $pluginInstance->getSettingsRepository(),
     $pluginInstance->getMenuCache(),
-    $pluginInstance->getIconLibrary()
+    $pluginInstance->getIconLibrary(),
+    $pluginInstance->getSanitizer(),
+    $pluginInstance->getPluginFile()
 );
 
 $testsPassed = true;

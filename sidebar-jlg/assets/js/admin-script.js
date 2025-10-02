@@ -224,6 +224,779 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports.renderSvgUrlPreview = renderSvgUrlPreview;
 }
 
+
+class SidebarPreviewModule {
+    constructor(args = {}) {
+        this.container = args.container || null;
+        this.viewport = this.container ? this.container.querySelector('.sidebar-jlg-preview__viewport') : null;
+        this.statusElement = this.container ? this.container.querySelector('.sidebar-jlg-preview__status') : null;
+        this.form = args.form || null;
+        this.ajaxUrl = args.ajaxUrl || '';
+        this.nonce = args.nonce || '';
+        this.action = args.action || 'jlg_render_preview';
+        this.messages = Object.assign({
+            loading: '',
+            error: '',
+            emptyMenu: '',
+            refresh: ''
+        }, args.messages || {});
+
+        this.initialOptions = SidebarPreviewModule.cloneObject(args.options || {});
+        this.currentOptions = SidebarPreviewModule.cloneObject(this.initialOptions);
+
+        this.$ = typeof window !== 'undefined' ? window.jQuery : null;
+
+        this.aside = null;
+        this.nav = null;
+        this.menuList = null;
+        this.menuSocialItem = null;
+        this.footerSocial = null;
+        this.hamburger = null;
+
+        this.menuContainer = null;
+        this.socialContainer = null;
+        this.menuObserver = null;
+        this.socialObserver = null;
+        this.isInitializing = false;
+
+        this.updateMenuFromDomBound = this.updateMenuFromDom.bind(this);
+        this.updateSocialFromDomBound = this.updateSocialFromDom.bind(this);
+    }
+
+    static cloneObject(object) {
+        try {
+            return JSON.parse(JSON.stringify(object));
+        } catch (error) {
+            return Object.assign({}, object);
+        }
+    }
+
+    init() {
+        if (!this.container || !this.viewport || !this.form || !this.$) {
+            return;
+        }
+
+        this.setState('loading');
+        this.setStatus(this.messages.loading || '', false);
+
+        this.loadPreview()
+            .then(() => {
+                this.setState('ready');
+                this.clearStatus();
+                this.setupBindings();
+                this.applyOptions();
+            })
+            .catch(() => {
+                // Failure is handled by loadPreview via renderFallback.
+            });
+    }
+
+    setState(state) {
+        if (this.container) {
+            this.container.setAttribute('data-state', state);
+        }
+    }
+
+    setStatus(message, isError) {
+        if (!this.statusElement) {
+            return;
+        }
+
+        this.statusElement.textContent = message || '';
+
+        if (isError) {
+            this.statusElement.classList.add('is-error');
+        } else {
+            this.statusElement.classList.remove('is-error');
+        }
+    }
+
+    clearStatus() {
+        this.setStatus('', false);
+    }
+
+    renderFallback(message) {
+        if (!this.viewport) {
+            return;
+        }
+
+        this.viewport.innerHTML = '';
+        this.setState('error');
+        this.setStatus(message || this.messages.error || '', true);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sidebar-jlg-preview__fallback';
+
+        const text = document.createElement('p');
+        text.textContent = message || this.messages.error || '';
+        wrapper.appendChild(text);
+
+        if (this.messages.refresh) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'button';
+            button.textContent = this.messages.refresh;
+            button.addEventListener('click', () => {
+                this.setState('loading');
+                this.setStatus(this.messages.loading || '', false);
+                this.loadPreview()
+                    .then(() => {
+                        this.setState('ready');
+                        this.clearStatus();
+                        this.setupBindings();
+                        this.applyOptions();
+                    })
+                    .catch(() => {
+                        // Nothing else to do, fallback already visible.
+                    });
+            });
+            wrapper.appendChild(button);
+        }
+
+        this.viewport.appendChild(wrapper);
+    }
+
+    loadPreview() {
+        if (!this.ajaxUrl || !this.nonce || !this.action) {
+            this.renderFallback(this.messages.error || '');
+            return Promise.reject(new Error('Missing preview configuration.'));
+        }
+
+        return new Promise((resolve, reject) => {
+            this.$.ajax({
+                url: this.ajaxUrl,
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    action: this.action,
+                    nonce: this.nonce,
+                    options: JSON.stringify(this.currentOptions || {})
+                }
+            })
+                .done((response) => {
+                    if (response && response.success && response.data && typeof response.data.html === 'string') {
+                        this.viewport.innerHTML = response.data.html;
+                        this.afterMarkupRendered();
+                        resolve(response.data);
+                        return;
+                    }
+
+                    const fallbackMessage = response && response.data && response.data.message
+                        ? response.data.message
+                        : this.messages.error;
+
+                    this.renderFallback(fallbackMessage || this.messages.error || '');
+                    reject(new Error('Invalid preview response.'));
+                })
+                .fail(() => {
+                    this.renderFallback(this.messages.error || '');
+                    reject(new Error('Preview request failed.'));
+                });
+        });
+    }
+
+    afterMarkupRendered() {
+        this.aside = this.viewport ? this.viewport.querySelector('.pro-sidebar') : null;
+        this.nav = this.viewport ? this.viewport.querySelector('.sidebar-navigation') : null;
+        this.menuList = this.viewport ? this.viewport.querySelector('.sidebar-menu') : null;
+        this.menuSocialItem = this.viewport ? this.viewport.querySelector('.social-icons-wrapper') : null;
+        this.footerSocial = this.viewport ? this.viewport.querySelector('.sidebar-footer') : null;
+        this.hamburger = this.viewport ? this.viewport.querySelector('#hamburger-btn') : null;
+
+        const overlay = this.viewport ? this.viewport.querySelector('.sidebar-overlay') : null;
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+
+        if (this.hamburger) {
+            this.hamburger.setAttribute('aria-hidden', 'true');
+            this.hamburger.setAttribute('tabindex', '-1');
+        }
+
+        if (this.menuList && this.menuSocialItem && !this.menuList.contains(this.menuSocialItem)) {
+            this.menuList.appendChild(this.menuSocialItem);
+        }
+    }
+
+    detachObservers() {
+        if (this.menuObserver) {
+            this.menuObserver.disconnect();
+            this.menuObserver = null;
+        }
+
+        if (this.socialObserver) {
+            this.socialObserver.disconnect();
+            this.socialObserver = null;
+        }
+
+        if (this.menuContainer) {
+            this.menuContainer.removeEventListener('input', this.updateMenuFromDomBound);
+            this.menuContainer.removeEventListener('change', this.updateMenuFromDomBound);
+        }
+
+        if (this.socialContainer) {
+            this.socialContainer.removeEventListener('input', this.updateSocialFromDomBound);
+            this.socialContainer.removeEventListener('change', this.updateSocialFromDomBound);
+        }
+    }
+
+    setupBindings() {
+        this.detachObservers();
+        if (!this.form) {
+            return;
+        }
+
+        this.isInitializing = true;
+
+        this.bindField('sidebar_jlg_settings[layout_style]', (value) => {
+            this.currentOptions.layout_style = value || 'full';
+        });
+
+        this.bindField('sidebar_jlg_settings[sidebar_position]', (value) => {
+            this.currentOptions.sidebar_position = value === 'right' ? 'right' : 'left';
+        });
+
+        this.bindField('sidebar_jlg_settings[bg_color]', (value) => {
+            this.currentOptions.bg_color = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[bg_color_type]', (value) => {
+            this.currentOptions.bg_color_type = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[bg_color_start]', (value) => {
+            this.currentOptions.bg_color_start = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[bg_color_end]', (value) => {
+            this.currentOptions.bg_color_end = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[font_color]', (value) => {
+            this.currentOptions.font_color = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[font_hover_color]', (value) => {
+            this.currentOptions.font_hover_color = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[width_desktop]', (value) => {
+            this.currentOptions.width_desktop = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[width_tablet]', (value) => {
+            this.currentOptions.width_tablet = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[overlay_color]', (value) => {
+            this.currentOptions.overlay_color = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[overlay_opacity]', (value) => {
+            this.currentOptions.overlay_opacity = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[hamburger_color]', (value) => {
+            this.currentOptions.hamburger_color = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[content_margin]', (value) => {
+            this.currentOptions.content_margin = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[menu_alignment_desktop]', (value) => {
+            this.currentOptions.menu_alignment_desktop = value || 'flex-start';
+        });
+
+        this.bindField('sidebar_jlg_settings[menu_alignment_mobile]', (value) => {
+            this.currentOptions.menu_alignment_mobile = value || 'flex-start';
+        });
+
+        this.bindField('sidebar_jlg_settings[app_name]', (value) => {
+            this.currentOptions.app_name = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[header_logo_type]', (value) => {
+            this.currentOptions.header_logo_type = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[header_logo_image]', (value) => {
+            this.currentOptions.header_logo_image = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[social_position]', (value) => {
+            this.currentOptions.social_position = value || 'footer';
+        });
+
+        this.bindField('sidebar_jlg_settings[social_orientation]', (value) => {
+            this.currentOptions.social_orientation = value || 'horizontal';
+        });
+
+        this.bindField('sidebar_jlg_settings[social_icon_size]', (value) => {
+            this.currentOptions.social_icon_size = value;
+        });
+
+        this.isInitializing = false;
+
+        this.menuContainer = document.getElementById('menu-items-container');
+        if (this.menuContainer) {
+            this.menuContainer.addEventListener('input', this.updateMenuFromDomBound);
+            this.menuContainer.addEventListener('change', this.updateMenuFromDomBound);
+            this.menuObserver = new MutationObserver(() => this.updateMenuFromDom());
+            this.menuObserver.observe(this.menuContainer, { childList: true, subtree: true });
+        }
+
+        this.socialContainer = document.getElementById('social-icons-container');
+        if (this.socialContainer) {
+            this.socialContainer.addEventListener('input', this.updateSocialFromDomBound);
+            this.socialContainer.addEventListener('change', this.updateSocialFromDomBound);
+            this.socialObserver = new MutationObserver(() => this.updateSocialFromDom());
+            this.socialObserver.observe(this.socialContainer, { childList: true, subtree: true });
+        }
+
+        this.updateMenuFromDom();
+        this.updateSocialFromDom();
+    }
+
+    bindField(name, handler) {
+        if (!this.form) {
+            return;
+        }
+
+        const selector = `[name="${name.replace(/"/g, '\"')}"]`;
+        const elements = Array.from(this.form.querySelectorAll(selector));
+
+        if (!elements.length) {
+            return;
+        }
+
+        const update = () => {
+            const value = this.getFieldValue(elements);
+            handler(value);
+            if (!this.isInitializing) {
+                this.applyOptions();
+            }
+        };
+
+        elements.forEach((element) => {
+            const eventName = element.type === 'radio' || element.type === 'checkbox' ? 'change' : 'input';
+            element.addEventListener(eventName, update);
+        });
+
+        update();
+    }
+
+    getFieldValue(elements) {
+        if (!elements.length) {
+            return null;
+        }
+
+        if (elements.length > 1 && elements[0].type === 'radio') {
+            const checked = elements.find((element) => element.checked);
+            return checked ? checked.value : null;
+        }
+
+        const element = elements[0];
+
+        if (element.type === 'checkbox') {
+            return element.checked ? element.value || true : false;
+        }
+
+        return element.value;
+    }
+
+    applyOptions() {
+        this.applyCssVariables();
+        this.updateLayout();
+        this.updateHeader();
+        this.renderMenu();
+        this.renderSocial();
+    }
+
+    applyCssVariables() {
+        if (!this.container) {
+            return;
+        }
+
+        const assignments = [
+            ['--sidebar-bg-color', this.currentOptions.bg_color],
+            ['--sidebar-text-color', this.currentOptions.font_color],
+            ['--sidebar-hover-color', this.currentOptions.font_hover_color],
+            ['--sidebar-width-desktop', this.formatDimension(this.currentOptions.width_desktop)],
+            ['--sidebar-width-tablet', this.formatDimension(this.currentOptions.width_tablet)],
+            ['--sidebar-overlay-color', this.currentOptions.overlay_color],
+            ['--sidebar-overlay-opacity', this.formatOpacity(this.currentOptions.overlay_opacity)],
+            ['--sidebar-hamburger-color', this.currentOptions.hamburger_color],
+            ['--sidebar-content-margin', this.formatDimension(this.currentOptions.content_margin)],
+            ['--sidebar-menu-align-desktop', this.currentOptions.menu_alignment_desktop],
+            ['--sidebar-menu-align-mobile', this.currentOptions.menu_alignment_mobile],
+            ['--sidebar-social-size', this.formatPercent(this.currentOptions.social_icon_size)]
+        ];
+
+        assignments.forEach(([variable, value]) => {
+            if (value === undefined || value === null || value === '') {
+                this.container.style.removeProperty(variable);
+            } else {
+                this.container.style.setProperty(variable, value);
+            }
+        });
+
+        const bgType = (this.currentOptions.bg_color_type || 'solid').toLowerCase();
+        const start = this.currentOptions.bg_color_start || '';
+        const end = this.currentOptions.bg_color_end || '';
+
+        if (bgType === 'gradient' && start && end) {
+            this.container.style.setProperty('--sidebar-bg-image', `linear-gradient(180deg, ${start} 0%, ${end} 100%)`);
+            this.container.style.setProperty('--sidebar-bg-color', start);
+        } else {
+            this.container.style.setProperty('--sidebar-bg-image', 'none');
+            if (this.currentOptions.bg_color) {
+                this.container.style.setProperty('--sidebar-bg-color', this.currentOptions.bg_color);
+            }
+        }
+    }
+
+    formatDimension(value) {
+        if (value === null || value === undefined || value === '') {
+            return '';
+        }
+
+        if (typeof value === 'number' || /^-?\d+(?:\.\d+)?$/.test(String(value))) {
+            return `${value}px`;
+        }
+
+        return String(value);
+    }
+
+    formatOpacity(value) {
+        const numeric = parseFloat(value);
+        if (!Number.isFinite(numeric)) {
+            return '0.5';
+        }
+        return Math.min(1, Math.max(0, numeric)).toString();
+    }
+
+    formatPercent(value) {
+        if (value === null || value === undefined || value === '') {
+            return '100%';
+        }
+
+        if (typeof value === 'number' || /^-?\d+(?:\.\d+)?$/.test(String(value))) {
+            return `${value}%`;
+        }
+
+        return String(value);
+    }
+
+    updateLayout() {
+        if (!this.aside) {
+            return;
+        }
+
+        const layout = this.currentOptions.layout_style || 'full';
+        const position = this.currentOptions.sidebar_position === 'right' ? 'right' : 'left';
+
+        this.replaceClass(this.aside, 'layout-', layout);
+        this.replaceClass(this.aside, 'orientation-', position);
+
+        if (this.menuList) {
+            if (layout === 'horizontal-bar') {
+                this.menuList.classList.add('is-horizontal');
+            } else {
+                this.menuList.classList.remove('is-horizontal');
+            }
+        }
+
+        if (this.nav) {
+            if (layout === 'horizontal-bar') {
+                this.nav.classList.add('is-horizontal');
+            } else {
+                this.nav.classList.remove('is-horizontal');
+            }
+        }
+
+        if (this.hamburger) {
+            this.hamburger.dataset.position = position;
+        }
+    }
+
+    replaceClass(element, prefix, suffix) {
+        if (!element) {
+            return;
+        }
+
+        const target = suffix ? `${prefix}${String(suffix).toLowerCase()}` : '';
+        const toRemove = [];
+
+        element.classList.forEach((className) => {
+            if (className.indexOf(prefix) === 0) {
+                toRemove.push(className);
+            }
+        });
+
+        toRemove.forEach((className) => element.classList.remove(className));
+
+        if (target) {
+            element.classList.add(target);
+        }
+    }
+
+    updateHeader() {
+        if (!this.viewport) {
+            return;
+        }
+
+        const header = this.viewport.querySelector('.sidebar-header');
+        if (!header) {
+            return;
+        }
+
+        const logoType = this.currentOptions.header_logo_type;
+        const logoUrl = this.currentOptions.header_logo_image;
+        const appName = this.currentOptions.app_name || '';
+
+        let logoImage = header.querySelector('.sidebar-logo-image');
+        let logoText = header.querySelector('.logo-text');
+
+        if (logoType === 'image' && logoUrl) {
+            if (!logoImage) {
+                logoImage = document.createElement('img');
+                logoImage.className = 'sidebar-logo-image';
+                header.insertBefore(logoImage, header.firstChild);
+            }
+
+            logoImage.src = logoUrl;
+            logoImage.alt = appName;
+
+            if (logoText) {
+                logoText.remove();
+            }
+        } else {
+            if (!logoText) {
+                logoText = document.createElement('span');
+                logoText.className = 'logo-text';
+                header.insertBefore(logoText, header.firstChild);
+            }
+
+            logoText.textContent = appName;
+
+            if (logoImage) {
+                logoImage.remove();
+            }
+        }
+    }
+
+    updateMenuFromDom() {
+        const items = [];
+
+        if (this.menuContainer) {
+            const boxes = this.menuContainer.querySelectorAll('.menu-item-box');
+
+            boxes.forEach((box) => {
+                const labelField = box.querySelector('.item-label');
+                const label = labelField && typeof labelField.value === 'string' ? labelField.value.trim() : '';
+                let url = '#';
+
+                const customInput = box.querySelector('input[name*="[value]"]');
+                const selectInput = box.querySelector('select[name*="[value]"]');
+
+                if (customInput && typeof customInput.value === 'string' && customInput.value.trim() !== '') {
+                    url = customInput.value.trim();
+                } else if (selectInput && typeof selectInput.value === 'string' && selectInput.value.trim() !== '') {
+                    url = selectInput.value.trim();
+                }
+
+                const iconPreview = box.querySelector('.menu-item-icon-wrapper .icon-preview');
+                const iconHtml = iconPreview ? iconPreview.innerHTML : '';
+
+                items.push({ label, url, iconHtml });
+            });
+        }
+
+        this.currentOptions.menu_items = items;
+        this.renderMenu();
+    }
+
+    escapeHtml(value) {
+        return String(value || '').replace(/[&<>"']/g, (match) => {
+            switch (match) {
+                case '&':
+                    return '&amp;';
+                case '<':
+                    return '&lt;';
+                case '>':
+                    return '&gt;';
+                case '"':
+                    return '&quot;';
+                case "'":
+                    return '&#039;';
+                default:
+                    return match;
+            }
+        });
+    }
+
+    buildMenuItem(item) {
+        const li = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = '#';
+        link.dataset.previewUrl = item.url || '#';
+        link.addEventListener('click', (event) => event.preventDefault());
+
+        if (item.iconHtml) {
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'menu-icon';
+            iconSpan.innerHTML = item.iconHtml;
+            link.appendChild(iconSpan);
+        }
+
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = item.label || item.url || '#';
+        link.appendChild(labelSpan);
+
+        li.appendChild(link);
+        return li;
+    }
+
+    renderMenu() {
+        if (!this.menuList) {
+            return;
+        }
+
+        const items = Array.isArray(this.currentOptions.menu_items) ? this.currentOptions.menu_items : [];
+        const socialItem = this.menuSocialItem && this.menuSocialItem.parentElement === this.menuList
+            ? this.menuSocialItem
+            : null;
+
+        if (socialItem) {
+            this.menuList.removeChild(socialItem);
+        }
+
+        this.menuList.innerHTML = '';
+
+        if (!items.length) {
+            const li = document.createElement('li');
+            li.className = 'menu-empty-message';
+            li.textContent = this.messages.emptyMenu || '';
+            this.menuList.appendChild(li);
+        } else {
+            const fragment = document.createDocumentFragment();
+            items.forEach((item) => {
+                fragment.appendChild(this.buildMenuItem(item));
+            });
+            this.menuList.appendChild(fragment);
+        }
+
+        if (socialItem) {
+            this.menuList.appendChild(socialItem);
+        }
+    }
+
+    updateSocialFromDom() {
+        const icons = [];
+
+        if (this.socialContainer) {
+            const boxes = this.socialContainer.querySelectorAll('.menu-item-box');
+
+            boxes.forEach((box) => {
+                const urlField = box.querySelector('.social-url');
+                const iconPreview = box.querySelector('.icon-preview');
+                const labelField = box.querySelector('.item-label');
+
+                const url = urlField && typeof urlField.value === 'string' ? urlField.value.trim() : '';
+
+                if (!url) {
+                    return;
+                }
+
+                icons.push({
+                    url,
+                    iconHtml: iconPreview ? iconPreview.innerHTML : '',
+                    label: labelField && typeof labelField.value === 'string' ? labelField.value.trim() : ''
+                });
+            });
+        }
+
+        this.currentOptions.social_icons = icons;
+        this.renderSocial();
+    }
+
+    buildSocialMarkup(icons, orientation) {
+        if (!Array.isArray(icons) || !icons.length) {
+            return '';
+        }
+
+        const orientationClass = orientation === 'vertical' ? 'vertical' : 'horizontal';
+
+        const items = icons
+            .filter((icon) => icon && icon.url)
+            .map((icon) => {
+                const label = this.escapeHtml(icon.label || icon.url);
+                const content = icon.iconHtml && icon.iconHtml.trim() !== ''
+                    ? icon.iconHtml
+                    : `<span class="no-icon-label">${label}</span>`;
+
+                return `<a href="#" data-preview-url="${this.escapeHtml(icon.url)}" aria-label="${label}">${content}</a>`;
+            })
+            .join('');
+
+        if (!items) {
+            return '';
+        }
+
+        return `<div class="social-icons ${orientationClass}">${items}</div>`;
+    }
+
+    renderSocial() {
+        const icons = Array.isArray(this.currentOptions.social_icons) ? this.currentOptions.social_icons : [];
+        const position = this.currentOptions.social_position === 'in-menu' ? 'in-menu' : 'footer';
+        const orientation = this.currentOptions.social_orientation || 'horizontal';
+        const markup = this.buildSocialMarkup(icons, orientation);
+
+        if (position === 'in-menu') {
+            if (!this.menuList) {
+                return;
+            }
+
+            if (!this.menuSocialItem) {
+                this.menuSocialItem = document.createElement('li');
+                this.menuSocialItem.className = 'social-icons-wrapper';
+            }
+
+            this.menuSocialItem.innerHTML = markup;
+            this.menuSocialItem.style.display = markup ? '' : 'none';
+
+            if (!this.menuList.contains(this.menuSocialItem)) {
+                this.menuList.appendChild(this.menuSocialItem);
+            }
+
+            if (this.footerSocial) {
+                this.footerSocial.style.display = 'none';
+            }
+        } else {
+            if (!this.footerSocial && this.aside) {
+                const inner = this.aside.querySelector('.sidebar-inner');
+                this.footerSocial = document.createElement('div');
+                this.footerSocial.className = 'sidebar-footer';
+                if (inner) {
+                    inner.appendChild(this.footerSocial);
+                } else {
+                    this.aside.appendChild(this.footerSocial);
+                }
+            }
+
+            if (this.footerSocial) {
+                this.footerSocial.innerHTML = markup;
+                this.footerSocial.style.display = markup ? '' : 'none';
+            }
+
+            if (this.menuSocialItem && this.menuSocialItem.parentElement) {
+                this.menuSocialItem.parentElement.removeChild(this.menuSocialItem);
+            }
+        }
+    }
+}
+
 jQuery(document).ready(function($) {
     const options = sidebarJLG.options || {};
     const ajaxUrl = sidebarJLG.ajax_url || '';
@@ -241,6 +1014,22 @@ jQuery(document).ready(function($) {
     const pendingIconRequests = {};
     const iconEntryByExactKey = {};
     const iconKeyLookup = {};
+
+    const previewModule = new SidebarPreviewModule({
+        container: document.getElementById('sidebar-jlg-preview'),
+        form: document.getElementById('sidebar-jlg-form'),
+        ajaxUrl,
+        nonce: sidebarJLG.preview_nonce || '',
+        action: sidebarJLG.preview_action || 'jlg_render_preview',
+        options,
+        messages: sidebarJLG.preview_messages || {}
+    });
+
+    previewModule.init();
+
+    if (typeof window !== 'undefined') {
+        window.SidebarJLGPreview = previewModule;
+    }
 
     function rebuildIconLookups(manifest) {
         iconManifest = Array.isArray(manifest) ? manifest : [];
