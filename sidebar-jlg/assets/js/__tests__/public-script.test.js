@@ -324,6 +324,25 @@ describe('public-script.js', () => {
     expect(link.style.getPropertyValue('--rotate-y')).toBe('');
   });
 
+  test('logs localized missing elements message when provided', () => {
+    document.body.innerHTML = '<div id="app"></div>';
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      loadScript({
+        debug_mode: '1',
+        messages: {
+          missingElements: 'Message localisé personnalisé',
+        },
+      });
+
+      expect(errorSpy).toHaveBeenCalledWith('Message localisé personnalisé');
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   test('respects the reduced motion preference', () => {
     loadScript({ close_on_link_click: '1' }, { prefersReducedMotion: true });
 
