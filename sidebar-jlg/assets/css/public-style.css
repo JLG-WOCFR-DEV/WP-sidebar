@@ -1,14 +1,32 @@
 /* Les variables sont injectées en ligne par PHP */
 
 /* --- Base --- */
+:root {
+    --jlg-safe-area-inset-block-start-fallback: 0px;
+    --jlg-safe-area-inset-block-end-fallback: 0px;
+    --jlg-safe-area-inset-inline-start-fallback: 0px;
+    --jlg-safe-area-inset-inline-end-fallback: 0px;
+    --jlg-safe-area-inset-block-start: var(--jlg-safe-area-inset-block-start-fallback);
+    --jlg-safe-area-inset-block-end: var(--jlg-safe-area-inset-block-end-fallback);
+    --jlg-safe-area-inset-inline-start: var(--jlg-safe-area-inset-inline-start-fallback);
+    --jlg-safe-area-inset-inline-end: var(--jlg-safe-area-inset-inline-end-fallback);
+}
+
+:root {
+    --jlg-safe-area-inset-block-start: env(safe-area-inset-top, var(--jlg-safe-area-inset-block-start-fallback));
+    --jlg-safe-area-inset-block-end: env(safe-area-inset-bottom, var(--jlg-safe-area-inset-block-end-fallback));
+    --jlg-safe-area-inset-inline-start: env(safe-area-inset-left, var(--jlg-safe-area-inset-inline-start-fallback));
+    --jlg-safe-area-inset-inline-end: env(safe-area-inset-right, var(--jlg-safe-area-inset-inline-end-fallback));
+}
+
 body {
     transition:
-        padding-left var(--transition-speed, 0.4s) ease,
-        padding-right var(--transition-speed, 0.4s) ease;
+        padding-inline-start var(--transition-speed, 0.4s) ease,
+        padding-inline-end var(--transition-speed, 0.4s) ease;
 }
 body.sidebar-open {
     touch-action: pan-y;
-    padding-right: var(--sidebar-scrollbar-compensation, 0);
+    padding-inline-end: var(--sidebar-scrollbar-compensation, 0);
 }
 body.sidebar-scroll-lock {
     overflow: hidden;
@@ -17,7 +35,7 @@ body.sidebar-scroll-lock {
 body.sidebar-open .pro-sidebar {
     touch-action: pan-y;
 }
-body.jlg-sidebar-active.jlg-sidebar-horizontal-bar { padding-left: 0 !important; }
+body.jlg-sidebar-active.jlg-sidebar-horizontal-bar { padding-inline-start: 0 !important; }
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -77,28 +95,38 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 }
 @media (min-width: 993px) {
     body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-left {
-        padding-left: var(--sidebar-width-desktop) !important;
+        padding-inline-start: var(--sidebar-width-desktop) !important;
     }
     body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-right {
-        padding-right: var(--sidebar-width-desktop) !important;
+        padding-inline-end: var(--sidebar-width-desktop) !important;
     }
     body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-left #page,
     body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-left .site-content,
     body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-left main {
-        margin-left: var(--content-margin, 2rem);
-        margin-right: 0;
+        margin-inline-start: var(--content-margin, 2rem);
+        margin-inline-end: 0;
     }
     body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-right #page,
     body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-right .site-content,
     body.jlg-sidebar-active.jlg-sidebar-push.jlg-sidebar-position-right main {
-        margin-right: var(--content-margin, 2rem);
-        margin-left: 0;
+        margin-inline-end: var(--content-margin, 2rem);
+        margin-inline-start: 0;
     }
 }
 
 /* --- Overlay pour Mobile/Tablette --- */
 .sidebar-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inset-block-end: 0;
+    inset-inline-end: 0;
+    box-sizing: border-box;
+    padding-block-start: var(--jlg-safe-area-inset-block-start);
+    padding-block-end: var(--jlg-safe-area-inset-block-end);
+    padding-inline-start: var(--jlg-safe-area-inset-inline-start);
+    padding-inline-end: var(--jlg-safe-area-inset-inline-end);
+    width: 100%; height: 100%;
     background-color: var(--overlay-color, rgba(0, 0, 0, 0.5));
     background-color: color-mix(in srgb, var(--overlay-color, #000000) calc(var(--overlay-opacity, 0.5) * 100%), transparent);
     z-index: 999;
@@ -110,7 +138,15 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 
 /* --- Sidebar Container --- */
 .pro-sidebar {
-    position: fixed; top: 0; left: 0; right: auto;
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+    padding-block-start: var(--jlg-safe-area-inset-block-start);
+    padding-block-end: var(--jlg-safe-area-inset-block-end);
+    padding-inline-start: var(--jlg-safe-area-inset-inline-start);
+    padding-inline-end: var(--jlg-safe-area-inset-inline-end);
+    box-sizing: border-box;
     width: 100%; height: 100vh; /* Mobile first */
     background-color: var(--sidebar-bg-color);
     background-image: var(--sidebar-bg-image);
@@ -120,8 +156,8 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     transition: transform var(--transition-speed, 0.4s) ease, opacity var(--transition-speed, 0.4s) ease;
 }
 .jlg-sidebar-position-right .pro-sidebar {
-    left: auto;
-    right: 0;
+    inset-inline-start: auto;
+    inset-inline-end: 0;
 }
 .sidebar-inner {
     display: flex;
@@ -165,8 +201,8 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     body.sidebar-open .pro-sidebar.animation-scale { transform: scale(1); opacity: 1; }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar {
-        left: 0;
-        right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
         width: 100%;
         height: auto;
         max-height: min(85vh, 640px);
@@ -193,8 +229,8 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
         transform: translateX(0);
     }
     body.jlg-sidebar-push:not(.sidebar-open) {
-        padding-left: 0;
-        padding-right: 0;
+        padding-inline-start: 0;
+        padding-inline-end: 0;
     }
 }
 
@@ -202,8 +238,8 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     body.jlg-sidebar-horizontal-bar .pro-sidebar {
         height: var(--horizontal-bar-height, 4rem);
         width: 100%;
-        left: 0;
-        right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
         flex-direction: column;
         transform: translateX(0);
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
@@ -215,18 +251,18 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar.layout-horizontal-bar.position-bottom {
-        top: auto;
-        bottom: 0;
+        inset-block-start: auto;
+        inset-block-end: 0;
     }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar.layout-horizontal-bar.is-sticky.position-top {
         position: sticky;
-        top: 0;
+        inset-block-start: 0;
     }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar.layout-horizontal-bar.is-sticky.position-bottom {
         position: sticky;
-        bottom: 0;
+        inset-block-end: 0;
     }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar.layout-horizontal-bar:not(.is-sticky) {
@@ -279,7 +315,7 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
     }
 
     body.jlg-sidebar-horizontal-bar .sidebar-footer {
-        margin-left: auto;
+        margin-inline-start: auto;
         padding: 0;
         border-top: none;
         display: flex;
@@ -425,20 +461,23 @@ html.jlg-prefers-reduced-motion .pro-sidebar {
 
 /* --- Hamburger --- */
 .hamburger-menu {
-    display: block; position: fixed;
-    top: var(--hamburger-top-position, 2rem);
-    left: 15px; right: auto; z-index: 1001;
+    display: block;
+    position: fixed;
+    inset-block-start: calc(var(--hamburger-top-position, 2rem) + var(--jlg-safe-area-inset-block-start));
+    inset-inline-start: calc(15px + var(--jlg-safe-area-inset-inline-start));
+    inset-inline-end: auto;
+    z-index: 1001;
     background: none; border: none;
     padding: 0; cursor: pointer;
     width: 50px; height: 50px;
     display: flex; align-items: center; justify-content: center;
 }
 .hamburger-menu.orientation-right {
-    left: auto;
-    right: 15px;
+    inset-inline-start: auto;
+    inset-inline-end: calc(15px + var(--jlg-safe-area-inset-inline-end));
 }
 .hamburger-menu.orientation-left {
-    right: auto;
+    inset-inline-end: auto;
 }
 
 .hamburger-menu:hover,
