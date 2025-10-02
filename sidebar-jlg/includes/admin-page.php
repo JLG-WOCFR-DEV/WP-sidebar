@@ -53,6 +53,20 @@ $textTransformLabels = [
             <h2><?php esc_html_e( 'Aperçu en direct', 'sidebar-jlg' ); ?></h2>
             <p class="description"><?php esc_html_e( 'L’aperçu se met à jour automatiquement lorsque vous modifiez les réglages.', 'sidebar-jlg' ); ?></p>
         </div>
+        <div class="sidebar-jlg-preview__toolbar" role="toolbar" aria-label="<?php esc_attr_e( 'Choisir la taille de prévisualisation', 'sidebar-jlg' ); ?>">
+            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button" data-preview-size="mobile" aria-pressed="false">
+                <span class="screen-reader-text"><?php esc_html_e( 'Prévisualiser en mode mobile', 'sidebar-jlg' ); ?></span>
+                <span aria-hidden="true"><?php esc_html_e( 'Mobile', 'sidebar-jlg' ); ?></span>
+            </button>
+            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button" data-preview-size="tablet" aria-pressed="false">
+                <span class="screen-reader-text"><?php esc_html_e( 'Prévisualiser en mode tablette', 'sidebar-jlg' ); ?></span>
+                <span aria-hidden="true"><?php esc_html_e( 'Tablette', 'sidebar-jlg' ); ?></span>
+            </button>
+            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button is-active" data-preview-size="desktop" aria-pressed="true">
+                <span class="screen-reader-text"><?php esc_html_e( 'Prévisualiser en mode bureau', 'sidebar-jlg' ); ?></span>
+                <span aria-hidden="true"><?php esc_html_e( 'Desktop', 'sidebar-jlg' ); ?></span>
+            </button>
+        </div>
         <div class="sidebar-jlg-preview__status" role="status" aria-live="polite"></div>
         <div class="sidebar-jlg-preview__viewport" aria-label="<?php esc_attr_e( 'Aperçu de la sidebar', 'sidebar-jlg' ); ?>"></div>
     </div>
