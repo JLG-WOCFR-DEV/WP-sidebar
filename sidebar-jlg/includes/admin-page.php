@@ -82,6 +82,17 @@
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e( 'Orientation', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <p>
+                            <label><input type="radio" name="sidebar_jlg_settings[sidebar_position]" value="left" <?php checked($options['sidebar_position'], 'left'); ?>> <?php esc_html_e( 'Alignée à gauche', 'sidebar-jlg' ); ?></label>
+                            <br>
+                            <label><input type="radio" name="sidebar_jlg_settings[sidebar_position]" value="right" <?php checked($options['sidebar_position'], 'right'); ?>> <?php esc_html_e( 'Alignée à droite', 'sidebar-jlg' ); ?></label>
+                        </p>
+                        <p class="description"><?php esc_html_e( 'Choisissez le côté d\'affichage de la sidebar et du bouton hamburger.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e( 'Comportement sur Desktop', 'sidebar-jlg' ); ?></th>
                     <td>
                         <select name="sidebar_jlg_settings[desktop_behavior]" class="desktop-behavior-select">

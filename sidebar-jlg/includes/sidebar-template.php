@@ -9,6 +9,11 @@ $allIcons = $allIcons ?? [];
 $layoutStyle = $options['layout_style'] ?? 'full';
 $horizontalPosition = $options['horizontal_bar_position'] ?? 'top';
 $horizontalSticky = !empty($options['horizontal_bar_sticky']);
+$rawSidebarPosition = $options['sidebar_position'] ?? 'left';
+$sidebarPosition = sanitize_key(is_string($rawSidebarPosition) ? $rawSidebarPosition : 'left');
+if ($sidebarPosition !== 'right') {
+    $sidebarPosition = 'left';
+}
 
 $navigationClasses = ['sidebar-navigation'];
 if ($layoutStyle === 'horizontal-bar') {
@@ -124,14 +129,15 @@ $sidebar_content_html = ob_get_clean();
     $hamburger_close_label = esc_attr__( 'Fermer le menu', 'sidebar-jlg' );
 ?>
 <button
-    class="hamburger-menu"
+    class="hamburger-menu orientation-<?php echo esc_attr($sidebarPosition); ?>"
     id="hamburger-btn"
     type="button"
     aria-label="<?php echo esc_attr( $hamburger_open_label ); ?>"
     aria-controls="pro-sidebar"
     aria-expanded="false"
     data-open-label="<?php echo esc_attr( $hamburger_open_label ); ?>"
-    data-close-label="<?php echo esc_attr( $hamburger_close_label ); ?>">
+    data-close-label="<?php echo esc_attr( $hamburger_close_label ); ?>"
+    data-position="<?php echo esc_attr($sidebarPosition); ?>">
     <div class="hamburger-icon">
         <div class="icon-1"></div>
         <div class="icon-2"></div>
@@ -140,7 +146,11 @@ $sidebar_content_html = ob_get_clean();
 </button>
 
 <?php
-$asideClasses = ['pro-sidebar', 'layout-' . ($layoutStyle ? sanitize_html_class($layoutStyle) : 'full')];
+$asideClasses = [
+    'pro-sidebar',
+    'layout-' . ($layoutStyle ? sanitize_html_class($layoutStyle) : 'full'),
+    'orientation-' . sanitize_html_class($sidebarPosition),
+];
 if ($layoutStyle === 'horizontal-bar') {
     $asideClasses[] = 'position-' . sanitize_html_class($horizontalPosition ?: 'top');
     if ($horizontalSticky) {
@@ -150,7 +160,7 @@ if ($layoutStyle === 'horizontal-bar') {
 $asideClassAttr = implode(' ', array_unique(array_map('sanitize_html_class', $asideClasses)));
 $horizontalAlignment = $options['horizontal_bar_alignment'] ?? 'space-between';
 ?>
-<aside class="<?php echo esc_attr($asideClassAttr); ?>" id="pro-sidebar" data-hover-desktop="<?php echo esc_attr($options['hover_effect_desktop']); ?>" data-hover-mobile="<?php echo esc_attr($options['hover_effect_mobile']); ?>" data-layout="<?php echo esc_attr($layoutStyle); ?>" data-horizontal-alignment="<?php echo esc_attr($horizontalAlignment); ?>">
+<aside class="<?php echo esc_attr($asideClassAttr); ?>" id="pro-sidebar" data-hover-desktop="<?php echo esc_attr($options['hover_effect_desktop']); ?>" data-hover-mobile="<?php echo esc_attr($options['hover_effect_mobile']); ?>" data-layout="<?php echo esc_attr($layoutStyle); ?>" data-horizontal-alignment="<?php echo esc_attr($horizontalAlignment); ?>" data-position="<?php echo esc_attr($sidebarPosition); ?>">
     <div class="sidebar-inner">
         <div class="sidebar-header">
         <?php if ($options['header_logo_type'] === 'image' && !empty($options['header_logo_image'])): ?>

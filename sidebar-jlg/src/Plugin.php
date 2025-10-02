@@ -61,7 +61,7 @@ class Plugin
 
         add_action('plugins_loaded', [$this, 'loadTextdomain']);
         add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
-        add_action('update_option_sidebar_jlg_settings', [$this->cache, 'clear'], 10, 0);
+        add_action('update_option_sidebar_jlg_settings', [$this, 'handleSettingsUpdated'], 10, 3);
         add_action('sidebar_jlg_custom_icons_changed', [$this->cache, 'clear'], 10, 0);
 
         $this->settings->revalidateStoredOptions();
@@ -90,6 +90,19 @@ class Plugin
         load_plugin_textdomain('sidebar-jlg', false, dirname(plugin_basename($this->pluginFile)) . '/languages');
     }
 
+    /**
+     * @param mixed $oldValue
+     * @param mixed $value
+     */
+    public function handleSettingsUpdated($oldValue, $value, string $optionName = ''): void
+    {
+        $this->cache->clear();
+
+        if ($this->hasSidebarPositionChanged($oldValue, $value)) {
+            $this->cache->forgetLocaleIndex();
+        }
+    }
+
     private function maybeInvalidateCacheOnVersionChange(): void
     {
         $storedVersion = get_option('sidebar_jlg_plugin_version');
@@ -98,6 +111,25 @@ class Plugin
             $this->cache->clear();
             update_option('sidebar_jlg_plugin_version', $this->version);
         }
+    }
+
+    /**
+     * @param mixed $oldValue
+     * @param mixed $newValue
+     */
+    private function hasSidebarPositionChanged($oldValue, $newValue): bool
+    {
+        $normalize = static function ($value): string {
+            if (!is_array($value)) {
+                return 'left';
+            }
+
+            $position = \sanitize_key($value['sidebar_position'] ?? '');
+
+            return $position === 'right' ? 'right' : 'left';
+        };
+
+        return $normalize($oldValue) !== $normalize($newValue);
     }
 
     public function getDefaultSettings(): array
