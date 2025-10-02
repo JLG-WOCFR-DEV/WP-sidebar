@@ -799,6 +799,36 @@ if (!function_exists('sanitize_hex_color')) {
     }
 }
 
+if (!function_exists('wp_get_nav_menu_object')) {
+    function wp_get_nav_menu_object($menu)
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        if (is_numeric($menu)) {
+            return (object) ['term_id' => (int) $menu];
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('wp_get_nav_menu_items')) {
+    function wp_get_nav_menu_items($menu, $args = [])
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        return [];
+    }
+}
+
 if (!function_exists('get_permalink')) {
     function get_permalink($post_id)
     {

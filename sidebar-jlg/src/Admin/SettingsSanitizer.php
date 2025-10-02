@@ -9,6 +9,8 @@ use JLG\Sidebar\Settings\ValueNormalizer;
 
 class SettingsSanitizer
 {
+    private const NAV_MENU_ALLOWED_FILTERS = ['all', 'top-level', 'current-branch'];
+
     private DefaultSettings $defaults;
     private IconLibrary $icons;
 
@@ -370,13 +372,18 @@ class SettingsSanitizer
 
         $sanitizedMenuItems = [];
         $svgUrlContext = $this->getSvgUrlValidationContext();
+        $existingMenuItems = [];
+        if (isset($existingOptions['menu_items']) && is_array($existingOptions['menu_items'])) {
+            $existingMenuItems = $existingOptions['menu_items'];
+        }
+
         if (isset($input['menu_items']) && is_array($input['menu_items'])) {
-            foreach ($input['menu_items'] as $item) {
+            foreach ($input['menu_items'] as $index => $item) {
                 if (!is_array($item)) {
                     continue;
                 }
 
-                $allowedItemTypes = ['custom', 'post', 'page', 'category'];
+                $allowedItemTypes = ['custom', 'post', 'page', 'category', 'nav_menu'];
                 $itemType = sanitize_key($item['type'] ?? '');
                 if (!in_array($itemType, $allowedItemTypes, true)) {
                     $itemType = 'custom';
@@ -418,15 +425,43 @@ class SettingsSanitizer
                     }
                 }
 
+                $existingItem = [];
+                if (isset($existingMenuItems[$index]) && is_array($existingMenuItems[$index])) {
+                    $existingItem = $existingMenuItems[$index];
+                }
+
                 switch ($itemType) {
                     case 'custom':
-                        $sanitizedItem['value'] = esc_url_raw($item['value'] ?? '');
+                        $rawValue = array_key_exists('value', $item) ? $item['value'] : ($existingItem['value'] ?? '');
+                        $sanitizedItem['value'] = esc_url_raw($rawValue);
+                        break;
+                    case 'nav_menu':
+                        $rawMenuValue = array_key_exists('value', $item) ? $item['value'] : ($existingItem['value'] ?? 0);
+                        $menuId = absint($rawMenuValue);
+                        if ($menuId > 0 && function_exists('wp_get_nav_menu_object')) {
+                            $menuObject = wp_get_nav_menu_object($menuId);
+                            if (!$menuObject) {
+                                $menuId = 0;
+                            }
+                        }
+
+                        $sanitizedItem['value'] = $menuId;
+                        $depthSource = array_key_exists('nav_menu_max_depth', $item)
+                            ? $item['nav_menu_max_depth']
+                            : ($existingItem['nav_menu_max_depth'] ?? null);
+                        $filterSource = array_key_exists('nav_menu_filter', $item)
+                            ? $item['nav_menu_filter']
+                            : ($existingItem['nav_menu_filter'] ?? null);
+
+                        $sanitizedItem['nav_menu_max_depth'] = $this->sanitizeNavMenuDepth($depthSource);
+                        $sanitizedItem['nav_menu_filter'] = $this->sanitizeNavMenuFilter($filterSource);
                         break;
                     case 'post':
                     case 'page':
                     case 'category':
                     default:
-                        $sanitizedItem['value'] = absint($item['value'] ?? 0);
+                        $rawTarget = array_key_exists('value', $item) ? $item['value'] : ($existingItem['value'] ?? 0);
+                        $sanitizedItem['value'] = absint($rawTarget);
                         break;
                 }
 
@@ -437,6 +472,40 @@ class SettingsSanitizer
         $sanitized['menu_items'] = $sanitizedMenuItems;
 
         return $sanitized;
+    }
+
+    public static function getAllowedNavMenuFilters(): array
+    {
+        return self::NAV_MENU_ALLOWED_FILTERS;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeNavMenuDepth($value): int
+    {
+        if (!is_scalar($value)) {
+            return 0;
+        }
+
+        $depth = absint($value);
+
+        return $depth > 0 ? $depth : 0;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeNavMenuFilter($value): string
+    {
+        if (is_string($value)) {
+            $normalized = sanitize_key($value);
+            if (in_array($normalized, self::NAV_MENU_ALLOWED_FILTERS, true)) {
+                return $normalized;
+            }
+        }
+
+        return self::NAV_MENU_ALLOWED_FILTERS[0];
     }
 
     /**

@@ -225,6 +225,129 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 
+let cachedNavMenus = null;
+let navMenusPromise = null;
+
+function normalizeNavMenus(menus) {
+    if (!Array.isArray(menus)) {
+        return [];
+    }
+
+    return menus.reduce((accumulator, menu) => {
+        if (!menu) {
+            return accumulator;
+        }
+
+        let id = '';
+        if (typeof menu.id === 'number' || typeof menu.id === 'string') {
+            id = String(menu.id);
+        } else if (typeof menu.term_id === 'number' || typeof menu.term_id === 'string') {
+            id = String(menu.term_id);
+        }
+
+        if (id === '') {
+            return accumulator;
+        }
+
+        const name = typeof menu.name === 'string' && menu.name.trim() !== ''
+            ? menu.name
+            : (typeof menu.slug === 'string' && menu.slug !== '' ? menu.slug : id);
+
+        accumulator.push({
+            id,
+            name,
+            slug: typeof menu.slug === 'string' ? menu.slug : '',
+        });
+
+        return accumulator;
+    }, []);
+}
+
+function fetchNavMenusFromDataStore() {
+    if (!window.wp || !wp.data || typeof wp.data.select !== 'function') {
+        return null;
+    }
+
+    const store = wp.data.select('core');
+    if (!store || typeof store.getMenus !== 'function') {
+        return null;
+    }
+
+    const menus = store.getMenus();
+    if (Array.isArray(menus)) {
+        return Promise.resolve(normalizeNavMenus(menus));
+    }
+
+    if (!wp.data.dispatch || typeof wp.data.dispatch !== 'function') {
+        return null;
+    }
+
+    const dispatcher = wp.data.dispatch('core');
+    if (!dispatcher || typeof dispatcher.fetchMenus !== 'function') {
+        return null;
+    }
+
+    return new Promise((resolve) => {
+        const unsubscribe = wp.data.subscribe(() => {
+            const loadedMenus = store.getMenus();
+            if (Array.isArray(loadedMenus)) {
+                unsubscribe();
+                resolve(normalizeNavMenus(loadedMenus));
+            }
+        });
+
+        try {
+            dispatcher.fetchMenus();
+        } catch (error) {
+            unsubscribe();
+            resolve([]);
+        }
+    });
+}
+
+function fetchNavMenusViaApi() {
+    if (!window.wp || !wp.apiFetch || typeof wp.apiFetch !== 'function') {
+        return Promise.resolve([]);
+    }
+
+    return wp.apiFetch({ path: '/wp/v2/menus?per_page=100' })
+        .then((menus) => normalizeNavMenus(menus))
+        .catch(() => []);
+}
+
+function fetchNavMenus() {
+    if (Array.isArray(cachedNavMenus)) {
+        return Promise.resolve(cachedNavMenus);
+    }
+
+    if (navMenusPromise) {
+        return navMenusPromise;
+    }
+
+    const storePromise = fetchNavMenusFromDataStore();
+    if (storePromise) {
+        navMenusPromise = storePromise
+            .then((menus) => {
+                cachedNavMenus = menus;
+                return menus;
+            })
+            .catch(() => fetchNavMenusViaApi().then((menus) => {
+                cachedNavMenus = menus;
+                return menus;
+            }));
+
+        return navMenusPromise;
+    }
+
+    navMenusPromise = fetchNavMenusViaApi().then((menus) => {
+        cachedNavMenus = menus;
+        return menus;
+    });
+
+    return navMenusPromise;
+}
+
+
 class SidebarPreviewModule {
     constructor(args = {}) {
         this.container = args.container || null;
@@ -2447,6 +2570,115 @@ jQuery(document).ready(function($) {
 
             const debouncedSearchHandler = debounce(triggerSearch, searchDebounceDelay);
             searchInput.on('input.sidebarSearch search.sidebarSearch', debouncedSearchHandler);
+        } else if (type === 'nav_menu') {
+            const menuSelectLabel = getI18nString('navMenuFieldLabel', 'Menu WordPress');
+            const menuPlaceholder = getI18nString('navMenuSelectPlaceholder', 'Sélectionnez un menu…');
+            const depthLabel = getI18nString('navMenuDepthLabel', 'Profondeur maximale');
+            const depthHelp = getI18nString('navMenuDepthHelp', '0 = illimité');
+            const filterLabel = getI18nString('navMenuFilterLabel', 'Filtrage');
+            const filterAllLabel = getI18nString('navMenuFilterAll', 'Tous les éléments');
+            const filterTopLevelLabel = getI18nString('navMenuFilterTopLevel', 'Uniquement le niveau 1');
+            const filterBranchLabel = getI18nString('navMenuFilterBranch', 'Branche de la page courante');
+
+            const allowedFilters = ['all', 'top-level', 'current-branch'];
+            const normalizedMenuValue = value !== null && value !== undefined ? String(value) : '';
+            let depthValue = parseInt(itemData.nav_menu_max_depth, 10);
+            if (!Number.isFinite(depthValue) || depthValue < 0) {
+                depthValue = 0;
+            }
+            let filterValue = typeof itemData.nav_menu_filter === 'string' ? itemData.nav_menu_filter : '';
+            if (!allowedFilters.includes(filterValue)) {
+                filterValue = 'all';
+            }
+
+            fieldContainer.html(`
+                <p>
+                    <label>${menuSelectLabel}</label>
+                    <select class="widefat menu-item-nav-select" name="sidebar_jlg_settings[menu_items][${index}][value]">
+                        <option value="">${menuPlaceholder}</option>
+                    </select>
+                </p>
+                <p>
+                    <label>${depthLabel}</label>
+                    <input type="number" class="small-text menu-item-nav-depth" min="0" step="1"
+                        name="sidebar_jlg_settings[menu_items][${index}][nav_menu_max_depth]"
+                        value="${depthValue}">
+                    <span class="description">${depthHelp}</span>
+                </p>
+                <p>
+                    <label>${filterLabel}</label>
+                    <select class="widefat menu-item-nav-filter" name="sidebar_jlg_settings[menu_items][${index}][nav_menu_filter]">
+                        <option value="all"${filterValue === 'all' ? ' selected' : ''}>${filterAllLabel}</option>
+                        <option value="top-level"${filterValue === 'top-level' ? ' selected' : ''}>${filterTopLevelLabel}</option>
+                        <option value="current-branch"${filterValue === 'current-branch' ? ' selected' : ''}>${filterBranchLabel}</option>
+                    </select>
+                </p>
+            `);
+
+            searchInput.val('');
+            statusElement.empty();
+            searchContainer.css('display', 'none');
+
+            const $menuSelect = fieldContainer.find('.menu-item-nav-select');
+            const $depthInput = fieldContainer.find('.menu-item-nav-depth');
+
+            const updateTitle = (menuName) => {
+                const fallback = menuName || getI18nString('menuItemDefaultTitle', 'Nouvel élément');
+                $itemBox.data('fallbackTitle', fallback);
+                const $labelField = $itemBox.find('.item-label');
+                const labelValue = $labelField.length && typeof $labelField.val() === 'string'
+                    ? $labelField.val().trim()
+                    : '';
+                $itemBox.find('.item-title').text(labelValue || fallback);
+            };
+
+            updateTitle('');
+
+            fetchNavMenus()
+                .then((menus) => {
+                    const menuItems = Array.isArray(menus) ? menus : [];
+                    $menuSelect.empty();
+                    const placeholderOption = document.createElement('option');
+                    placeholderOption.value = '';
+                    placeholderOption.textContent = menuPlaceholder;
+                    $menuSelect.append(placeholderOption);
+
+                    let selectedName = '';
+                    menuItems.forEach((menu) => {
+                        if (!menu || typeof menu.id === 'undefined') {
+                            return;
+                        }
+
+                        const option = document.createElement('option');
+                        option.value = String(menu.id);
+                        option.textContent = menu.name || menu.slug || option.value;
+
+                        if (normalizedMenuValue !== '' && option.value === normalizedMenuValue) {
+                            option.selected = true;
+                            selectedName = option.textContent;
+                        }
+
+                        $menuSelect.append(option);
+                    });
+
+                    updateTitle(selectedName);
+                })
+                .catch(() => {
+                    updateTitle('');
+                });
+
+            $menuSelect.on('change', function() {
+                const option = this.options[this.selectedIndex];
+                const menuName = option && option.value ? option.textContent : '';
+                updateTitle(menuName);
+            });
+
+            $depthInput.on('input', function() {
+                const parsed = parseInt(this.value, 10);
+                if (!Number.isFinite(parsed) || parsed < 0) {
+                    this.value = '0';
+                }
+            });
         } else {
             fieldContainer.empty();
             searchInput.val('');
@@ -2463,13 +2695,15 @@ jQuery(document).ready(function($) {
         addButtonId: 'add-menu-item', 
         deleteButtonClass: 'delete-menu-item',
         newTitle: getI18nString('menuItemDefaultTitle', 'Nouvel élément'),
-        newItem: (index) => ({ 
-            index, 
-            label: '', 
-            type: 'custom', 
-            value: '', 
-            icon_type: 'svg_inline', 
-            icon: '' 
+        newItem: (index) => ({
+            index,
+            label: '',
+            type: 'custom',
+            value: '',
+            icon_type: 'svg_inline',
+            icon: '',
+            nav_menu_max_depth: 0,
+            nav_menu_filter: 'all'
         }),
         onAppend: ($itemBox, itemData) => {
             updateValueField($itemBox, itemData);
@@ -2481,7 +2715,12 @@ jQuery(document).ready(function($) {
     // Gestion du changement de type de menu
     $('#menu-items-container').on('change', '.menu-item-type', function() {
         const $itemBox = $(this).closest('.menu-item-box');
-        updateValueField($itemBox, { value: '' });
+        const selectedType = $(this).val();
+        if (selectedType === 'nav_menu') {
+            updateValueField($itemBox, { value: '', nav_menu_max_depth: 0, nav_menu_filter: 'all' });
+        } else {
+            updateValueField($itemBox, { value: '' });
+        }
     });
 
     // --- Builder pour les icônes sociales ---

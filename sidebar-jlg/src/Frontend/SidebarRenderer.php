@@ -643,9 +643,394 @@ class SidebarRenderer
                 }
 
                 return self::urlsMatch($targetUrl, $currentUrl);
+            case 'nav_menu_item':
+                $menuItemType = isset($item['menu_item_type']) ? (string) $item['menu_item_type'] : '';
+                $object = isset($item['object']) ? (string) $item['object'] : '';
+                $objectId = absint($item['object_id'] ?? 0);
+                $currentUrl = is_string($context['current_url'] ?? null) ? (string) $context['current_url'] : '';
+                $targetUrl = isset($item['url']) ? (string) $item['url'] : '';
+
+                switch ($menuItemType) {
+                    case 'post_type':
+                        if ($objectId > 0 && in_array($objectId, (array) $context['current_post_ids'], true)) {
+                            $postTypes = (array) $context['current_post_types'];
+                            if ($object === '' || $postTypes === [] || in_array($object, $postTypes, true)) {
+                                return true;
+                            }
+                        }
+                        break;
+                    case 'post_type_archive':
+                        if ($object !== '' && in_array($object, (array) $context['current_post_types'], true)) {
+                            return true;
+                        }
+                        break;
+                    case 'taxonomy':
+                        if ($object === 'category' && $objectId > 0) {
+                            if (in_array($objectId, (array) $context['current_category_ids'], true)) {
+                                return true;
+                            }
+                        }
+                        break;
+                }
+
+                if ($targetUrl !== '' && $currentUrl !== '' && self::urlsMatch($targetUrl, $currentUrl)) {
+                    return true;
+                }
+
+                return false;
         }
 
         return false;
+    }
+
+    public static function buildMenuTree(array $options, array $allIcons, array $context): array
+    {
+        $menuItems = [];
+        if (isset($options['menu_items']) && is_array($options['menu_items'])) {
+            $menuItems = $options['menu_items'];
+        }
+
+        $nodes = [];
+
+        foreach ($menuItems as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $type = isset($item['type']) ? (string) $item['type'] : '';
+
+            if ($type === 'nav_menu') {
+                $menuId = absint($item['value'] ?? 0);
+                if ($menuId <= 0) {
+                    continue;
+                }
+
+                $maxDepth = isset($item['nav_menu_max_depth']) ? max(0, absint($item['nav_menu_max_depth'])) : 0;
+                $filter = isset($item['nav_menu_filter']) ? sanitize_key((string) $item['nav_menu_filter']) : 'all';
+
+                $navNodes = self::buildNodesFromNavMenu($menuId, $maxDepth, $filter, $context);
+                if (!empty($navNodes)) {
+                    $nodes = array_merge($nodes, $navNodes);
+                }
+
+                continue;
+            }
+
+            $staticNode = self::buildStaticMenuNode($item, $allIcons, $context);
+            if ($staticNode !== null) {
+                $nodes[] = $staticNode;
+            }
+        }
+
+        return array_values($nodes);
+    }
+
+    private static function buildStaticMenuNode(array $item, array $allIcons, array $context): ?array
+    {
+        $type = isset($item['type']) ? (string) $item['type'] : '';
+        $url = '#';
+        $rawUrl = '';
+        $isValid = true;
+
+        switch ($type) {
+            case 'custom':
+                $rawUrl = isset($item['value']) ? (string) $item['value'] : '';
+                break;
+            case 'post':
+            case 'page':
+                $targetId = absint($item['value'] ?? 0);
+                if ($targetId > 0 && function_exists('get_permalink')) {
+                    $rawUrl = get_permalink($targetId);
+                }
+                break;
+            case 'category':
+                $targetId = absint($item['value'] ?? 0);
+                if ($targetId > 0 && function_exists('get_category_link')) {
+                    $rawUrl = get_category_link($targetId);
+                }
+                break;
+        }
+
+        if ($rawUrl === '' || (function_exists('is_wp_error') && is_wp_error($rawUrl))) {
+            $isValid = false;
+        }
+
+        if ($isValid && is_string($rawUrl) && $rawUrl !== '') {
+            $url = $rawUrl;
+        }
+
+        $icon = [
+            'type' => '',
+            'markup' => '',
+            'url' => '',
+            'is_custom' => false,
+        ];
+
+        $iconType = isset($item['icon_type']) ? (string) $item['icon_type'] : 'svg_inline';
+        $iconValue = isset($item['icon']) ? (string) $item['icon'] : '';
+
+        if ($iconType === 'svg_url') {
+            if ($iconValue !== '' && filter_var($iconValue, FILTER_VALIDATE_URL)) {
+                $icon['type'] = 'svg_url';
+                $icon['url'] = $iconValue;
+            }
+        } elseif ($iconValue !== '' && isset($allIcons[$iconValue])) {
+            $icon['type'] = 'svg_inline';
+            $icon['markup'] = (string) $allIcons[$iconValue];
+            $icon['is_custom'] = strpos($iconValue, 'custom_') === 0;
+        }
+
+        $isCurrent = self::isMenuItemCurrent($item, $context);
+
+        $classes = ['menu-item', 'menu-item-static'];
+        if ($isCurrent) {
+            $classes[] = 'current-menu-item';
+        }
+
+        if ($icon['type'] !== '') {
+            $classes[] = 'menu-item-has-icon';
+        }
+
+        $classes = self::normalizeMenuClasses($classes);
+
+        return [
+            'label' => isset($item['label']) ? (string) $item['label'] : '',
+            'url' => $url,
+            'classes' => $classes,
+            'is_current' => $isCurrent,
+            'is_current_ancestor' => false,
+            'children' => [],
+            'icon' => $icon,
+            'origin' => 'static',
+        ];
+    }
+
+    private static function buildNodesFromNavMenu(int $menuId, int $maxDepth, string $filter, array $context): array
+    {
+        if (!function_exists('wp_get_nav_menu_items')) {
+            return [];
+        }
+
+        $rawItems = wp_get_nav_menu_items($menuId, ['update_post_term_cache' => false]);
+        if (!is_array($rawItems)) {
+            return [];
+        }
+
+        $itemsById = [];
+        $childrenMap = [];
+        $rootIds = [];
+
+        foreach ($rawItems as $menuItem) {
+            if (!is_object($menuItem) || !isset($menuItem->ID)) {
+                continue;
+            }
+
+            $mapped = self::mapNavMenuItem($menuItem);
+            if ($mapped === null) {
+                continue;
+            }
+
+            $menuItemId = (int) $menuItem->ID;
+            $parentId = isset($menuItem->menu_item_parent) ? (int) $menuItem->menu_item_parent : 0;
+
+            $classes = is_array($menuItem->classes) ? $menuItem->classes : [];
+            $classes[] = 'menu-item';
+            $classes[] = 'menu-item-nav';
+            $classes[] = 'origin-nav-menu';
+
+            $isCurrent = self::isMenuItemCurrent($mapped['item_data'], $context);
+
+            $itemsById[$menuItemId] = [
+                'id' => $menuItemId,
+                'parent' => $parentId,
+                'label' => $mapped['label'],
+                'url' => $mapped['url'],
+                'item_data' => $mapped['item_data'],
+                'classes' => self::normalizeMenuClasses($classes),
+                'is_current' => $isCurrent,
+            ];
+        }
+
+        foreach ($itemsById as $id => $node) {
+            $parentId = $node['parent'];
+            if ($parentId > 0 && isset($itemsById[$parentId])) {
+                if (!isset($childrenMap[$parentId])) {
+                    $childrenMap[$parentId] = [];
+                }
+                $childrenMap[$parentId][] = $id;
+            } else {
+                $rootIds[] = $id;
+            }
+        }
+
+        $tree = [];
+        foreach ($rootIds as $rootId) {
+            $node = self::buildNavMenuNodeTree($rootId, $itemsById, $childrenMap, $maxDepth, 0);
+            if ($node !== null) {
+                $tree[] = $node;
+            }
+        }
+
+        if ($filter === 'top-level') {
+            $tree = self::stripChildrenFromNavNodes($tree);
+        } elseif ($filter === 'current-branch') {
+            $filtered = self::pruneNavMenuToCurrentBranch($tree);
+            if ($filtered !== []) {
+                $tree = $filtered;
+            }
+        }
+
+        return array_values($tree);
+    }
+
+    private static function buildNavMenuNodeTree(int $nodeId, array $itemsById, array $childrenMap, int $maxDepth, int $depth): ?array
+    {
+        if (!isset($itemsById[$nodeId])) {
+            return null;
+        }
+
+        $item = $itemsById[$nodeId];
+
+        $node = [
+            'label' => $item['label'],
+            'url' => $item['url'],
+            'classes' => $item['classes'],
+            'is_current' => $item['is_current'],
+            'is_current_ancestor' => false,
+            'children' => [],
+            'icon' => [
+                'type' => '',
+                'markup' => '',
+                'url' => '',
+                'is_custom' => false,
+            ],
+            'origin' => 'nav_menu',
+        ];
+
+        if (isset($childrenMap[$nodeId]) && ($maxDepth === 0 || $depth + 1 < $maxDepth)) {
+            foreach ($childrenMap[$nodeId] as $childId) {
+                $childNode = self::buildNavMenuNodeTree($childId, $itemsById, $childrenMap, $maxDepth, $depth + 1);
+                if ($childNode === null) {
+                    continue;
+                }
+
+                if ($childNode['is_current'] || $childNode['is_current_ancestor']) {
+                    $node['is_current_ancestor'] = true;
+                }
+
+                $node['children'][] = $childNode;
+            }
+        }
+
+        if (!empty($node['children'])) {
+            $node['classes'][] = 'menu-item-has-children';
+        }
+
+        if ($node['is_current']) {
+            $node['classes'][] = 'current-menu-item';
+        }
+
+        if ($node['is_current_ancestor']) {
+            $node['classes'][] = 'current-menu-ancestor';
+        }
+
+        $node['classes'] = self::normalizeMenuClasses($node['classes']);
+
+        return $node;
+    }
+
+    private static function mapNavMenuItem(object $menuItem): ?array
+    {
+        if (!isset($menuItem->title)) {
+            return null;
+        }
+
+        $label = sanitize_text_field((string) $menuItem->title);
+        $url = isset($menuItem->url) && is_string($menuItem->url) ? (string) $menuItem->url : '';
+
+        return [
+            'label' => $label,
+            'url' => $url,
+            'item_data' => [
+                'type' => 'nav_menu_item',
+                'menu_item_type' => isset($menuItem->type) ? (string) $menuItem->type : '',
+                'object' => isset($menuItem->object) ? (string) $menuItem->object : '',
+                'object_id' => isset($menuItem->object_id) ? absint($menuItem->object_id) : 0,
+                'url' => $url,
+            ],
+        ];
+    }
+
+    private static function normalizeMenuClasses($classes): array
+    {
+        if (!is_array($classes)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($classes as $class) {
+            if (!is_string($class)) {
+                continue;
+            }
+
+            $sanitized = sanitize_html_class($class);
+            if ($sanitized === '') {
+                continue;
+            }
+
+            $normalized[$sanitized] = true;
+        }
+
+        return array_keys($normalized);
+    }
+
+    private static function stripChildrenFromNavNodes(array $nodes): array
+    {
+        foreach ($nodes as &$node) {
+            if (!empty($node['children'])) {
+                $node['children'] = [];
+            }
+
+            $node['classes'] = self::normalizeMenuClasses(array_diff($node['classes'], ['menu-item-has-children']));
+        }
+
+        unset($node);
+
+        return array_values($nodes);
+    }
+
+    private static function pruneNavMenuToCurrentBranch(array $nodes): array
+    {
+        $pruned = [];
+
+        foreach ($nodes as $node) {
+            $children = self::pruneNavMenuToCurrentBranch($node['children']);
+            $shouldKeep = $node['is_current'] || $node['is_current_ancestor'] || !empty($children);
+
+            if (!$shouldKeep) {
+                continue;
+            }
+
+            $node['children'] = array_values($children);
+
+            if (!empty($children)) {
+                if (!in_array('menu-item-has-children', $node['classes'], true)) {
+                    $node['classes'][] = 'menu-item-has-children';
+                }
+                if (!in_array('current-menu-ancestor', $node['classes'], true)) {
+                    $node['classes'][] = 'current-menu-ancestor';
+                }
+                $node['is_current_ancestor'] = true;
+            } else {
+                $node['classes'] = array_values(array_diff($node['classes'], ['menu-item-has-children']));
+            }
+
+            $node['classes'] = self::normalizeMenuClasses($node['classes']);
+            $pruned[] = $node;
+        }
+
+        return $pruned;
     }
 
     private static function buildCurrentUrl(): ?string
