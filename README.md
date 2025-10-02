@@ -21,6 +21,13 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 - Activer une recherche intégrée et personnaliser son affichage.
 - Importer vos propres icônes SVG en les plaçant dans le dossier `wp-content/uploads/sidebar-jlg/icons/`.
 
+### Export / Import des réglages
+
+- Depuis l’onglet **Outils** de la page d’administration, utilisez le bouton **Exporter les réglages** pour générer un fichier JSON contenant la configuration actuelle (`sidebar_jlg_settings`).
+- Conservez ce fichier dans votre système de contrôle de versions ou partagez-le avec votre équipe pour synchroniser les environnements.
+- Sur l’environnement cible, sélectionnez ce fichier via le bouton **Importer les réglages** puis confirmez l’action. Les options existantes sont validées et remplacées avant que la page ne soit automatiquement rechargée.
+- Les exports incluent la version du plugin et l’URL du site source pour faciliter les audits et vérifier que l’import a été réalisé sur le bon environnement.
+
 ### Bloc Gutenberg "Sidebar JLG – Recherche"
 
 - Le bloc dynamique `jlg/sidebar-search` permet d'insérer l'encart de recherche de la sidebar dans l'éditeur du site.

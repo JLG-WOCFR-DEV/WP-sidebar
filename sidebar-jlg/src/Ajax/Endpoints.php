@@ -6,6 +6,11 @@ use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
 use function __;
+use function current_time;
+use function gmdate;
+use function home_url;
+use function sanitize_option;
+use function time;
 
 class Endpoints
 {
@@ -30,6 +35,8 @@ class Endpoints
         add_action('wp_ajax_jlg_reset_settings', [$this, 'ajax_reset_settings']);
         add_action('wp_ajax_jlg_get_icon_svg', [$this, 'ajax_get_icon_svg']);
         add_action('wp_ajax_jlg_upload_custom_icon', [$this, 'ajax_upload_custom_icon']);
+        add_action('wp_ajax_jlg_export_settings', [$this, 'ajax_export_settings']);
+        add_action('wp_ajax_jlg_import_settings', [$this, 'ajax_import_settings']);
     }
 
     /**
@@ -486,6 +493,124 @@ class Endpoints
         }
 
         wp_send_json_success($response);
+    }
+
+    public function ajax_export_settings(): void
+    {
+        $capability = $this->get_ajax_capability();
+
+        if (!current_user_can($capability)) {
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
+        }
+
+        check_ajax_referer('jlg_tools_nonce', 'nonce');
+
+        $options = $this->settings->getOptionsWithRevalidation();
+
+        $timestamp = current_time('timestamp', true);
+        if (!is_int($timestamp)) {
+            $timestamp = time();
+        }
+
+        $payload = [
+            'settings' => $options,
+            'generated_at' => gmdate('c', $timestamp),
+            'site_url' => home_url('/'),
+        ];
+
+        if (defined('SIDEBAR_JLG_VERSION')) {
+            $payload['plugin_version'] = SIDEBAR_JLG_VERSION;
+        }
+
+        $fileName = sprintf('sidebar-jlg-settings-%s.json', gmdate('Ymd-His', $timestamp));
+
+        wp_send_json_success([
+            'message' => __('Export des réglages généré.', 'sidebar-jlg'),
+            'file_name' => $fileName,
+            'payload' => $payload,
+        ]);
+    }
+
+    public function ajax_import_settings(): void
+    {
+        $capability = $this->get_ajax_capability();
+
+        if (!current_user_can($capability)) {
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
+        }
+
+        check_ajax_referer('jlg_tools_nonce', 'nonce');
+
+        if (!isset($_FILES['settings_file']) || !is_array($_FILES['settings_file'])) {
+            wp_send_json_error(__('Aucun fichier reçu.', 'sidebar-jlg'));
+        }
+
+        $file = $_FILES['settings_file'];
+        $uploadError = isset($file['error']) ? (int) $file['error'] : UPLOAD_ERR_OK;
+
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            wp_send_json_error($this->describeUploadError($uploadError));
+        }
+
+        $tmpName = isset($file['tmp_name']) ? $file['tmp_name'] : '';
+
+        if (!is_string($tmpName) || $tmpName === '' || !file_exists($tmpName) || !is_uploaded_file($tmpName)) {
+            wp_send_json_error(__('Le fichier téléversé est invalide ou introuvable.', 'sidebar-jlg'));
+        }
+
+        $rawContents = file_get_contents($tmpName);
+
+        if (!is_string($rawContents) || $rawContents === '') {
+            wp_send_json_error(__('Le fichier JSON est vide ou illisible.', 'sidebar-jlg'));
+        }
+
+        $decoded = json_decode($rawContents, true);
+
+        if (!is_array($decoded)) {
+            $jsonErrorMessage = function_exists('json_last_error_msg')
+                ? json_last_error_msg()
+                : __('Format JSON invalide.', 'sidebar-jlg');
+
+            wp_send_json_error(
+                sprintf(
+                    __('Impossible d’importer le fichier : %s', 'sidebar-jlg'),
+                    $jsonErrorMessage
+                )
+            );
+        }
+
+        $settings = $this->extractSettingsFromImport($decoded);
+
+        if (!is_array($settings)) {
+            wp_send_json_error(__('Le fichier ne contient pas de réglages valides.', 'sidebar-jlg'));
+        }
+
+        $sanitized = sanitize_option('sidebar_jlg_settings', $settings);
+
+        if (!is_array($sanitized)) {
+            $sanitized = [];
+        }
+
+        $this->settings->saveOptions($sanitized);
+        $this->settings->revalidateStoredOptions();
+        $this->cache->clear();
+
+        wp_send_json_success([
+            'message' => __('Réglages importés avec succès.', 'sidebar-jlg'),
+        ]);
+    }
+
+    private function extractSettingsFromImport(array $decoded): array
+    {
+        if (isset($decoded['settings']) && is_array($decoded['settings'])) {
+            return $decoded['settings'];
+        }
+
+        if (isset($decoded['sidebar_jlg_settings']) && is_array($decoded['sidebar_jlg_settings'])) {
+            return $decoded['sidebar_jlg_settings'];
+        }
+
+        return $decoded;
     }
 
     private function describeUploadError(int $code): string

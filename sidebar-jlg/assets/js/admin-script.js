@@ -229,6 +229,7 @@ jQuery(document).ready(function($) {
     const ajaxUrl = sidebarJLG.ajax_url || '';
     const ajaxNonce = sidebarJLG.nonce || '';
     const iconFetchAction = typeof sidebarJLG.icon_fetch_action === 'string' ? sidebarJLG.icon_fetch_action : 'jlg_get_icon_svg';
+    const toolsNonce = typeof sidebarJLG.tools_nonce === 'string' ? sidebarJLG.tools_nonce : '';
     let iconManifest = Array.isArray(sidebarJLG.icons_manifest) ? sidebarJLG.icons_manifest : [];
     const iconUploadAction = typeof sidebarJLG.icon_upload_action === 'string' ? sidebarJLG.icon_upload_action : '';
     const parsedUploadMax = parseInt(sidebarJLG.icon_upload_max_size, 10);
@@ -281,6 +282,60 @@ jQuery(document).ready(function($) {
         if (debugMode) {
             console.log(`[Sidebar JLG Debug] ${message}`, data);
         }
+    }
+
+    function renderNotice(type, message) {
+        const container = $('#sidebar-jlg-js-notices');
+        const $target = container.length ? container : $('.sidebar-jlg-admin-wrap');
+
+        if (!$target || !$target.length) {
+            return;
+        }
+
+        const typeClasses = {
+            success: 'notice-success',
+            error: 'notice-error',
+            warning: 'notice-warning',
+            info: 'notice-info'
+        };
+
+        const noticeClass = typeClasses[type] || typeClasses.info;
+        const dismissText = getI18nString('dismissNotice', 'Ignorer cette notification.');
+
+        const $notice = $('<div/>', {
+            class: `notice ${noticeClass} is-dismissible sidebar-jlg-notice`
+        });
+
+        const $message = $('<p/>');
+        $message.text(message || '');
+        $notice.append($message);
+
+        const $dismissButton = $('<button type="button" class="notice-dismiss"></button>');
+        const $dismissScreenReader = $('<span class="screen-reader-text"></span>');
+        $dismissScreenReader.text(dismissText);
+        $dismissButton.append($dismissScreenReader);
+        $notice.append($dismissButton);
+
+        $target.find('.sidebar-jlg-notice').remove();
+        $target.prepend($notice);
+
+        $notice.on('click', '.notice-dismiss', function() {
+            $notice.remove();
+        });
+    }
+
+    function getResponseMessage(response, fallback) {
+        if (response && typeof response === 'object') {
+            if (response.data && typeof response.data.message === 'string') {
+                return response.data.message;
+            }
+
+            if (typeof response.message === 'string') {
+                return response.message;
+            }
+        }
+
+        return fallback;
     }
 
     function debounce(fn, delay) {
@@ -1765,7 +1820,7 @@ jQuery(document).ready(function($) {
         if (!confirm("Êtes-vous sûr de vouloir réinitialiser tous les réglages ? Cette action est irréversible.")) {
             return;
         }
-        
+
         logDebug('Reset button clicked.');
         const $this = $(this);
         $this.prop('disabled', true).text('Réinitialisation...');
@@ -1791,6 +1846,155 @@ jQuery(document).ready(function($) {
             $this.prop('disabled', false).text('Réinitialiser tous les réglages');
         });
     });
+
+    const $exportButton = $('#export-jlg-settings');
+    const $importButton = $('#import-jlg-settings');
+    const $importFileInput = $('#import-jlg-settings-file');
+
+    if ($exportButton.length) {
+        const exportDefaultText = $exportButton.text();
+
+        $exportButton.on('click', function() {
+            if (!ajaxUrl) {
+                renderNotice('error', getI18nString('exportError', 'Impossible de générer l’export.'));
+                return;
+            }
+
+            if (!toolsNonce) {
+                renderNotice('error', getI18nString('exportError', 'Impossible de générer l’export.'));
+                return;
+            }
+
+            const confirmMessage = getI18nString('exportConfirm', 'Voulez-vous exporter les réglages actuels ?');
+            if (confirmMessage && !confirm(confirmMessage)) {
+                return;
+            }
+
+            const inProgressText = getI18nString('exportInProgress', 'Export en cours…');
+            $exportButton.prop('disabled', true).text(inProgressText);
+
+            $.post(ajaxUrl, {
+                action: 'jlg_export_settings',
+                nonce: toolsNonce
+            })
+            .done(function(response) {
+                if (response && response.success && response.data) {
+                    const data = response.data;
+                    const payload = data.payload || {};
+                    let jsonString = '';
+
+                    try {
+                        jsonString = JSON.stringify(payload, null, 2);
+                    } catch (error) {
+                        logDebug('Failed to stringify export payload.', error);
+                    }
+
+                    if (jsonString) {
+                        if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+                            const fallbackMessage = getI18nString('exportError', 'Impossible de générer l’export.');
+                            renderNotice('error', fallbackMessage);
+                            return;
+                        }
+
+                        const blob = new Blob([jsonString], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = (typeof data.file_name === 'string' && data.file_name !== '')
+                            ? data.file_name
+                            : 'sidebar-jlg-settings.json';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+
+                        const message = getResponseMessage(response, getI18nString('exportSuccess', 'Export terminé. Le téléchargement va démarrer.'));
+                        renderNotice('success', message);
+                        return;
+                    }
+                }
+
+                const errorMessage = getResponseMessage(response, getI18nString('exportError', 'Impossible de générer l’export.'));
+                renderNotice('error', errorMessage);
+            })
+            .fail(function(xhr) {
+                const errorMessage = getResponseMessage(xhr ? xhr.responseJSON : null, getI18nString('exportError', 'Impossible de générer l’export.'));
+                renderNotice('error', errorMessage);
+            })
+            .always(function() {
+                $exportButton.prop('disabled', false).text(exportDefaultText);
+            });
+        });
+    }
+
+    if ($importButton.length && $importFileInput.length) {
+        const importDefaultText = $importButton.text();
+
+        $importButton.on('click', function() {
+            if (!ajaxUrl) {
+                renderNotice('error', getI18nString('importError', 'L’import des réglages a échoué.'));
+                return;
+            }
+
+            if (!toolsNonce) {
+                renderNotice('error', getI18nString('importError', 'L’import des réglages a échoué.'));
+                return;
+            }
+
+            const inputElement = $importFileInput.get(0);
+            if (!inputElement || !inputElement.files || !inputElement.files.length) {
+                renderNotice('error', getI18nString('importMissingFile', 'Veuillez sélectionner un fichier JSON avant de lancer l’import.'));
+                return;
+            }
+
+            const confirmMessage = getI18nString('importConfirm', 'Importer ces réglages écrasera la configuration actuelle. Continuer ?');
+            if (confirmMessage && !confirm(confirmMessage)) {
+                return;
+            }
+
+            const file = inputElement.files[0];
+            if (typeof FormData === 'undefined') {
+                renderNotice('error', getI18nString('importError', 'L’import des réglages a échoué.'));
+                return;
+            }
+            const formData = new FormData();
+            formData.append('action', 'jlg_import_settings');
+            formData.append('nonce', toolsNonce);
+            formData.append('settings_file', file);
+
+            $importButton.prop('disabled', true).text(getI18nString('importInProgress', 'Import en cours…'));
+            $importFileInput.prop('disabled', true);
+
+            $.ajax({
+                url: ajaxUrl,
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false
+            })
+            .done(function(response) {
+                if (response && response.success) {
+                    const message = getResponseMessage(response, getI18nString('importSuccess', 'Réglages importés avec succès. Rechargement de la page…'));
+                    renderNotice('success', message);
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1200);
+                    return;
+                }
+
+                const errorMessage = getResponseMessage(response, getI18nString('importError', 'L’import des réglages a échoué.'));
+                renderNotice('error', errorMessage);
+            })
+            .fail(function(xhr) {
+                const errorMessage = getResponseMessage(xhr ? xhr.responseJSON : null, getI18nString('importError', 'L’import des réglages a échoué.'));
+                renderNotice('error', errorMessage);
+            })
+            .always(function() {
+                $importButton.prop('disabled', false).text(importDefaultText);
+                $importFileInput.prop('disabled', false).val('');
+            });
+        });
+    }
 
     // --- Bouton de debug (si mode debug activé) ---
     if (typeof window !== 'undefined') {

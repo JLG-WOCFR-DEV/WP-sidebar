@@ -34,6 +34,8 @@ $textTransformLabels = [
     settings_errors( 'sidebar_jlg_messages' );
     ?>
 
+    <div id="sidebar-jlg-js-notices"></div>
+
     <p><?php esc_html_e( 'Personnalisez l\'apparence et le comportement de votre sidebar.', 'sidebar-jlg' ); ?></p>
     <p><b><?php esc_html_e( 'Nouveau :', 'sidebar-jlg' ); ?></b> <?php printf( esc_html__( 'Ajoutez vos propres icônes SVG dans le dossier %1$s. Elles apparaîtront dans les listes de sélection !', 'sidebar-jlg' ), '<code>/wp-content/uploads/sidebar-jlg/icons/</code>' ); ?></p>
 
@@ -490,6 +492,23 @@ $textTransformLabels = [
                             <?php esc_html_e( 'Activer le mode de débogage.', 'sidebar-jlg' ); ?>
                         </label>
                         <p class="description"><?php esc_html_e( 'Affiche des informations utiles dans la console du navigateur (F12) pour résoudre les problèmes.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e( 'Exporter les réglages', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <button type="button" id="export-jlg-settings" class="button button-primary"><?php esc_html_e( 'Exporter les réglages', 'sidebar-jlg' ); ?></button>
+                        <p class="description"><?php esc_html_e( 'Générez un fichier JSON contenant la configuration actuelle pour la déployer sur un autre environnement.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e( 'Importer des réglages', 'sidebar-jlg' ); ?></th>
+                    <td class="sidebar-jlg-import-tools">
+                        <div class="sidebar-jlg-import-controls">
+                            <input type="file" id="import-jlg-settings-file" accept="application/json,.json" />
+                            <button type="button" id="import-jlg-settings" class="button button-secondary"><?php esc_html_e( 'Importer les réglages', 'sidebar-jlg' ); ?></button>
+                        </div>
+                        <p class="description"><?php esc_html_e( 'Sélectionnez un export JSON valide. Les réglages actuels seront remplacés après confirmation.', 'sidebar-jlg' ); ?></p>
                     </td>
                 </tr>
                 <tr>
