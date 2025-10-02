@@ -846,8 +846,6 @@ class SidebarRenderer
 
     private function resolveSidebarPosition(array $options): string
     {
-        $position = \sanitize_key($options['sidebar_position'] ?? '');
-
-        return $position === 'right' ? 'right' : 'left';
+        return $this->settings->normalizeSidebarPosition($options['sidebar_position'] ?? null);
     }
 }

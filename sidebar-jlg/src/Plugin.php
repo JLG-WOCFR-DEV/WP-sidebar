@@ -119,17 +119,14 @@ class Plugin
      */
     private function hasSidebarPositionChanged($oldValue, $newValue): bool
     {
-        $normalize = static function ($value): string {
-            if (!is_array($value)) {
-                return 'left';
-            }
+        $oldPosition = is_array($oldValue)
+            ? $this->settings->normalizeSidebarPosition($oldValue['sidebar_position'] ?? null)
+            : $this->settings->normalizeSidebarPosition(null);
+        $newPosition = is_array($newValue)
+            ? $this->settings->normalizeSidebarPosition($newValue['sidebar_position'] ?? null)
+            : $this->settings->normalizeSidebarPosition(null);
 
-            $position = \sanitize_key($value['sidebar_position'] ?? '');
-
-            return $position === 'right' ? 'right' : 'left';
-        };
-
-        return $normalize($oldValue) !== $normalize($newValue);
+        return $oldPosition !== $newPosition;
     }
 
     public function getDefaultSettings(): array

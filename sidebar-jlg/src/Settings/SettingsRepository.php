@@ -77,6 +77,7 @@ class SettingsRepository
         }
 
         $options = wp_parse_args($optionsFromDb, $this->getDefaultSettings());
+        $options['sidebar_position'] = $this->normalizeSidebarPosition($options['sidebar_position'] ?? null);
 
         $this->optionsCacheRaw = $optionsFromDb;
         $this->optionsCache = $options;
@@ -89,6 +90,7 @@ class SettingsRepository
         $optionsFromDb = $this->getStoredOptions();
         $defaults = $this->getDefaultSettings();
         $options = wp_parse_args($optionsFromDb, $defaults);
+        $options['sidebar_position'] = $this->normalizeSidebarPosition($options['sidebar_position'] ?? null);
 
         $revalidated = $this->revalidateCustomIcons($options);
         if ($revalidated !== $options) {
@@ -96,6 +98,7 @@ class SettingsRepository
         }
 
         $finalOptions = wp_parse_args($revalidated, $defaults);
+        $finalOptions['sidebar_position'] = $this->normalizeSidebarPosition($finalOptions['sidebar_position'] ?? null);
         $this->optionsCacheRaw = $revalidated;
         $this->optionsCache = $finalOptions;
 
@@ -222,6 +225,8 @@ class SettingsRepository
             }
         }
 
+        $revalidated['sidebar_position'] = $this->normalizeSidebarPosition($revalidated['sidebar_position'] ?? null);
+
         if ($revalidated !== $merged) {
             update_option('sidebar_jlg_settings', $revalidated);
             $this->invalidateCache();
@@ -320,6 +325,27 @@ class SettingsRepository
     {
         $this->optionsCache = null;
         $this->optionsCacheRaw = null;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    public function normalizeSidebarPosition($value): string
+    {
+        if (is_string($value) || is_numeric($value)) {
+            $normalized = \sanitize_key((string) $value);
+
+            if ($normalized === 'right') {
+                return 'right';
+            }
+        }
+
+        $defaults = $this->getDefaultSettings();
+        $fallback = is_string($defaults['sidebar_position'] ?? null)
+            ? \sanitize_key((string) $defaults['sidebar_position'])
+            : 'left';
+
+        return $fallback === 'right' ? 'right' : 'left';
     }
 
     private function registerCacheInvalidationHooks(): void
