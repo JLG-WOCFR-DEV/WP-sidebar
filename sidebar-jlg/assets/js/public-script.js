@@ -6,9 +6,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const openLabel = hamburgerBtn ? (hamburgerBtn.getAttribute('data-open-label') || hamburgerBtn.getAttribute('aria-label') || '') : '';
     const closeLabel = hamburgerBtn ? (hamburgerBtn.getAttribute('data-close-label') || openLabel) : '';
 
+    function getMissingElementsMessage() {
+        if (
+            typeof sidebarSettings !== 'undefined' &&
+            sidebarSettings.messages &&
+            sidebarSettings.messages.missingElements
+        ) {
+            return sidebarSettings.messages.missingElements;
+        }
+
+        if (
+            typeof wp !== 'undefined' &&
+            wp.i18n &&
+            typeof wp.i18n.__ === 'function'
+        ) {
+            return wp.i18n.__('Sidebar JLG : menu introuvable.', 'sidebar-jlg');
+        }
+
+        return 'Sidebar JLG : menu introuvable.';
+    }
+
     if (!sidebar || !hamburgerBtn) {
         if (typeof sidebarSettings !== 'undefined' && sidebarSettings.debug_mode == '1') {
-            console.error('Sidebar JLG: Sidebar or hamburger button not found.');
+            console.error(getMissingElementsMessage());
         }
         return;
     }

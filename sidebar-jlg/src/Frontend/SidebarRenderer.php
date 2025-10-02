@@ -110,6 +110,9 @@ class SidebarRenderer
             'animation_type' => $options['animation_type'] ?? 'slide-left',
             'close_on_link_click' => $options['close_on_link_click'] ?? '',
             'debug_mode' => (string) ($options['debug_mode'] ?? '0'),
+            'messages' => [
+                'missingElements' => __('Sidebar JLG : menu introuvable.', 'sidebar-jlg'),
+            ],
         ];
 
         wp_localize_script('sidebar-jlg-public-js', 'sidebarSettings', $localizedOptions);
