@@ -3,6 +3,7 @@
 namespace JLG\Sidebar\Settings;
 
 use JLG\Sidebar\Icons\IconLibrary;
+use JLG\Sidebar\Settings\OptionChoices;
 use JLG\Sidebar\Settings\ValueNormalizer;
 
 class SettingsRepository
@@ -77,6 +78,7 @@ class SettingsRepository
         }
 
         $options = wp_parse_args($optionsFromDb, $this->getDefaultSettings());
+        $options = $this->normalizeRuntimeChoices($options);
 
         $this->optionsCacheRaw = $optionsFromDb;
         $this->optionsCache = $options;
@@ -96,6 +98,7 @@ class SettingsRepository
         }
 
         $finalOptions = wp_parse_args($revalidated, $defaults);
+        $finalOptions = $this->normalizeRuntimeChoices($finalOptions);
         $this->optionsCacheRaw = $revalidated;
         $this->optionsCache = $finalOptions;
 
@@ -332,4 +335,22 @@ class SettingsRepository
         add_action('delete_option_sidebar_jlg_settings', [$this, 'invalidateCache'], 0, 0);
     }
 
+    private function normalizeRuntimeChoices(array $options): array
+    {
+        $defaults = $this->getDefaultSettings();
+        $choices = OptionChoices::getAll();
+
+        if (!isset($choices['sidebar_position'])) {
+            return $options;
+        }
+
+        $options['sidebar_position'] = OptionChoices::resolveChoice(
+            $options['sidebar_position'] ?? null,
+            $choices['sidebar_position'],
+            $defaults['sidebar_position'] ?? null,
+            $defaults['sidebar_position'] ?? 'left'
+        );
+
+        return $options;
+    }
 }

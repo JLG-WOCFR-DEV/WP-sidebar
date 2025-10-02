@@ -63,6 +63,7 @@ class SidebarRenderer
     private MenuCache $cache;
     private string $pluginFile;
     private string $version;
+    private bool $bodyDataPrinted = false;
 
     public function __construct(
         SettingsRepository $settings,
@@ -83,6 +84,8 @@ class SidebarRenderer
         add_action('wp_enqueue_scripts', [$this, 'enqueueAssets']);
         add_action('wp_footer', [$this, 'render']);
         add_filter('body_class', [$this, 'addBodyClasses']);
+        add_action('wp_body_open', [$this, 'outputBodyDataScript']);
+        add_action('wp_footer', [$this, 'outputBodyDataScriptFallback'], 5);
     }
 
     public function enqueueAssets(): void
@@ -506,6 +509,42 @@ class SidebarRenderer
         }
 
         echo $html;
+    }
+
+    public function outputBodyDataScript(): void
+    {
+        $this->printBodyDataScript();
+    }
+
+    public function outputBodyDataScriptFallback(): void
+    {
+        $this->printBodyDataScript();
+    }
+
+    private function printBodyDataScript(): void
+    {
+        if ($this->bodyDataPrinted) {
+            return;
+        }
+
+        $options = $this->settings->getOptions();
+        if (empty($options['enable_sidebar'])) {
+            return;
+        }
+
+        $position = $this->resolveSidebarPosition($options);
+        $encodedPosition = json_encode($position, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+
+        if (!is_string($encodedPosition)) {
+            return;
+        }
+
+        printf(
+            '<script id="sidebar-jlg-body-data">document.body.dataset.sidebarPosition=%s;</script>',
+            $encodedPosition
+        );
+
+        $this->bodyDataPrinted = true;
     }
 
     private function cleanSidebarBuffer(int $targetLevel): void

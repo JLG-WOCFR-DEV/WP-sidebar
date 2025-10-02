@@ -37,8 +37,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebarPosition = sidebarPositionAttr === 'right' ? 'right' : 'left';
     document.body.classList.remove('jlg-sidebar-position-left', 'jlg-sidebar-position-right');
     document.body.classList.add(`jlg-sidebar-position-${sidebarPosition}`);
+    document.body.dataset.sidebarPosition = sidebarPosition;
     hamburgerBtn.classList.remove('orientation-left', 'orientation-right');
     hamburgerBtn.classList.add(`orientation-${sidebarPosition}`);
+    hamburgerBtn.dataset.position = sidebarPosition;
 
     const prefersReducedMotionQuery = typeof window.matchMedia === 'function'
         ? window.matchMedia('(prefers-reduced-motion: reduce)')
