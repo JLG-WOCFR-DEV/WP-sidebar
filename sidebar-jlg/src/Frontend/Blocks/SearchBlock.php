@@ -145,11 +145,7 @@ class SearchBlock
             return;
         }
 
-        $storedOptions = get_option('sidebar_jlg_settings', []);
-        if (!is_array($storedOptions)) {
-            $storedOptions = [];
-        }
-
+        $storedOptions = $this->settings->getRawProfileOptions();
         $this->settings->saveOptions(array_merge($storedOptions, $updates));
     }
 

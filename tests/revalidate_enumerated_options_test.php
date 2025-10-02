@@ -13,13 +13,18 @@ $renderer = $plugin->getSidebarRenderer();
 
 $defaults = $repository->getDefaultSettings();
 
-$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
-    'desktop_behavior' => 'invalid-behavior',
+$GLOBALS['wp_test_options']['sidebar_jlg_profiles'] = [
+    'active' => 'default',
+    'profiles' => [
+        'default' => [
+            'desktop_behavior' => 'invalid-behavior',
+        ],
+    ],
 ];
 
 $repository->revalidateStoredOptions();
 
-$storedAfter = $GLOBALS['wp_test_options']['sidebar_jlg_settings'] ?? [];
+$storedAfter = $repository->getRawProfileOptions();
 
 $testsPassed = true;
 

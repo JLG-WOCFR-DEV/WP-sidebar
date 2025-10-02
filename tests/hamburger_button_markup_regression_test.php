@@ -16,7 +16,7 @@ $defaultSettings['enable_sidebar'] = true;
 $defaultSettings['menu_items'] = [];
 $defaultSettings['social_icons'] = [];
 
-update_option('sidebar_jlg_settings', $defaultSettings);
+$settingsRepository->saveOptions($defaultSettings);
 $menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
 

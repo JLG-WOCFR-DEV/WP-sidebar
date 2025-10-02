@@ -4,6 +4,7 @@ declare(strict_types=1);
 use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
+use JLG\Sidebar\Settings\SettingsRepository;
 
 require __DIR__ . '/bootstrap.php';
 
@@ -15,7 +16,8 @@ require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
 $defaults = new DefaultSettings();
 $icons = new IconLibrary(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php');
-$sanitizer = new SettingsSanitizer($defaults, $icons);
+$repository = new SettingsRepository($defaults, $icons);
+$sanitizer = new SettingsSanitizer($defaults, $icons, $repository);
 
 $reflection = new ReflectionClass(SettingsSanitizer::class);
 $method = $reflection->getMethod('sanitize_general_settings');

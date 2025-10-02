@@ -15,15 +15,20 @@ $menuCache = $plugin->getMenuCache();
 $defaults = $repository->getDefaultSettings();
 $defaultContentMargin = $defaults['content_margin'] ?? '';
 
-$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
-    'enable_sidebar' => true,
-    'content_margin' => '',
+$GLOBALS['wp_test_options']['sidebar_jlg_profiles'] = [
+    'active' => 'default',
+    'profiles' => [
+        'default' => [
+            'enable_sidebar' => true,
+            'content_margin' => '',
+        ],
+    ],
 ];
 
 $menuCache->clear();
 $repository->revalidateStoredOptions();
 
-$storedAfterRevalidation = $GLOBALS['wp_test_options']['sidebar_jlg_settings'] ?? [];
+$storedAfterRevalidation = $repository->getRawProfileOptions();
 
 $testsPassed = true;
 

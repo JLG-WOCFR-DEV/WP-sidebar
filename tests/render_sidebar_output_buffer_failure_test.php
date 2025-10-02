@@ -45,7 +45,7 @@ namespace {
 
     $defaultSettings = $settingsRepository->getDefaultSettings();
     $defaultSettings['enable_sidebar'] = '1';
-    update_option('sidebar_jlg_settings', $defaultSettings);
+    $settingsRepository->saveOptions($defaultSettings);
 
     $menuCache->clear();
     $GLOBALS['wp_test_transients'] = [];

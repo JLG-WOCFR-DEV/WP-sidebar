@@ -12,17 +12,22 @@ $repository = $plugin->getSettingsRepository();
 
 $defaults = $repository->getDefaultSettings();
 
-$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
-    'overlay_opacity' => 5.2,
-    'mobile_bg_opacity' => 'not-a-number',
-    'mobile_blur' => '-15',
-    'animation_speed' => '200ms',
-    'social_icon_size' => '90%',
+$GLOBALS['wp_test_options']['sidebar_jlg_profiles'] = [
+    'active' => 'default',
+    'profiles' => [
+        'default' => [
+            'overlay_opacity' => 5.2,
+            'mobile_bg_opacity' => 'not-a-number',
+            'mobile_blur' => '-15',
+            'animation_speed' => '200ms',
+            'social_icon_size' => '90%',
+        ],
+    ],
 ];
 
 $repository->revalidateStoredOptions();
 
-$storedAfterRevalidation = $GLOBALS['wp_test_options']['sidebar_jlg_settings'] ?? [];
+$storedAfterRevalidation = $repository->getRawProfileOptions();
 
 $testsPassed = true;
 

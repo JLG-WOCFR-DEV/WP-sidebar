@@ -48,8 +48,12 @@ $pluginFile = __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 $defaults = new DefaultSettings();
 $iconLibrary = new IconLibrary($pluginFile);
 
-$createBlock = static function () use ($defaults, $iconLibrary, $pluginFile): SearchBlock {
-    $settings = new SettingsRepository($defaults, $iconLibrary);
+$createRepository = static function () use ($defaults, $iconLibrary): SettingsRepository {
+    return new SettingsRepository($defaults, $iconLibrary);
+};
+
+$createBlock = static function () use ($createRepository, $pluginFile): SearchBlock {
+    $settings = $createRepository();
 
     return new SearchBlock($settings, $pluginFile, 'test-version');
 };
@@ -71,18 +75,18 @@ $attributes = [
 // Scenario 1: visitor or unauthorized user should not trigger option synchronization.
 $GLOBALS['test_current_user_can'] = false;
 $GLOBALS['test_is_admin'] = false;
-update_option('sidebar_jlg_settings', $initialOptions);
+$createRepository()->saveOptions($initialOptions);
 
 $unauthorizedBlock = $createBlock();
 $unauthorizedBlock->render($attributes);
 
-$storedAfterUnauthorized = get_option('sidebar_jlg_settings');
+$storedAfterUnauthorized = $createRepository()->getRawProfileOptions();
 assertSameValue($initialOptions, $storedAfterUnauthorized, 'Options remain unchanged for unauthorized users.');
 
 // Scenario 2: admin context with proper capability should synchronize options.
 $GLOBALS['test_current_user_can'] = true;
 $GLOBALS['test_is_admin'] = true;
-update_option('sidebar_jlg_settings', $initialOptions);
+$createRepository()->saveOptions($initialOptions);
 
 $authorizedBlock = $createBlock();
 $authorizedBlock->render($attributes);
@@ -93,7 +97,7 @@ $expectedOptions['search_method'] = 'shortcode';
 $expectedOptions['search_alignment'] = 'center';
 $expectedOptions['search_shortcode'] = '[example]';
 
-$storedAfterAuthorized = get_option('sidebar_jlg_settings');
+$storedAfterAuthorized = $createRepository()->getRawProfileOptions();
 assertSameValue($expectedOptions, $storedAfterAuthorized, 'Options are synchronized for authorized users in admin context.');
 
 if ($testsPassed) {

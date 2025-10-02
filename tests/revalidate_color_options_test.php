@@ -76,26 +76,31 @@ $expectedFontHoverColor = normalize_expected_color($defaults['font_hover_color']
 $expectedMobileBgColor = normalize_expected_color($defaults['mobile_bg_color'] ?? '');
 $expectedOverlayColor = normalize_expected_color($defaults['overlay_color'] ?? '');
 
-$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
-    'enable_sidebar' => true,
-    'bg_color_type' => 'gradient',
-    'accent_color_type' => 'gradient',
-    'bg_color' => '',
-    'bg_color_start' => '',
-    'bg_color_end' => '',
-    'accent_color' => '',
-    'accent_color_start' => '',
-    'accent_color_end' => '',
-    'font_color' => '',
-    'font_hover_color' => '',
-    'overlay_color' => '',
-    'mobile_bg_color' => '',
+$GLOBALS['wp_test_options']['sidebar_jlg_profiles'] = [
+    'active' => 'default',
+    'profiles' => [
+        'default' => [
+            'enable_sidebar' => true,
+            'bg_color_type' => 'gradient',
+            'accent_color_type' => 'gradient',
+            'bg_color' => '',
+            'bg_color_start' => '',
+            'bg_color_end' => '',
+            'accent_color' => '',
+            'accent_color_start' => '',
+            'accent_color_end' => '',
+            'font_color' => '',
+            'font_hover_color' => '',
+            'overlay_color' => '',
+            'mobile_bg_color' => '',
+        ],
+    ],
 ];
 
 $menuCache->clear();
 $repository->revalidateStoredOptions();
 
-$storedAfterRevalidation = $GLOBALS['wp_test_options']['sidebar_jlg_settings'] ?? [];
+$storedAfterRevalidation = $repository->getRawProfileOptions();
 
 $testsPassed = true;
 

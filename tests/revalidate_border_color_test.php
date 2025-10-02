@@ -32,12 +32,17 @@ function assertSame($expected, $actual, string $message): void
 }
 
 $maliciousBorderColor = '#fff; background: url(javascript:alert(1))';
-$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
-    'border_color' => $maliciousBorderColor,
+$GLOBALS['wp_test_options']['sidebar_jlg_profiles'] = [
+    'active' => 'default',
+    'profiles' => [
+        'default' => [
+            'border_color' => $maliciousBorderColor,
+        ],
+    ],
 ];
 
 $repository->revalidateStoredOptions();
-$storedAfterRevalidation = $GLOBALS['wp_test_options']['sidebar_jlg_settings'] ?? [];
+$storedAfterRevalidation = $repository->getRawProfileOptions();
 
 assertSame(
     $defaultBorderColor,
@@ -46,12 +51,17 @@ assertSame(
 );
 
 $validBorderColor = '#123abc';
-$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
-    'border_color' => $validBorderColor,
+$GLOBALS['wp_test_options']['sidebar_jlg_profiles'] = [
+    'active' => 'default',
+    'profiles' => [
+        'default' => [
+            'border_color' => $validBorderColor,
+        ],
+    ],
 ];
 
 $repository->revalidateStoredOptions();
-$storedAfterValidRevalidation = $GLOBALS['wp_test_options']['sidebar_jlg_settings'] ?? [];
+$storedAfterValidRevalidation = $repository->getRawProfileOptions();
 
 assertSame(
     $validBorderColor,

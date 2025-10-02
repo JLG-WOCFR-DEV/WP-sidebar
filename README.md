@@ -23,7 +23,7 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 
 ### Export / Import des réglages
 
-- Depuis l’onglet **Outils** de la page d’administration, utilisez le bouton **Exporter les réglages** pour générer un fichier JSON contenant la configuration actuelle (`sidebar_jlg_settings`).
+- Depuis l’onglet **Outils** de la page d’administration, utilisez le bouton **Exporter les réglages** pour générer un fichier JSON contenant la configuration actuelle (profil actif enregistré dans `sidebar_jlg_profiles`).
 - Conservez ce fichier dans votre système de contrôle de versions ou partagez-le avec votre équipe pour synchroniser les environnements.
 - Sur l’environnement cible, sélectionnez ce fichier via le bouton **Importer les réglages** puis confirmez l’action. Les options existantes sont validées et remplacées avant que la page ne soit automatiquement rechargée.
 - Les exports incluent la version du plugin et l’URL du site source pour faciliter les audits et vérifier que l’import a été réalisé sur le bon environnement.

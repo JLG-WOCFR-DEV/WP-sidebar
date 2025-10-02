@@ -55,7 +55,7 @@ function assertNotContains(string $needle, string $haystack, string $message): v
 
 $default_settings = $settingsRepository->getDefaultSettings();
 $default_settings['social_icons'] = [];
-update_option('sidebar_jlg_settings', $default_settings);
+$settingsRepository->saveOptions($default_settings);
 
 $input_settings = [
     'menu_items' => [
@@ -89,7 +89,7 @@ assertTrue(
     'Category ID preserved after sanitization'
 );
 
-update_option('sidebar_jlg_settings', $sanitized_settings);
+$settingsRepository->saveOptions($sanitized_settings);
 
 $menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
@@ -146,7 +146,7 @@ $dynamic_settings['enable_search'] = true;
 $dynamic_settings['search_method'] = 'shortcode';
 $dynamic_settings['search_shortcode'] = '[dynamic]';
 
-update_option('sidebar_jlg_settings', $dynamic_settings);
+$settingsRepository->saveOptions($dynamic_settings);
 
 switch_to_locale('en_US');
 ob_start();
@@ -177,7 +177,7 @@ $search_disabled_settings['enable_search'] = false;
 $search_disabled_settings['search_method'] = 'shortcode';
 $search_disabled_settings['search_shortcode'] = '[disabled]';
 
-update_option('sidebar_jlg_settings', $search_disabled_settings);
+$settingsRepository->saveOptions($search_disabled_settings);
 
 switch_to_locale('en_US');
 ob_start();
@@ -214,7 +214,7 @@ $default_search_settings['enable_sidebar'] = true;
 $default_search_settings['enable_search'] = true;
 $default_search_settings['search_method'] = 'default';
 
-update_option('sidebar_jlg_settings', $default_search_settings);
+$settingsRepository->saveOptions($default_search_settings);
 
 $default_search_transient_key = 'sidebar_jlg_full_html_en_US';
 switch_to_locale('en_US');
@@ -277,13 +277,18 @@ $GLOBALS['wp_test_function_overrides']['update_option'] = static function ($name
 $GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] = SIDEBAR_JLG_VERSION;
 $GLOBALS['wp_test_options']['sidebar_jlg_cached_locales'] = ['fr_FR'];
 $GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR'] = '<div>cached</div>';
-$GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
-    'menu_items' => [
-        [
-            'label' => 'Corrupted item',
-            'type' => 'custom',
-            'icon_type' => 'svg_inline',
-            'icon' => 'custom_missing',
+$GLOBALS['wp_test_options']['sidebar_jlg_profiles'] = [
+    'active' => 'default',
+    'profiles' => [
+        'default' => [
+            'menu_items' => [
+                [
+                    'label' => 'Corrupted item',
+                    'type' => 'custom',
+                    'icon_type' => 'svg_inline',
+                    'icon' => 'custom_missing',
+                ],
+            ],
         ],
     ],
 ];

@@ -32,7 +32,7 @@ $default_settings['menu_items'] = [
 ];
 $default_settings['social_icons'] = [];
 
-update_option('sidebar_jlg_settings', $default_settings);
+$settingsRepository->saveOptions($default_settings);
 $menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
 $GLOBALS['test_category_link_return'] = new WP_Error('invalid_term', 'Invalid term');

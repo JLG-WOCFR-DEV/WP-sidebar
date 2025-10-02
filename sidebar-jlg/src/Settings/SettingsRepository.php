@@ -9,6 +9,9 @@ use JLG\Sidebar\Settings\ValueNormalizer;
 
 class SettingsRepository
 {
+    private const PROFILES_OPTION = 'sidebar_jlg_profiles';
+    public const DEFAULT_PROFILE_KEY = 'default';
+
     private const STRUCTURED_DIMENSION_KEYS = [
         'content_margin',
         'floating_vertical_margin',
@@ -62,6 +65,8 @@ class SettingsRepository
     private IconLibrary $icons;
     private ?array $optionsCache = null;
     private ?array $optionsCacheRaw = null;
+    private ?array $profilesCache = null;
+    private ?string $optionsCacheProfileKey = null;
 
     public function __construct(DefaultSettings $defaults, IconLibrary $icons)
     {
@@ -70,15 +75,46 @@ class SettingsRepository
         $this->registerCacheInvalidationHooks();
     }
 
+    public function migrateLegacyOptions(): void
+    {
+        $legacy = get_option('sidebar_jlg_settings', null);
+        if (!is_array($legacy)) {
+            return;
+        }
+
+        $profiles = $this->getProfilesStructure();
+        $hasExistingProfiles = array_filter(
+            $profiles['profiles'],
+            static fn ($options) => is_array($options) && $options !== []
+        );
+
+        if ($hasExistingProfiles !== []) {
+            delete_option('sidebar_jlg_settings');
+            return;
+        }
+
+        $profiles['profiles'][self::DEFAULT_PROFILE_KEY] = $legacy;
+        $profiles['active'] = self::DEFAULT_PROFILE_KEY;
+
+        update_option(self::PROFILES_OPTION, $profiles);
+        delete_option('sidebar_jlg_settings');
+        $this->invalidateCache();
+    }
+
     public function getDefaultSettings(): array
     {
         return $this->defaults->all();
     }
 
-    public function getOptions(): array
+    public function getOptions(?string $profileKey = null): array
     {
-        $optionsFromDb = $this->getStoredOptions();
-        if ($this->optionsCache !== null && $this->optionsCacheRaw === $optionsFromDb) {
+        $resolvedProfileKey = $this->resolveProfileKey($profileKey);
+        $optionsFromDb = $this->getStoredOptions($resolvedProfileKey);
+        if (
+            $this->optionsCache !== null
+            && $this->optionsCacheRaw === $optionsFromDb
+            && $this->optionsCacheProfileKey === $resolvedProfileKey
+        ) {
             return $this->optionsCache;
         }
 
@@ -87,44 +123,67 @@ class SettingsRepository
 
         $this->optionsCacheRaw = $optionsFromDb;
         $this->optionsCache = $options;
+        $this->optionsCacheProfileKey = $resolvedProfileKey;
 
         return $options;
     }
 
-    public function getOptionsWithRevalidation(): array
+    public function getOptionsWithRevalidation(?string $profileKey = null): array
     {
-        $optionsFromDb = $this->getStoredOptions();
+        $resolvedProfileKey = $this->resolveProfileKey($profileKey);
+        $optionsFromDb = $this->getStoredOptions($resolvedProfileKey);
         $defaults = $this->getDefaultSettings();
         $options = wp_parse_args($optionsFromDb, $defaults);
 
         $revalidated = $this->revalidateCustomIcons($options);
         if ($revalidated !== $options) {
-            update_option('sidebar_jlg_settings', $revalidated);
+            $this->saveOptions($revalidated, $resolvedProfileKey);
         }
 
         $finalOptions = wp_parse_args($revalidated, $defaults);
         $finalOptions = $this->normalizeRuntimeChoices($finalOptions);
         $this->optionsCacheRaw = $revalidated;
         $this->optionsCache = $finalOptions;
+        $this->optionsCacheProfileKey = $resolvedProfileKey;
 
         return $finalOptions;
     }
 
-    public function saveOptions(array $options): void
+    public function saveOptions(array $options, ?string $profileKey = null): void
     {
-        update_option('sidebar_jlg_settings', $options);
+        $profile = $this->resolveProfileKey($profileKey, true);
+        $structure = $this->getProfilesStructure();
+        $structure['profiles'][$profile] = $options;
+        if (!isset($structure['active']) || $structure['active'] === '') {
+            $structure['active'] = $profile;
+        }
+
+        $this->persistProfiles($structure);
         $this->invalidateCache();
     }
 
-    public function deleteOptions(): void
+    public function deleteOptions(?string $profileKey = null): void
     {
-        delete_option('sidebar_jlg_settings');
+        $profile = $this->resolveProfileKey($profileKey);
+        $structure = $this->getProfilesStructure();
+
+        unset($structure['profiles'][$profile]);
+
+        if ($structure['profiles'] === []) {
+            $structure['profiles'][self::DEFAULT_PROFILE_KEY] = [];
+            $structure['active'] = self::DEFAULT_PROFILE_KEY;
+        } elseif (($structure['active'] ?? '') === $profile) {
+            $structure['active'] = array_key_first($structure['profiles']);
+        }
+
+        $this->persistProfiles($structure);
         $this->invalidateCache();
     }
 
-    public function revalidateStoredOptions(): void
+    public function revalidateStoredOptions(?string $profileKey = null): void
     {
-        $stored = get_option('sidebar_jlg_settings', null);
+        $profile = $this->resolveProfileKey($profileKey);
+        $stored = $this->getStoredOptions($profile);
         if (!is_array($stored)) {
             return;
         }
@@ -243,9 +302,54 @@ class SettingsRepository
         }
 
         if ($revalidated !== $merged) {
-            update_option('sidebar_jlg_settings', $revalidated);
+            $this->saveOptions($revalidated, $profile);
             $this->invalidateCache();
         }
+    }
+
+    public function getActiveProfileKey(): string
+    {
+        $structure = $this->getProfilesStructure();
+
+        return $structure['active'];
+    }
+
+    public function setActiveProfileKey(string $profileKey): void
+    {
+        $profileKey = sanitize_key($profileKey);
+        if ($profileKey === '') {
+            return;
+        }
+
+        $structure = $this->getProfilesStructure();
+        if (!isset($structure['profiles'][$profileKey])) {
+            return;
+        }
+
+        if ($structure['active'] === $profileKey) {
+            return;
+        }
+
+        $structure['active'] = $profileKey;
+        $this->persistProfiles($structure);
+        $this->invalidateCache();
+    }
+
+    public function getAvailableProfileKeys(): array
+    {
+        $structure = $this->getProfilesStructure();
+
+        return array_keys($structure['profiles']);
+    }
+
+    public function getRawProfileOptions(?string $profileKey = null): array
+    {
+        $profile = $this->resolveProfileKey($profileKey);
+        $structure = $this->getProfilesStructure();
+
+        $options = $structure['profiles'][$profile] ?? [];
+
+        return is_array($options) ? $options : [];
     }
 
     private function revalidateCustomIcons(array $options): array
@@ -365,21 +469,17 @@ class SettingsRepository
         return $options;
     }
 
-    private function getStoredOptions(): array
+    private function getStoredOptions(?string $profileKey = null): array
     {
-        $optionsFromDb = get_option('sidebar_jlg_settings', []);
-
-        if (!is_array($optionsFromDb)) {
-            return [];
-        }
-
-        return $optionsFromDb;
+        return $this->getRawProfileOptions($profileKey);
     }
 
     public function invalidateCache(): void
     {
         $this->optionsCache = null;
         $this->optionsCacheRaw = null;
+        $this->profilesCache = null;
+        $this->optionsCacheProfileKey = null;
     }
 
     private function registerCacheInvalidationHooks(): void
@@ -388,8 +488,8 @@ class SettingsRepository
             return;
         }
 
-        add_action('update_option_sidebar_jlg_settings', [$this, 'invalidateCache'], 0, 0);
-        add_action('delete_option_sidebar_jlg_settings', [$this, 'invalidateCache'], 0, 0);
+        add_action('update_option_' . self::PROFILES_OPTION, [$this, 'invalidateCache'], 0, 0);
+        add_action('delete_option_' . self::PROFILES_OPTION, [$this, 'invalidateCache'], 0, 0);
     }
 
     private function normalizeRuntimeChoices(array $options): array
@@ -409,5 +509,87 @@ class SettingsRepository
         );
 
         return $options;
+    }
+
+    private function getProfilesStructure(): array
+    {
+        if ($this->profilesCache !== null) {
+            return $this->profilesCache;
+        }
+
+        $stored = get_option(self::PROFILES_OPTION, []);
+        if (!is_array($stored)) {
+            $stored = [];
+        }
+
+        $profiles = [];
+        if (isset($stored['profiles']) && is_array($stored['profiles'])) {
+            foreach ($stored['profiles'] as $key => $profileOptions) {
+                if (!is_string($key)) {
+                    continue;
+                }
+
+                $sanitizedKey = sanitize_key($key);
+                if ($sanitizedKey === '') {
+                    continue;
+                }
+
+                $profiles[$sanitizedKey] = is_array($profileOptions) ? $profileOptions : [];
+            }
+        }
+
+        if ($profiles === []) {
+            $profiles[self::DEFAULT_PROFILE_KEY] = [];
+        }
+
+        $active = isset($stored['active']) && is_string($stored['active'])
+            ? sanitize_key($stored['active'])
+            : '';
+
+        if ($active === '' || !isset($profiles[$active])) {
+            $active = array_key_first($profiles) ?? self::DEFAULT_PROFILE_KEY;
+        }
+
+        $structure = [
+            'active' => $active,
+            'profiles' => $profiles,
+        ];
+
+        $this->profilesCache = $structure;
+
+        return $structure;
+    }
+
+    private function persistProfiles(array $structure): void
+    {
+        update_option(self::PROFILES_OPTION, [
+            'active' => $structure['active'],
+            'profiles' => $structure['profiles'],
+        ]);
+        $this->profilesCache = $structure;
+    }
+
+    private function resolveProfileKey(?string $profileKey, bool $allowCreate = false): string
+    {
+        if ($profileKey === null || $profileKey === '') {
+            return $this->getActiveProfileKey();
+        }
+
+        $sanitized = sanitize_key($profileKey);
+        if ($sanitized === '') {
+            return $this->getActiveProfileKey();
+        }
+
+        $structure = $this->getProfilesStructure();
+
+        if ($allowCreate) {
+            return $sanitized;
+        }
+
+        if (!isset($structure['profiles'][$sanitized])) {
+            return $structure['active'];
+        }
+
+        return $sanitized;
     }
 }

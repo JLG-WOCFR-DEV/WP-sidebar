@@ -5,6 +5,7 @@ namespace JLG\Sidebar\Admin;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
 use JLG\Sidebar\Settings\OptionChoices;
+use JLG\Sidebar\Settings\SettingsRepository;
 use JLG\Sidebar\Settings\ValueNormalizer;
 
 class SettingsSanitizer
@@ -21,23 +22,25 @@ class SettingsSanitizer
 
     private DefaultSettings $defaults;
     private IconLibrary $icons;
+    private SettingsRepository $repository;
 
     /**
      * @var array<string, string[]>
      */
     private array $allowedChoices;
 
-    public function __construct(DefaultSettings $defaults, IconLibrary $icons)
+    public function __construct(DefaultSettings $defaults, IconLibrary $icons, SettingsRepository $repository)
     {
         $this->defaults = $defaults;
         $this->icons = $icons;
+        $this->repository = $repository;
         $this->allowedChoices = OptionChoices::getAll();
     }
 
     public function sanitize_settings($input): array
     {
         $defaults = $this->defaults->all();
-        $existingOptions = get_option('sidebar_jlg_settings', $defaults);
+        $existingOptions = $this->repository->getRawProfileOptions();
         if (!is_array($existingOptions)) {
             if (function_exists('error_log')) {
                 error_log('Sidebar JLG settings option was not an array. Resetting to defaults.');

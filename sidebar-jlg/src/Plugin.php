@@ -35,7 +35,7 @@ class Plugin
         $this->icons = new IconLibrary($pluginFile);
         $this->settings = new SettingsRepository($this->defaults, $this->icons);
         $this->cache = new MenuCache();
-        $this->sanitizer = new SettingsSanitizer($this->defaults, $this->icons);
+        $this->sanitizer = new SettingsSanitizer($this->defaults, $this->icons, $this->settings);
         $this->menuPage = new MenuPage(
             $this->settings,
             $this->sanitizer,
@@ -58,10 +58,12 @@ class Plugin
     public function register(): void
     {
         $this->maybeInvalidateCacheOnVersionChange();
+        $this->settings->migrateLegacyOptions();
 
         add_action('plugins_loaded', [$this, 'loadTextdomain']);
         add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
-        add_action('update_option_sidebar_jlg_settings', [$this, 'handleSettingsUpdated'], 10, 3);
+        add_action('update_option_sidebar_jlg_settings', [$this, 'handleLegacySettingsUpdated'], 10, 3);
+        add_action('update_option_sidebar_jlg_profiles', [$this, 'handleSettingsUpdated'], 10, 3);
         add_action('sidebar_jlg_custom_icons_changed', [$this->cache, 'clear'], 10, 0);
         add_action('wp_update_nav_menu', [$this->cache, 'clear'], 10, 0);
 
@@ -104,6 +106,20 @@ class Plugin
         }
     }
 
+    /**
+     * @param mixed $oldValue
+     * @param mixed $value
+     */
+    public function handleLegacySettingsUpdated($oldValue = null, $value = null, string $optionName = ''): void
+    {
+        if (!is_array($value)) {
+            $value = [];
+        }
+
+        $this->settings->saveOptions($value);
+        delete_option('sidebar_jlg_settings');
+    }
+
     private function maybeInvalidateCacheOnVersionChange(): void
     {
         $storedVersion = get_option('sidebar_jlg_plugin_version');
@@ -120,17 +136,47 @@ class Plugin
      */
     private function hasSidebarPositionChanged($oldValue, $newValue): bool
     {
-        $normalize = static function ($value): string {
-            if (!is_array($value)) {
+        $normalize = function ($value): string {
+            $options = $this->extractActiveOptions($value);
+
+            if (!is_array($options)) {
                 return 'left';
             }
 
-            $position = \sanitize_key($value['sidebar_position'] ?? '');
+            $position = \sanitize_key($options['sidebar_position'] ?? '');
 
             return $position === 'right' ? 'right' : 'left';
         };
 
         return $normalize($oldValue) !== $normalize($newValue);
+    }
+
+    /**
+     * @param mixed $value
+     * @return array<string,mixed>
+     */
+    private function extractActiveOptions($value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        if (isset($value['profiles']) && is_array($value['profiles'])) {
+            $activeKey = isset($value['active']) ? \sanitize_key((string) $value['active']) : '';
+            if ($activeKey !== '' && isset($value['profiles'][$activeKey]) && is_array($value['profiles'][$activeKey])) {
+                return $value['profiles'][$activeKey];
+            }
+
+            foreach ($value['profiles'] as $profileOptions) {
+                if (is_array($profileOptions)) {
+                    return $profileOptions;
+                }
+            }
+
+            return [];
+        }
+
+        return $value;
     }
 
     public function getDefaultSettings(): array

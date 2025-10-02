@@ -4,6 +4,7 @@ declare(strict_types=1);
 use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
+use JLG\Sidebar\Settings\SettingsRepository;
 use function JLG\Sidebar\plugin;
 
 require __DIR__ . '/bootstrap.php';
@@ -12,7 +13,8 @@ require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
 $defaults = new DefaultSettings();
 $icons = new IconLibrary(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php');
-$sanitizer = new SettingsSanitizer($defaults, $icons);
+$repository = new SettingsRepository($defaults, $icons);
+$sanitizer = new SettingsSanitizer($defaults, $icons, $repository);
 
 $reflection = new ReflectionClass(SettingsSanitizer::class);
 $method = $reflection->getMethod('sanitize_social_settings');
@@ -88,7 +90,7 @@ $savedSettings['social_position'] = $result['social_position'];
 $savedSettings['social_orientation'] = $result['social_orientation'];
 $savedSettings['social_icon_size'] = $result['social_icon_size'];
 
-update_option('sidebar_jlg_settings', $savedSettings);
+$settingsRepository->saveOptions($savedSettings);
 $menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
 

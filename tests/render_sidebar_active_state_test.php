@@ -63,12 +63,12 @@ function assertContains(string $needle, string $haystack, string $message): void
 
 function runSidebarScenario(array $menuItem, callable $configureContext): array
 {
-    global $renderer, $menuCache, $baseSettings;
+    global $renderer, $menuCache, $baseSettings, $settingsRepository;
 
     $settings = $baseSettings;
     $settings['menu_items'] = [$menuItem];
 
-    update_option('sidebar_jlg_settings', $settings);
+    $settingsRepository->saveOptions($settings);
 
     $GLOBALS['test_queried_object'] = null;
     $_SERVER['HTTP_HOST'] = 'example.com';
