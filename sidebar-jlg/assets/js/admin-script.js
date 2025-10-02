@@ -373,12 +373,19 @@ class SidebarPreviewModule {
 
         this.$ = typeof window !== 'undefined' ? window.jQuery : null;
 
+        const initialPreviewSize = this.container ? this.container.getAttribute('data-preview-size') : '';
+        this.previewSize = SidebarPreviewModule.normalizePreviewSize(initialPreviewSize);
+        this.toolbar = this.container ? this.container.querySelector('.sidebar-jlg-preview__toolbar') : null;
+        this.previewButtons = this.toolbar ? Array.from(this.toolbar.querySelectorAll('[data-preview-size]')) : [];
+        this.toolbarInitialized = false;
+
         this.aside = null;
         this.nav = null;
         this.menuList = null;
         this.menuSocialItem = null;
         this.footerSocial = null;
         this.hamburger = null;
+        this.overlay = null;
 
         this.menuContainer = null;
         this.socialContainer = null;
@@ -386,8 +393,24 @@ class SidebarPreviewModule {
         this.socialObserver = null;
         this.isInitializing = false;
 
+        this.updatePreviewSizeClasses();
+
         this.updateMenuFromDomBound = this.updateMenuFromDom.bind(this);
         this.updateSocialFromDomBound = this.updateSocialFromDom.bind(this);
+    }
+
+    static normalizePreviewSize(value) {
+        const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+        if (normalized === 'mobile' || normalized === 'tablet') {
+            return normalized;
+        }
+
+        return 'desktop';
+    }
+
+    static getPreviewLabel(value) {
+        const normalized = SidebarPreviewModule.normalizePreviewSize(value);
+        return normalized.charAt(0).toUpperCase() + normalized.slice(1);
     }
 
     static cloneObject(object) {
@@ -516,6 +539,7 @@ class SidebarPreviewModule {
             .then(() => {
                 this.setState('ready');
                 this.clearStatus();
+                this.setupToolbar();
                 this.setupBindings();
                 this.applyOptions();
             })
@@ -636,10 +660,8 @@ class SidebarPreviewModule {
         this.footerSocial = this.viewport ? this.viewport.querySelector('.sidebar-footer') : null;
         this.hamburger = this.viewport ? this.viewport.querySelector('#hamburger-btn') : null;
 
-        const overlay = this.viewport ? this.viewport.querySelector('.sidebar-overlay') : null;
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
+        this.overlay = this.viewport ? this.viewport.querySelector('.sidebar-overlay') : null;
+        this.syncOverlayVisibility();
 
         if (this.hamburger) {
             this.hamburger.setAttribute('aria-hidden', 'true');
@@ -651,6 +673,106 @@ class SidebarPreviewModule {
         }
 
         this.captureDefaultFontStackFromMarkup();
+        this.updatePreviewSizeClasses();
+    }
+
+    setupToolbar() {
+        if (!this.container) {
+            return;
+        }
+
+        if (!this.toolbar || !this.previewButtons.length) {
+            this.updatePreviewSizeClasses();
+            return;
+        }
+
+        if (!this.toolbarInitialized) {
+            this.previewButtons.forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const size = SidebarPreviewModule.normalizePreviewSize(button.getAttribute('data-preview-size'));
+                    this.setPreviewSize(size, { triggerButton: button });
+                });
+            });
+            this.toolbarInitialized = true;
+        }
+
+        this.setPreviewSize(this.previewSize, { skipApply: true });
+    }
+
+    setPreviewSize(size, options = {}) {
+        const normalized = SidebarPreviewModule.normalizePreviewSize(size);
+        const { triggerButton = null, skipApply = false } = options || {};
+
+        this.previewSize = normalized;
+        this.updatePreviewSizeClasses();
+
+        if (this.previewButtons && this.previewButtons.length) {
+            this.previewButtons.forEach((button) => {
+                const buttonSize = SidebarPreviewModule.normalizePreviewSize(button.getAttribute('data-preview-size'));
+                const isActive = triggerButton ? button === triggerButton : buttonSize === normalized;
+                button.classList.toggle('is-active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        }
+
+        if (!this.isInitializing && !skipApply) {
+            this.applyOptions();
+        }
+    }
+
+    updatePreviewSizeClasses() {
+        if (this.container) {
+            this.container.setAttribute('data-preview-size', this.previewSize);
+        }
+
+        if (this.viewport) {
+            this.viewport.setAttribute('data-preview-size', this.previewSize);
+            const label = this.getPreviewButtonLabel(this.previewSize) || SidebarPreviewModule.getPreviewLabel(this.previewSize);
+            this.viewport.setAttribute('data-preview-label', label);
+            this.replaceClass(this.viewport, 'preview-', this.previewSize);
+        }
+
+        if (this.aside) {
+            this.aside.dataset.previewSize = this.previewSize;
+            this.replaceClass(this.aside, 'preview-', this.previewSize);
+        }
+
+        this.syncOverlayVisibility();
+    }
+
+    getPreviewButtonLabel(size) {
+        if (!this.previewButtons || !this.previewButtons.length) {
+            return '';
+        }
+
+        const target = this.previewButtons.find((button) => {
+            const buttonSize = SidebarPreviewModule.normalizePreviewSize(button.getAttribute('data-preview-size'));
+            return buttonSize === size;
+        });
+
+        if (!target) {
+            return '';
+        }
+
+        const hiddenLabel = target.querySelector('[aria-hidden="true"]');
+        if (hiddenLabel && hiddenLabel.textContent) {
+            return hiddenLabel.textContent.trim();
+        }
+
+        return target.textContent ? target.textContent.trim() : '';
+    }
+
+    syncOverlayVisibility() {
+        if (!this.overlay) {
+            return;
+        }
+
+        if (this.previewSize === 'mobile') {
+            this.overlay.style.display = '';
+        } else {
+            this.overlay.style.display = 'none';
+        }
     }
 
     detachObservers() {
