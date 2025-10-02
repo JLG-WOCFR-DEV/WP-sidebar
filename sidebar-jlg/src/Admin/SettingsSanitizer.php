@@ -20,6 +20,35 @@ class SettingsSanitizer
         'letter_spacing' => ['px', 'rem', 'em'],
     ];
 
+    private const PROFILE_BOOLEAN_KEYS = [
+        'enabled',
+        'is_enabled',
+        'active',
+        'is_active',
+        'default',
+        'is_default',
+    ];
+
+    private const PROFILE_INTEGER_KEYS = [
+        'order',
+        'priority',
+        'position',
+        'menu_id',
+        'weight',
+        'sequence',
+    ];
+
+    private const PROFILE_SLUG_KEYS = [
+        'slug',
+        'key',
+    ];
+
+    private const PROFILE_TEXTAREA_KEYS = [
+        'description',
+        'notes',
+        'summary',
+    ];
+
     private DefaultSettings $defaults;
     private IconLibrary $icons;
 
@@ -35,10 +64,10 @@ class SettingsSanitizer
         $this->allowedChoices = OptionChoices::getAll();
     }
 
-    public function sanitize_settings($input): array
+    public function sanitize_settings($input, ?array $existingOptionsOverride = null): array
     {
         $defaults = $this->defaults->all();
-        $existingOptions = get_option('sidebar_jlg_settings', $defaults);
+        $existingOptions = $existingOptionsOverride ?? get_option('sidebar_jlg_settings', $defaults);
         if (!is_array($existingOptions)) {
             if (function_exists('error_log')) {
                 error_log('Sidebar JLG settings option was not an array. Resetting to defaults.');
@@ -69,6 +98,63 @@ class SettingsSanitizer
     public function getSvgUrlRestrictions(): array
     {
         return $this->getSvgUrlValidationContext();
+    }
+
+    /**
+     * @param mixed $profiles
+     */
+    public function sanitize_profiles($profiles, string $optionName = ''): array
+    {
+        return $this->sanitize_profiles_collection($profiles);
+    }
+
+    /**
+     * @param mixed $profiles
+     */
+    public function sanitize_profiles_collection($profiles, ?array $existingProfiles = null): array
+    {
+        if ($existingProfiles === null) {
+            $storedProfiles = get_option('sidebar_jlg_profiles', []);
+            $existingProfiles = is_array($storedProfiles) ? $storedProfiles : [];
+        }
+
+        if (!is_array($profiles)) {
+            return [];
+        }
+
+        return $this->sanitizeProfileCollection($profiles, $existingProfiles);
+    }
+
+    /**
+     * @param mixed $value
+     */
+    public function sanitize_active_profile($value, string $optionName = '', ?array $profiles = null): string
+    {
+        $profileId = $this->extractProfileId($value);
+
+        if ($profileId === '') {
+            return '';
+        }
+
+        $availableProfiles = $profiles;
+        if ($availableProfiles === null) {
+            $storedProfiles = get_option('sidebar_jlg_profiles', []);
+            $availableProfiles = is_array($storedProfiles)
+                ? $this->sanitizeProfileCollection($storedProfiles, [])
+                : [];
+        }
+
+        foreach ($availableProfiles as $profile) {
+            if (!is_array($profile)) {
+                continue;
+            }
+
+            if (($profile['id'] ?? '') === $profileId) {
+                return $profileId;
+            }
+        }
+
+        return '';
     }
 
     private function sanitize_general_settings(array $input, array $existingOptions): array
@@ -510,9 +596,21 @@ class SettingsSanitizer
             return 0;
         }
 
-        $depth = absint($value);
+        if (is_string($value)) {
+            $value = trim($value);
+        }
 
-        return $depth > 0 ? $depth : 0;
+        if ($value === '' || !is_numeric($value)) {
+            return 0;
+        }
+
+        $numeric = (int) $value;
+
+        if ($numeric <= 0) {
+            return 0;
+        }
+
+        return absint($numeric);
     }
 
     /**
@@ -749,6 +847,477 @@ class SettingsSanitizer
         }
 
         return absint($existing);
+    }
+
+    /**
+     * @param array<int, mixed> $profiles
+     * @param array<int, mixed> $existingProfiles
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function sanitizeProfileCollection(array $profiles, array $existingProfiles): array
+    {
+        $indexedExisting = $this->indexProfilesById($existingProfiles);
+        $sanitized = [];
+        $positions = [];
+
+        foreach ($profiles as $profile) {
+            if (!is_array($profile)) {
+                continue;
+            }
+
+            $sanitizedProfile = $this->sanitizeSingleProfile($profile, $indexedExisting);
+
+            if ($sanitizedProfile === null) {
+                continue;
+            }
+
+            $id = $sanitizedProfile['id'];
+
+            if (isset($positions[$id])) {
+                $sanitized[$positions[$id]] = $sanitizedProfile;
+                continue;
+            }
+
+            $sanitized[] = $sanitizedProfile;
+            $positions[$id] = array_key_last($sanitized);
+        }
+
+        return array_values($sanitized);
+    }
+
+    /**
+     * @param array<string, mixed> $profile
+     * @param array<string, array<string, mixed>> $existingProfiles
+     */
+    private function sanitizeSingleProfile(array $profile, array $existingProfiles): ?array
+    {
+        $profileId = $this->extractProfileId($profile);
+
+        if ($profileId === '') {
+            return null;
+        }
+
+        $existing = $existingProfiles[$profileId] ?? [];
+
+        $sanitized = ['id' => $profileId];
+
+        $ignoredKeys = ['id', 'settings', 'conditions'];
+
+        foreach ($profile as $key => $value) {
+            if (in_array($key, $ignoredKeys, true)) {
+                continue;
+            }
+
+            if (in_array($key, self::PROFILE_BOOLEAN_KEYS, true)) {
+                $sanitized[$key] = !empty($value);
+                continue;
+            }
+
+            if (in_array($key, self::PROFILE_INTEGER_KEYS, true)) {
+                $existingValue = isset($existing[$key]) && is_scalar($existing[$key])
+                    ? (int) $existing[$key]
+                    : 0;
+                $sanitized[$key] = $this->sanitizeProfileInteger($value, $existingValue);
+                continue;
+            }
+
+            if (in_array($key, self::PROFILE_SLUG_KEYS, true)) {
+                $slug = $this->sanitizeProfileId($value);
+                if ($slug === '' && isset($existing[$key])) {
+                    $slug = $this->sanitizeProfileId($existing[$key]);
+                }
+                if ($slug !== '') {
+                    $sanitized[$key] = $slug;
+                }
+                continue;
+            }
+
+            if (in_array($key, self::PROFILE_TEXTAREA_KEYS, true)) {
+                $sanitized[$key] = sanitize_text_field((string) $value);
+                continue;
+            }
+
+            if (is_scalar($value)) {
+                $sanitized[$key] = sanitize_text_field((string) $value);
+            }
+        }
+
+        foreach ($existing as $key => $existingValue) {
+            if (isset($sanitized[$key]) || in_array($key, ['id', 'settings', 'conditions'], true)) {
+                continue;
+            }
+
+            if (in_array($key, self::PROFILE_BOOLEAN_KEYS, true)) {
+                $sanitized[$key] = !empty($existingValue);
+            } elseif (in_array($key, self::PROFILE_INTEGER_KEYS, true)) {
+                $sanitized[$key] = $this->sanitizeProfileInteger($existingValue, 0);
+            } elseif (in_array($key, self::PROFILE_SLUG_KEYS, true)) {
+                $slug = $this->sanitizeProfileId($existingValue);
+                if ($slug !== '') {
+                    $sanitized[$key] = $slug;
+                }
+            } elseif (in_array($key, self::PROFILE_TEXTAREA_KEYS, true)) {
+                $sanitized[$key] = sanitize_text_field((string) $existingValue);
+            } elseif (is_scalar($existingValue)) {
+                $sanitized[$key] = sanitize_text_field((string) $existingValue);
+            }
+        }
+
+        $existingConditions = isset($existing['conditions']) && is_array($existing['conditions'])
+            ? $existing['conditions']
+            : [];
+        $rawConditions = isset($profile['conditions']) && is_array($profile['conditions'])
+            ? $profile['conditions']
+            : $existingConditions;
+
+        $sanitized['conditions'] = $this->sanitizeProfileConditions(
+            is_array($rawConditions) ? $rawConditions : [],
+            $existingConditions
+        );
+
+        $existingSettings = isset($existing['settings']) && is_array($existing['settings'])
+            ? $existing['settings']
+            : null;
+
+        if (isset($profile['settings']) && is_array($profile['settings'])) {
+            $settingsSource = $profile['settings'];
+        } elseif ($existingSettings !== null) {
+            $settingsSource = $existingSettings;
+        } else {
+            $settingsSource = [];
+        }
+
+        $sanitized['settings'] = $this->sanitize_settings($settingsSource, $existingSettings);
+
+        return $sanitized;
+    }
+
+    /**
+     * @param array<int, mixed> $profiles
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function indexProfilesById(array $profiles): array
+    {
+        $indexed = [];
+
+        foreach ($profiles as $profile) {
+            if (!is_array($profile)) {
+                continue;
+            }
+
+            $id = $this->extractProfileId($profile);
+
+            if ($id === '') {
+                continue;
+            }
+
+            $indexed[$id] = $profile;
+        }
+
+        return $indexed;
+    }
+
+    /**
+     * @param array<string, mixed> $conditions
+     * @param array<string, mixed> $existing
+     *
+     * @return array{content_types: array<int, string>, taxonomies: array<int, string>, roles: array<int, string>, languages: array<int, string>}
+     */
+    private function sanitizeProfileConditions(array $conditions, array $existing = []): array
+    {
+        $existing = is_array($existing) ? $existing : [];
+
+        $contentTypes = $this->sanitizeConditionValues(
+            $conditions['content_types'] ?? [],
+            $this->getAllowedContentTypes(),
+            isset($existing['content_types']) && is_array($existing['content_types']) ? $existing['content_types'] : []
+        );
+
+        $taxonomies = $this->sanitizeConditionValues(
+            $conditions['taxonomies'] ?? [],
+            $this->getAllowedTaxonomies(),
+            isset($existing['taxonomies']) && is_array($existing['taxonomies']) ? $existing['taxonomies'] : []
+        );
+
+        $roles = $this->sanitizeConditionValues(
+            $conditions['roles'] ?? [],
+            $this->getAllowedRoles(),
+            isset($existing['roles']) && is_array($existing['roles']) ? $existing['roles'] : []
+        );
+
+        $languages = $this->sanitizeConditionValues(
+            $conditions['languages'] ?? [],
+            $this->getAllowedLanguages(),
+            isset($existing['languages']) && is_array($existing['languages']) ? $existing['languages'] : [],
+            true
+        );
+
+        return [
+            'content_types' => $contentTypes,
+            'taxonomies' => $taxonomies,
+            'roles' => $roles,
+            'languages' => $languages,
+        ];
+    }
+
+    /**
+     * @param mixed $raw
+     * @param array<int, string> $allowed
+     * @param array<int, mixed> $existing
+     *
+     * @return array<int, string>
+     */
+    private function sanitizeConditionValues($raw, array $allowed, array $existing = [], bool $preserveCase = false): array
+    {
+        $rawValues = is_array($raw) ? $raw : [];
+        $sanitized = $this->filterConditionValues($rawValues, $allowed, $preserveCase);
+
+        if ($sanitized !== []) {
+            return $sanitized;
+        }
+
+        if (!empty($existing)) {
+            return $this->filterConditionValues(is_array($existing) ? $existing : [], $allowed, $preserveCase);
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<int, mixed> $values
+     * @param array<int, string> $allowed
+     *
+     * @return array<int, string>
+     */
+    private function filterConditionValues(array $values, array $allowed, bool $preserveCase): array
+    {
+        $normalizedAllowed = $preserveCase
+            ? array_values(array_unique(array_map('strval', $allowed)))
+            : array_values(array_unique(array_map('sanitize_key', $allowed)));
+
+        $result = [];
+
+        foreach ($values as $value) {
+            if (!is_scalar($value)) {
+                continue;
+            }
+
+            $stringValue = (string) $value;
+            $normalizedValue = $preserveCase ? $stringValue : sanitize_key($stringValue);
+
+            if ($normalizedValue === '') {
+                continue;
+            }
+
+            $comparison = $preserveCase ? $stringValue : $normalizedValue;
+
+            if (!in_array($comparison, $normalizedAllowed, true)) {
+                continue;
+            }
+
+            $result[] = $preserveCase ? $comparison : $normalizedValue;
+        }
+
+        return array_values(array_unique($result));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getAllowedContentTypes(): array
+    {
+        if (!function_exists('get_post_types')) {
+            return ['post', 'page'];
+        }
+
+        $types = get_post_types(['public' => true], 'names');
+
+        if (!is_array($types)) {
+            $types = [];
+        }
+
+        $types[] = 'post';
+        $types[] = 'page';
+
+        $sanitized = [];
+
+        foreach ($types as $type) {
+            $normalized = sanitize_key((string) $type);
+
+            if ($normalized !== '') {
+                $sanitized[] = $normalized;
+            }
+        }
+
+        return array_values(array_unique($sanitized));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getAllowedTaxonomies(): array
+    {
+        if (!function_exists('get_taxonomies')) {
+            return [];
+        }
+
+        $taxonomies = get_taxonomies(['public' => true], 'names');
+
+        if (!is_array($taxonomies)) {
+            $taxonomies = [];
+        }
+
+        $sanitized = [];
+
+        foreach ($taxonomies as $taxonomy) {
+            $normalized = sanitize_key((string) $taxonomy);
+
+            if ($normalized !== '') {
+                $sanitized[] = $normalized;
+            }
+        }
+
+        return array_values(array_unique($sanitized));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getAllowedRoles(): array
+    {
+        if (!function_exists('wp_roles')) {
+            return [];
+        }
+
+        $roles = wp_roles();
+
+        if (!is_object($roles)) {
+            return [];
+        }
+
+        $roleNames = [];
+
+        if (isset($roles->roles) && is_array($roles->roles)) {
+            foreach (array_keys($roles->roles) as $roleKey) {
+                $normalized = sanitize_key((string) $roleKey);
+
+                if ($normalized !== '') {
+                    $roleNames[] = $normalized;
+                }
+            }
+        }
+
+        return array_values(array_unique($roleNames));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getAllowedLanguages(): array
+    {
+        $languages = ['default'];
+
+        if (function_exists('get_available_languages')) {
+            $available = get_available_languages();
+
+            if (is_array($available)) {
+                foreach ($available as $language) {
+                    if (!is_string($language) || $language === '') {
+                        continue;
+                    }
+
+                    $languages[] = $language;
+                }
+            }
+        }
+
+        if (function_exists('determine_locale')) {
+            $current = determine_locale();
+
+            if (is_string($current) && $current !== '') {
+                $languages[] = $current;
+            }
+        }
+
+        return array_values(array_unique($languages));
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeProfileInteger($value, int $existing = 0): int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        return $existing;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeProfileId($value): string
+    {
+        if (is_string($value) || is_int($value)) {
+            $sanitized = sanitize_key((string) $value);
+
+            if ($sanitized !== '') {
+                return $sanitized;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function extractProfileId($value): string
+    {
+        if (is_string($value) || is_int($value)) {
+            return $this->sanitizeProfileId($value);
+        }
+
+        if (!is_array($value)) {
+            return '';
+        }
+
+        foreach (['id', 'slug', 'key'] as $key) {
+            if (!isset($value[$key])) {
+                continue;
+            }
+
+            $candidate = $this->sanitizeProfileId($value[$key]);
+
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        if (isset($value['profile'])) {
+            $candidate = $this->extractProfileId($value['profile']);
+
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        if (isset($value['value'])) {
+            $candidate = $this->sanitizeProfileId($value['value']);
+
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        return '';
     }
 
     private function sanitizeChoice($rawValue, array $allowed, $existingValue, $defaultValue): string

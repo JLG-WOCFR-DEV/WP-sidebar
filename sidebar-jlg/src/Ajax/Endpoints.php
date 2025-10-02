@@ -18,6 +18,7 @@ use function ob_get_level;
 use function ob_start;
 use function plugin_dir_path;
 use function sanitize_option;
+use function update_option;
 use function time;
 use function wp_parse_args;
 use function wp_unslash;
@@ -601,6 +602,8 @@ class Endpoints
         }
 
         $settings = $this->extractSettingsFromImport($decoded);
+        $profilesPayload = $this->extractProfilesFromImport($decoded);
+        $activeProfilePayload = $this->extractActiveProfileFromImport($decoded);
 
         if (!is_array($settings)) {
             wp_send_json_error(__('Le fichier ne contient pas de réglages valides.', 'sidebar-jlg'));
@@ -612,9 +615,29 @@ class Endpoints
             $sanitized = [];
         }
 
+        $sanitizedProfiles = null;
+
+        if ($profilesPayload !== null) {
+            $sanitizedProfiles = $this->sanitizer->sanitize_profiles_collection($profilesPayload);
+            update_option('sidebar_jlg_profiles', $sanitizedProfiles);
+        }
+
+        if ($activeProfilePayload !== null) {
+            $sanitizedActiveProfile = $this->sanitizer->sanitize_active_profile(
+                $activeProfilePayload,
+                '',
+                $sanitizedProfiles
+            );
+            update_option('sidebar_jlg_active_profile', $sanitizedActiveProfile);
+        }
+
         $this->settings->saveOptions($sanitized);
         $this->settings->revalidateStoredOptions();
         $this->cache->clear();
+
+        if ($profilesPayload !== null || $activeProfilePayload !== null) {
+            $this->cache->forgetLocaleIndex();
+        }
 
         wp_send_json_success([
             'message' => __('Réglages importés avec succès.', 'sidebar-jlg'),
@@ -707,6 +730,35 @@ class Endpoints
         }
 
         return $decoded;
+    }
+
+    private function extractProfilesFromImport(array $decoded): ?array
+    {
+        if (isset($decoded['profiles']) && is_array($decoded['profiles'])) {
+            return $decoded['profiles'];
+        }
+
+        if (isset($decoded['sidebar_jlg_profiles']) && is_array($decoded['sidebar_jlg_profiles'])) {
+            return $decoded['sidebar_jlg_profiles'];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return mixed
+     */
+    private function extractActiveProfileFromImport(array $decoded)
+    {
+        if (array_key_exists('active_profile', $decoded)) {
+            return $decoded['active_profile'];
+        }
+
+        if (array_key_exists('sidebar_jlg_active_profile', $decoded)) {
+            return $decoded['sidebar_jlg_active_profile'];
+        }
+
+        return null;
     }
 
     private function describeUploadError(int $code): string

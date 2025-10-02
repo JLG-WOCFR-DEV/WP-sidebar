@@ -63,9 +63,17 @@ class Plugin
     {
         $this->maybeInvalidateCacheOnVersionChange();
 
+        add_filter('sanitize_option_sidebar_jlg_profiles', [$this->sanitizer, 'sanitize_profiles'], 10, 2);
+        add_filter('sanitize_option_sidebar_jlg_active_profile', [$this->sanitizer, 'sanitize_active_profile'], 10, 2);
         add_action('plugins_loaded', [$this, 'loadTextdomain']);
         add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
         add_action('update_option_sidebar_jlg_settings', [$this, 'handleSettingsUpdated'], 10, 3);
+        add_action('add_option_sidebar_jlg_profiles', [$this, 'handleProfilesOptionChanged'], 10, 2);
+        add_action('update_option_sidebar_jlg_profiles', [$this, 'handleProfilesOptionChanged'], 10, 3);
+        add_action('delete_option_sidebar_jlg_profiles', [$this, 'handleProfilesOptionChanged'], 10, 1);
+        add_action('add_option_sidebar_jlg_active_profile', [$this, 'handleActiveProfileChanged'], 10, 2);
+        add_action('update_option_sidebar_jlg_active_profile', [$this, 'handleActiveProfileChanged'], 10, 3);
+        add_action('delete_option_sidebar_jlg_active_profile', [$this, 'handleActiveProfileChanged'], 10, 1);
         add_action('sidebar_jlg_custom_icons_changed', [$this->cache, 'clear'], 10, 0);
         add_action('wp_update_nav_menu', [$this->cache, 'clear'], 10, 0);
 
@@ -108,6 +116,26 @@ class Plugin
         }
     }
 
+    /**
+     * @param mixed $arg1
+     * @param mixed $arg2
+     * @param mixed $arg3
+     */
+    public function handleProfilesOptionChanged($arg1 = null, $arg2 = null, $arg3 = null): void
+    {
+        $this->resetProfileCaches();
+    }
+
+    /**
+     * @param mixed $arg1
+     * @param mixed $arg2
+     * @param mixed $arg3
+     */
+    public function handleActiveProfileChanged($arg1 = null, $arg2 = null, $arg3 = null): void
+    {
+        $this->resetProfileCaches();
+    }
+
     private function maybeInvalidateCacheOnVersionChange(): void
     {
         $storedVersion = get_option('sidebar_jlg_plugin_version');
@@ -135,6 +163,12 @@ class Plugin
         };
 
         return $normalize($oldValue) !== $normalize($newValue);
+    }
+
+    private function resetProfileCaches(): void
+    {
+        $this->cache->clear();
+        $this->cache->forgetLocaleIndex();
     }
 
     public function getDefaultSettings(): array
