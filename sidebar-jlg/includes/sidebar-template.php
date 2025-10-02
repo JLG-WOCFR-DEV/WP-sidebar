@@ -41,6 +41,7 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
     }
 
     $html = '';
+    static $submenuIndex = 0;
 
     foreach ($nodes as $node) {
         if (!is_array($node)) {
@@ -51,6 +52,24 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
         if (!empty($node['classes']) && is_array($node['classes'])) {
             $classes = array_merge($classes, $node['classes']);
         }
+        $hasChildren = !empty($node['children']) && is_array($node['children']);
+        if ($hasChildren) {
+            $classes[] = 'has-submenu-toggle';
+        }
+        $classes = array_unique(array_filter(array_map('sanitize_html_class', $classes)));
+
+        $initiallyExpandedClasses = [
+            'current-menu-ancestor',
+            'current-menu-parent',
+            'current_page_parent',
+            'current_page_ancestor',
+            'current_page_item',
+            'current-menu-item',
+        ];
+        $isInitiallyExpanded = $hasChildren && !empty(array_intersect($classes, $initiallyExpandedClasses));
+        if ($isInitiallyExpanded && !in_array('is-open', $classes, true)) {
+            $classes[] = 'is-open';
+        }
         $classes = array_unique(array_filter(array_map('sanitize_html_class', $classes)));
         $classAttr = '';
         if (!empty($classes)) {
@@ -59,6 +78,14 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
 
         $url = isset($node['url']) && is_string($node['url']) && $node['url'] !== '' ? $node['url'] : '#';
         $ariaCurrent = !empty($node['is_current']) ? ' aria-current="page"' : '';
+
+        $submenuId = '';
+        $toggleExpandedAttr = 'false';
+        $toggleLabelExpand = esc_attr__('Afficher le sous-menu', 'sidebar-jlg');
+        $toggleLabelCollapse = esc_attr__('Masquer le sous-menu', 'sidebar-jlg');
+        if ($isInitiallyExpanded) {
+            $toggleExpandedAttr = 'true';
+        }
 
         ob_start();
         ?>
@@ -81,15 +108,36 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
                 ?>
                 <span><?php echo esc_html((string) ($node['label'] ?? '')); ?></span>
             </a>
-            <?php if (!empty($node['children']) && is_array($node['children'])) : ?>
+            <?php if ($hasChildren) : ?>
                 <?php
+                $submenuIndex++;
+                $submenuId = 'sidebar-submenu-' . $submenuIndex;
                 $submenuClasses = ['submenu'];
                 if ($layout === 'horizontal-bar') {
                     $submenuClasses[] = 'is-mega';
                 }
+                if ($isInitiallyExpanded) {
+                    $submenuClasses[] = 'is-open';
+                }
                 $submenuClassAttr = implode(' ', array_unique(array_filter(array_map('sanitize_html_class', $submenuClasses))));
                 ?>
-                <ul class="<?php echo esc_attr($submenuClassAttr); ?>">
+                <button
+                    class="submenu-toggle"
+                    type="button"
+                    aria-expanded="<?php echo esc_attr($toggleExpandedAttr); ?>"
+                    aria-controls="<?php echo esc_attr($submenuId); ?>"
+                    aria-haspopup="true"
+                    data-label-expand="<?php echo esc_attr($toggleLabelExpand); ?>"
+                    data-label-collapse="<?php echo esc_attr($toggleLabelCollapse); ?>"
+                >
+                    <span class="screen-reader-text"><?php echo esc_html($toggleExpandedAttr === 'true' ? $toggleLabelCollapse : $toggleLabelExpand); ?></span>
+                    <span aria-hidden="true" class="submenu-toggle-indicator"></span>
+                </button>
+                <ul
+                    id="<?php echo esc_attr($submenuId); ?>"
+                    class="<?php echo esc_attr($submenuClassAttr); ?>"
+                    aria-hidden="<?php echo $isInitiallyExpanded ? 'false' : 'true'; ?>"
+                >
                     <?php echo $renderMenuNodes($node['children'], $layout); ?>
                 </ul>
             <?php endif; ?>

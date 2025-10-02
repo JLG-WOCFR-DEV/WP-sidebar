@@ -43,6 +43,13 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 - Un contrôle supplémentaire inspecte les attributs `href`/`xlink:href` des balises `<use>` afin de s'assurer qu'ils pointent uniquement vers un identifiant local ou vers un média de la bibliothèque (`wp-content/uploads`). Les validations spécifiques sont centralisées dans `Sidebar\JLG\Icons\IconLibrary::validateSanitizedSvg()` pour simplifier l'ajout de nouvelles règles de sécurité.
 - Les attributs ARIA usuels (`aria-label`, `aria-describedby`, etc.) sont désormais préservés lors de la validation afin de faciliter l'accessibilité des icônes.
 
+### Navigation imbriquée et UX
+
+- Les éléments `menu-item-has-children` affichent désormais un bouton dédié (toggle) placé à droite du lien parent. Le bouton expose les attributs `aria-expanded`, `aria-controls` et met à jour son libellé automatiquement pour refléter l'état du sous-menu.
+- Les sous-menus sont masqués par défaut via une classe `is-open` et bénéficient d'une indentation, de séparateurs visuels et de transitions douces. Les états ouverts sont conservés pour les éléments de navigation correspondant à la page courante.
+- Le script public gère les interactions clavier (Esc pour refermer, flèche bas pour ouvrir et focaliser le premier lien) et différencie mobile/desktop : sur les écrans tactiles étroits, l'ouverture d'un sous-menu referme ses frères afin de limiter le défilement.
+- Vérification manuelle : navigation testée en mode tactile (émulation iPhone 12 Pro Max dans Chromium) pour valider les appuis successifs sur les toggles et la conservation du focus clavier.
+
 ## Désinstallation
 
 La désinstallation supprime les options enregistrées par le plugin.

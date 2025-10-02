@@ -84,6 +84,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
     const originalSidebarTabIndex = sidebar.hasAttribute('tabindex') ? sidebar.getAttribute('tabindex') : null;
     let cachedFocusableElements = [];
+    const DESKTOP_BREAKPOINT = 993;
+
+    document.body.classList.add('sidebar-js-enhanced');
+
+    const SUBMENU_OPEN_CLASS = 'is-open';
+    const SUBMENU_TOGGLE_SELECTOR = 'button.submenu-toggle';
+    const SUBMENU_SELECTOR = 'ul.submenu';
+    const LABEL_EXPAND_ATTR = 'data-label-expand';
+    const LABEL_COLLAPSE_ATTR = 'data-label-collapse';
+    const menuItemsWithChildren = Array.from(sidebar.querySelectorAll('.menu-item-has-children, .has-submenu-toggle'));
 
     function isAriaHidden(element) {
         const ariaHidden = element.getAttribute('aria-hidden');
@@ -137,6 +147,233 @@ document.addEventListener('DOMContentLoaded', function() {
         return cachedFocusableElements;
     }
 
+    function isDesktopViewport() {
+        return window.innerWidth >= DESKTOP_BREAKPOINT;
+    }
+
+    function findDirectChild(element, selector) {
+        if (!element || !element.children) {
+            return null;
+        }
+
+        for (let i = 0; i < element.children.length; i += 1) {
+            const child = element.children[i];
+            if (child.matches && child.matches(selector)) {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    function applyToggleLabel(toggle, isOpen) {
+        if (!toggle) {
+            return;
+        }
+
+        const label = toggle.getAttribute(isOpen ? LABEL_COLLAPSE_ATTR : LABEL_EXPAND_ATTR);
+        if (!label) {
+            return;
+        }
+
+        toggle.setAttribute('aria-label', label);
+
+        const srText = toggle.querySelector('.screen-reader-text');
+        if (srText) {
+            srText.textContent = label;
+        }
+    }
+
+    function applySubmenuHeight(submenu) {
+        if (!submenu) {
+            return;
+        }
+
+        const height = submenu.scrollHeight;
+        submenu.style.setProperty('--submenu-max-height', `${height}px`);
+    }
+
+    function handleSubmenuTransitionEnd(event) {
+        if (!event || event.propertyName !== 'max-height') {
+            return;
+        }
+
+        const submenu = event.currentTarget;
+        if (!submenu || !(submenu instanceof HTMLElement)) {
+            return;
+        }
+
+        if (submenu.classList.contains(SUBMENU_OPEN_CLASS)) {
+            submenu.style.removeProperty('--submenu-max-height');
+        }
+    }
+
+    function collapseSiblingSubmenus(menuItem) {
+        if (!menuItem || !menuItem.parentElement) {
+            return;
+        }
+
+        const siblings = Array.from(menuItem.parentElement.children).filter((element) => element !== menuItem);
+        siblings.forEach((sibling) => {
+            const toggle = findDirectChild(sibling, SUBMENU_TOGGLE_SELECTOR);
+            const submenu = findDirectChild(sibling, SUBMENU_SELECTOR);
+            if (!toggle || !submenu) {
+                return;
+            }
+
+            if (toggle.getAttribute('aria-expanded') === 'true') {
+                setMenuItemState(sibling, submenu, toggle, false);
+            }
+        });
+    }
+
+    function setMenuItemState(menuItem, submenu, toggle, shouldOpen, options = {}) {
+        if (!menuItem || !submenu || !toggle) {
+            return;
+        }
+
+        const { collapseSiblings = false, focusToggle = false } = options;
+        const isCurrentlyOpen = toggle.getAttribute('aria-expanded') === 'true';
+
+        if (shouldOpen === isCurrentlyOpen) {
+            applyToggleLabel(toggle, shouldOpen);
+            return;
+        }
+
+        if (shouldOpen && collapseSiblings) {
+            collapseSiblingSubmenus(menuItem);
+        }
+
+        applySubmenuHeight(submenu);
+
+        menuItem.classList.toggle(SUBMENU_OPEN_CLASS, shouldOpen);
+        submenu.classList.toggle(SUBMENU_OPEN_CLASS, shouldOpen);
+        toggle.classList.toggle(SUBMENU_OPEN_CLASS, shouldOpen);
+
+        toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+        submenu.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+        applyToggleLabel(toggle, shouldOpen);
+
+        if (!shouldOpen) {
+            requestAnimationFrame(() => {
+                submenu.style.setProperty('--submenu-max-height', '0px');
+            });
+        }
+
+        refreshFocusableElements();
+
+        if (!shouldOpen && focusToggle) {
+            toggle.focus({ preventScroll: true });
+        }
+    }
+
+    function getFirstVisibleInteractiveElement(container) {
+        if (!container) {
+            return null;
+        }
+
+        const candidates = Array.from(container.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])'));
+        return candidates.find((element) => isElementVisible(element)) || null;
+    }
+
+    function refreshOpenSubmenuHeights() {
+        menuItemsWithChildren.forEach((menuItem) => {
+            const submenu = findDirectChild(menuItem, SUBMENU_SELECTOR);
+            const toggle = findDirectChild(menuItem, SUBMENU_TOGGLE_SELECTOR);
+            if (!submenu || !toggle) {
+                return;
+            }
+
+            if (submenu.classList.contains(SUBMENU_OPEN_CLASS) || toggle.getAttribute('aria-expanded') === 'true') {
+                applySubmenuHeight(submenu);
+            }
+        });
+    }
+
+    menuItemsWithChildren.forEach((menuItem) => {
+        const toggle = findDirectChild(menuItem, SUBMENU_TOGGLE_SELECTOR);
+        const submenu = findDirectChild(menuItem, SUBMENU_SELECTOR);
+
+        if (!toggle || !submenu) {
+            return;
+        }
+
+        if (!submenu.dataset.transitionBound) {
+            submenu.addEventListener('transitionend', handleSubmenuTransitionEnd);
+            submenu.dataset.transitionBound = 'true';
+        }
+
+        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+
+        menuItem.classList.toggle(SUBMENU_OPEN_CLASS, isExpanded);
+        submenu.classList.toggle(SUBMENU_OPEN_CLASS, isExpanded);
+        toggle.classList.toggle(SUBMENU_OPEN_CLASS, isExpanded);
+        submenu.setAttribute('aria-hidden', isExpanded ? 'false' : 'true');
+        applyToggleLabel(toggle, isExpanded);
+
+        if (!isExpanded) {
+            submenu.style.setProperty('--submenu-max-height', '0px');
+        } else {
+            applySubmenuHeight(submenu);
+        }
+
+        toggle.addEventListener('click', (event) => {
+            event.preventDefault();
+            const shouldOpen = toggle.getAttribute('aria-expanded') !== 'true';
+            setMenuItemState(menuItem, submenu, toggle, shouldOpen, { collapseSiblings: !isDesktopViewport() });
+
+            if (shouldOpen) {
+                const firstInteractive = getFirstVisibleInteractiveElement(submenu);
+                if (firstInteractive) {
+                    firstInteractive.focus({ preventScroll: true });
+                }
+            }
+        });
+
+        toggle.addEventListener('keydown', (event) => {
+            if (!event) {
+                return;
+            }
+
+            const key = event.key;
+
+            if (key === 'Escape' || key === 'Esc') {
+                if (toggle.getAttribute('aria-expanded') === 'true') {
+                    event.preventDefault();
+                    setMenuItemState(menuItem, submenu, toggle, false, { focusToggle: true });
+                }
+                return;
+            }
+
+            if (key === 'ArrowDown' || key === 'Down') {
+                if (toggle.getAttribute('aria-expanded') !== 'true') {
+                    setMenuItemState(menuItem, submenu, toggle, true, { collapseSiblings: !isDesktopViewport() });
+                }
+
+                const firstInteractive = getFirstVisibleInteractiveElement(submenu);
+                if (firstInteractive) {
+                    event.preventDefault();
+                    firstInteractive.focus({ preventScroll: true });
+                }
+            }
+        });
+
+        submenu.addEventListener('keydown', (event) => {
+            if (!event) {
+                return;
+            }
+
+            const key = event.key;
+
+            if (key === 'Escape' || key === 'Esc') {
+                if (toggle.getAttribute('aria-expanded') === 'true') {
+                    event.preventDefault();
+                    setMenuItemState(menuItem, submenu, toggle, false, { focusToggle: true });
+                }
+            }
+        });
+    });
+
     function focusFirstAvailableElement() {
         const focusableElements = refreshFocusableElements();
         if (focusableElements.length > 0) {
@@ -149,7 +386,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         sidebar.focus({ preventScroll: true });
     }
-    const DESKTOP_BREAKPOINT = 993;
     const SCROLL_LOCK_CLASS = 'sidebar-scroll-lock';
 
     function getScrollbarWidth() {
@@ -428,6 +664,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleResize() {
         applyHoverEffect();
+        refreshOpenSubmenuHeights();
 
         if (!document.body.classList.contains('sidebar-open')) {
             return;
