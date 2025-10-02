@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use JLG\Sidebar\Settings\ValueNormalizer;
 use function JLG\Sidebar\plugin;
 
 require __DIR__ . '/bootstrap.php';
@@ -67,7 +68,10 @@ ob_start();
 $renderer->render();
 ob_end_clean();
 
-$expectedCss = '--content-margin: calc(var(--sidebar-width-desktop) + ' . $defaultContentMargin . ');';
+$defaultContentMarginCss = is_array($defaultContentMargin)
+    ? ValueNormalizer::dimensionToCss($defaultContentMargin, '')
+    : (string) $defaultContentMargin;
+$expectedCss = '--content-margin: calc(var(--sidebar-width-desktop) + ' . $defaultContentMarginCss . ');';
 assertContains($expectedCss, $inlineStyles, 'Rendered CSS uses default content margin after revalidation');
 
 if (!$testsPassed) {

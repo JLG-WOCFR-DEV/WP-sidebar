@@ -21,6 +21,7 @@ $GLOBALS['wp_test_translations'] = $GLOBALS['wp_test_translations'] ?? [
 ];
 $GLOBALS['wp_test_function_overrides'] = $GLOBALS['wp_test_function_overrides'] ?? [];
 $GLOBALS['wp_test_inline_styles'] = $GLOBALS['wp_test_inline_styles'] ?? [];
+$GLOBALS['wp_test_available_languages'] = $GLOBALS['wp_test_available_languages'] ?? ['fr_FR', 'en_US'];
 
 if (!function_exists('wp_test_call_override')) {
     function wp_test_call_override(string $function, array $args, ?bool &$handled = null)
@@ -470,6 +471,89 @@ if (!function_exists('delete_option')) {
         }
 
         return true;
+    }
+}
+
+if (!function_exists('get_post_types')) {
+    function get_post_types($args = [], $output = 'names'): array
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return is_array($result) ? $result : [];
+        }
+
+        $names = ['post', 'page'];
+
+        if ($output === 'objects') {
+            $objects = [];
+            foreach ($names as $name) {
+                $objects[$name] = (object) ['name' => $name];
+            }
+
+            return $objects;
+        }
+
+        return $names;
+    }
+}
+
+if (!function_exists('get_taxonomies')) {
+    function get_taxonomies($args = [], $output = 'names'): array
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return is_array($result) ? $result : [];
+        }
+
+        $names = ['category', 'post_tag'];
+
+        if ($output === 'objects') {
+            $objects = [];
+            foreach ($names as $name) {
+                $objects[$name] = (object) ['name' => $name];
+            }
+
+            return $objects;
+        }
+
+        return $names;
+    }
+}
+
+if (!function_exists('wp_roles')) {
+    function wp_roles()
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        return (object) [
+            'roles' => [
+                'administrator' => ['name' => 'Administrator'],
+                'editor' => ['name' => 'Editor'],
+                'author' => ['name' => 'Author'],
+                'subscriber' => ['name' => 'Subscriber'],
+            ],
+        ];
+    }
+}
+
+if (!function_exists('get_available_languages')) {
+    function get_available_languages(): array
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return is_array($result) ? $result : [];
+        }
+
+        $languages = $GLOBALS['wp_test_available_languages'] ?? [];
+
+        return is_array($languages) ? $languages : [];
     }
 }
 

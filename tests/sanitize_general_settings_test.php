@@ -4,6 +4,7 @@ declare(strict_types=1);
 use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
+use JLG\Sidebar\Settings\ValueNormalizer;
 
 require __DIR__ . '/bootstrap.php';
 
@@ -187,7 +188,11 @@ $horizontal_input = [
 $horizontal_result = $method->invoke($sanitizer, $horizontal_input, $horizontal_existing);
 
 assertSame('horizontal-bar', $horizontal_result['layout_style'] ?? null, 'Horizontal layout is accepted');
-assertSame('72px', $horizontal_result['horizontal_bar_height'] ?? null, 'Horizontal bar height is sanitized');
+assertSame(
+    '72px',
+    ValueNormalizer::dimensionToCss($horizontal_result['horizontal_bar_height'] ?? '', ''),
+    'Horizontal bar height is sanitized'
+);
 assertSame('bottom', $horizontal_result['horizontal_bar_position'] ?? null, 'Horizontal bar position accepts valid input');
 assertSame('center', $horizontal_result['horizontal_bar_alignment'] ?? null, 'Horizontal bar alignment accepts valid input');
 assertSame(true, $horizontal_result['horizontal_bar_sticky'] ?? null, 'Horizontal bar sticky flag is converted to boolean');
@@ -198,7 +203,11 @@ $horizontal_invalid_height = [
 
 $horizontal_height_result = $method->invoke($sanitizer, $horizontal_invalid_height, $horizontal_existing);
 
-assertSame('4rem', $horizontal_height_result['horizontal_bar_height'] ?? null, 'Invalid horizontal bar height falls back to existing value');
+assertSame(
+    '4rem',
+    ValueNormalizer::dimensionToCss($horizontal_height_result['horizontal_bar_height'] ?? '', ''),
+    'Invalid horizontal bar height falls back to existing value'
+);
 
 $existing_invalid_alignment = array_merge($defaults->all(), [
     'header_alignment_desktop' => 'diagonal',
