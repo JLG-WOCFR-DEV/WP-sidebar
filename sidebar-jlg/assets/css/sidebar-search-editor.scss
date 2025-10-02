@@ -1,0 +1,67 @@
+.sidebar-search {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    display: flex;
+    justify-content: var(--sidebar-search-alignment, flex-start);
+    color: var(--sidebar-text-color, #f5f5f5);
+}
+
+.sidebar-search form,
+.sidebar-search .search-form {
+    width: 100%;
+    max-width: 250px;
+}
+
+.sidebar-search label {
+    display: block;
+    width: 100%;
+}
+
+.sidebar-search input[type="search"],
+.sidebar-search .search-field {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: none;
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--sidebar-text-color, #f5f5f5);
+}
+
+.sidebar-search input[type="search"]::placeholder,
+.sidebar-search .search-field::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.sidebar-search .search-submit {
+    display: none;
+}
+
+.sidebar-search__placeholder {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+}
+
+.sidebar-search__shortcode-preview {
+    display: inline-block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--sidebar-text-color, #f5f5f5);
+    font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.sidebar-search--align-center {
+    justify-content: center;
+}
+
+.sidebar-search--align-end {
+    justify-content: flex-end;
+}
+
+.sidebar-search--align-start {
+    justify-content: flex-start;
+}
