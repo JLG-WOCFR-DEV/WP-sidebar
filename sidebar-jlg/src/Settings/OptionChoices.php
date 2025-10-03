@@ -15,6 +15,7 @@ final class OptionChoices
         'desktop_behavior' => ['push', 'overlay'],
         'search_method' => ['default', 'shortcode', 'hook'],
         'search_alignment' => ['flex-start', 'center', 'flex-end'],
+        'search_color_scheme' => ['auto', 'light', 'dark'],
         'header_logo_type' => ['text', 'image'],
         'header_alignment_desktop' => ['flex-start', 'center', 'flex-end'],
         'header_alignment_mobile' => ['flex-start', 'center', 'flex-end'],

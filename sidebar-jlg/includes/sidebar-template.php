@@ -276,7 +276,38 @@ $horizontalAlignment = $options['horizontal_bar_alignment'] ?? 'space-between';
     </div>
 
         <?php if ($options['enable_search']): ?>
-        <div class="sidebar-search">
+        <?php
+            $searchAlignment = sanitize_key($options['search_alignment'] ?? 'flex-start');
+            if (!in_array($searchAlignment, ['flex-start', 'center', 'flex-end'], true)) {
+                $searchAlignment = 'flex-start';
+            }
+
+            $searchAlignmentClass = 'sidebar-search--align-start';
+            if ($searchAlignment === 'center') {
+                $searchAlignmentClass = 'sidebar-search--align-center';
+            } elseif ($searchAlignment === 'flex-end') {
+                $searchAlignmentClass = 'sidebar-search--align-end';
+            }
+
+            $searchColorScheme = sanitize_key($options['search_color_scheme'] ?? 'auto');
+            if (!in_array($searchColorScheme, ['auto', 'light', 'dark'], true)) {
+                $searchColorScheme = 'auto';
+            }
+
+            $searchSchemeClass = 'sidebar-search--scheme-dark';
+            if ($searchColorScheme === 'light') {
+                $searchSchemeClass = 'sidebar-search--scheme-light';
+            }
+
+            $searchAppliedScheme = $searchColorScheme === 'light' ? 'light' : 'dark';
+        ?>
+        <div
+            class="sidebar-search <?php echo esc_attr(trim($searchAlignmentClass . ' ' . $searchSchemeClass)); ?>"
+            data-sidebar-search-align="<?php echo esc_attr($searchAlignment); ?>"
+            data-sidebar-search-scheme="<?php echo esc_attr($searchColorScheme); ?>"
+            data-sidebar-search-applied-scheme="<?php echo esc_attr($searchAppliedScheme); ?>"
+            style="<?php echo esc_attr('--sidebar-search-alignment:' . $searchAlignment . ';'); ?>"
+        >
             <?php
             switch ($options['search_method']) {
                 case 'shortcode':

@@ -1,10 +1,11 @@
 .sidebar-search {
-    --sidebar-search-color: var(--sidebar-text-color, #f5f5f5);
-    --sidebar-search-surface-weak: rgba(255, 255, 255, 0.05);
-    --sidebar-search-surface: rgba(255, 255, 255, 0.1);
-    --sidebar-search-surface-strong: rgba(255, 255, 255, 0.2);
-    --sidebar-search-placeholder-color: rgba(255, 255, 255, 0.6);
-    --sidebar-search-muted-color: rgba(255, 255, 255, 0.8);
+    --sidebar-search-color: var(--sidebar-text-color, var(--wp--preset--color--foreground, currentColor));
+    --sidebar-search-surface-base: transparent;
+    --sidebar-search-surface-weak: color-mix(in srgb, var(--sidebar-search-color) 12%, transparent);
+    --sidebar-search-surface: color-mix(in srgb, var(--sidebar-search-color) 18%, transparent);
+    --sidebar-search-surface-strong: color-mix(in srgb, var(--sidebar-search-color) 28%, transparent);
+    --sidebar-search-placeholder-color: color-mix(in srgb, var(--sidebar-search-color) 68%, transparent);
+    --sidebar-search-muted-color: color-mix(in srgb, var(--sidebar-search-color) 86%, transparent);
 
     padding: 1rem;
     border-bottom: 1px solid var(--sidebar-search-surface);
@@ -14,19 +15,17 @@
     color: var(--sidebar-search-color);
 }
 
-.sidebar-search.sidebar-search--editor {
-    --sidebar-search-color: var(--sidebar-text-color, var(--wp-admin-theme-color, #1d2327));
-    --sidebar-search-surface-weak: color-mix(in srgb, var(--sidebar-search-color) 8%, transparent);
-    --sidebar-search-surface: color-mix(in srgb, var(--sidebar-search-color) 16%, transparent);
-    --sidebar-search-surface-strong: color-mix(in srgb, var(--sidebar-search-color) 24%, transparent);
-    --sidebar-search-placeholder-color: color-mix(in srgb, var(--sidebar-search-color) 60%, transparent);
-    --sidebar-search-muted-color: color-mix(in srgb, var(--sidebar-search-color) 80%, transparent);
+.sidebar-search.sidebar-search--scheme-light {
+    --sidebar-search-surface-base: var(--wp--preset--color--background, #fff);
+    --sidebar-search-surface-weak: color-mix(in srgb, var(--sidebar-search-color) 8%, var(--sidebar-search-surface-base));
+    --sidebar-search-surface: color-mix(in srgb, var(--sidebar-search-color) 14%, var(--sidebar-search-surface-base));
+    --sidebar-search-surface-strong: color-mix(in srgb, var(--sidebar-search-color) 22%, var(--sidebar-search-surface-base));
+    --sidebar-search-placeholder-color: color-mix(in srgb, var(--sidebar-search-color) 58%, var(--sidebar-search-surface-base));
+    --sidebar-search-muted-color: color-mix(in srgb, var(--sidebar-search-color) 78%, var(--sidebar-search-surface-base));
 }
 
-.sidebar-search.sidebar-search--frontend {
-    --sidebar-search-surface-weak: rgba(255, 255, 255, 0.05);
-    --sidebar-search-surface: rgba(255, 255, 255, 0.1);
-    --sidebar-search-surface-strong: rgba(255, 255, 255, 0.2);
+.sidebar-search.sidebar-search--scheme-dark {
+    --sidebar-search-surface-base: transparent;
 }
 
 .sidebar-search form,

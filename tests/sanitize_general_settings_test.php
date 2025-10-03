@@ -145,6 +145,7 @@ $existing_enums = array_merge($defaults->all(), [
     'desktop_behavior'       => 'push',
     'search_method'          => 'hook',
     'search_alignment'       => 'flex-end',
+    'search_color_scheme'    => 'dark',
     'header_logo_type'       => 'image',
     'header_alignment_desktop' => 'center',
     'header_alignment_mobile'  => 'flex-start',
@@ -157,6 +158,7 @@ $input_invalid_enums = [
     'desktop_behavior'       => 'teleport',
     'search_method'          => 'quantum',
     'search_alignment'       => 'space-between',
+    'search_color_scheme'    => 'neon',
     'header_logo_type'       => 'emoji',
     'header_alignment_desktop' => 'space-around',
     'header_alignment_mobile'  => 'stretch',
@@ -170,6 +172,7 @@ assertSame('floating', $result_invalid_enums['layout_style'] ?? null, 'Invalid l
 assertSame('push', $result_invalid_enums['desktop_behavior'] ?? null, 'Invalid desktop behavior falls back to default');
 assertSame('hook', $result_invalid_enums['search_method'] ?? null, 'Invalid search method falls back to existing value');
 assertSame('flex-end', $result_invalid_enums['search_alignment'] ?? null, 'Invalid search alignment falls back to existing value');
+assertSame('dark', $result_invalid_enums['search_color_scheme'] ?? null, 'Invalid search color scheme falls back to existing value');
 assertSame('image', $result_invalid_enums['header_logo_type'] ?? null, 'Invalid header logo type falls back to existing value');
 assertSame('center', $result_invalid_enums['header_alignment_desktop'] ?? null, 'Invalid desktop header alignment falls back to existing value');
 assertSame('flex-start', $result_invalid_enums['header_alignment_mobile'] ?? null, 'Invalid mobile header alignment falls back to existing value');

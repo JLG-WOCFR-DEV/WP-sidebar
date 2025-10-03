@@ -275,6 +275,12 @@ class SettingsSanitizer
             $existingOptions['search_alignment'] ?? ($defaults['search_alignment'] ?? ''),
             $defaults['search_alignment'] ?? ''
         );
+        $sanitized['search_color_scheme'] = $this->sanitizeChoice(
+            $input['search_color_scheme'] ?? null,
+            $this->allowedChoices['search_color_scheme'],
+            $existingOptions['search_color_scheme'] ?? ($defaults['search_color_scheme'] ?? ''),
+            $defaults['search_color_scheme'] ?? ''
+        );
         $sanitized['debug_mode'] = !empty($input['debug_mode']);
         $sanitized['show_close_button'] = !empty($input['show_close_button']);
         // Checkbox -> boolean conversion for the automatic closing behaviour.

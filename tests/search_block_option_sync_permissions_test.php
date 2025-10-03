@@ -58,6 +58,7 @@ $initialOptions = [
     'enable_search' => false,
     'search_method' => 'default',
     'search_alignment' => 'flex-start',
+    'search_color_scheme' => 'auto',
     'search_shortcode' => '',
 ];
 
@@ -65,6 +66,7 @@ $attributes = [
     'enable_search' => true,
     'search_method' => 'shortcode',
     'search_alignment' => 'center',
+    'search_color_scheme' => 'light',
     'search_shortcode' => '[example] ',
 ];
 
@@ -91,6 +93,7 @@ $expectedOptions = $initialOptions;
 $expectedOptions['enable_search'] = true;
 $expectedOptions['search_method'] = 'shortcode';
 $expectedOptions['search_alignment'] = 'center';
+$expectedOptions['search_color_scheme'] = 'light';
 $expectedOptions['search_shortcode'] = '[example]';
 
 $storedAfterAuthorized = get_option('sidebar_jlg_settings');

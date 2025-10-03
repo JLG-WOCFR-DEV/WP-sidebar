@@ -32,10 +32,13 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 
 - Le bloc dynamique `jlg/sidebar-search` permet d'insérer l'encart de recherche de la sidebar dans l'éditeur du site.
 - Les attributs `enable_search`, `search_method`, `search_alignment` et `search_shortcode` sont synchronisés avec les options globales du plugin via le `SettingsRepository` pour garantir la rétrocompatibilité avec les installations existantes.
+- L'attribut `search_color_scheme` permet désormais de piloter la palette claire/sombre du bloc. Il est synchronisé avec la configuration globale et accepte les valeurs `auto`, `light` et `dark`.
 - Le bloc affiche un aperçu direct dans l'éditeur grâce au script d'édition (`sidebar-jlg/assets/js/blocks/sidebar-search.js`) et réutilise le rendu PHP (`render_callback`) pour conserver la logique de la sidebar en front.
 - Les scripts générés sont exposés via `block.json` et chargés automatiquement par WordPress depuis `sidebar-jlg/assets/build`. Après compilation, vérifiez que les fichiers `sidebar-search(.asset).php` et `sidebar-search-view(.asset).php` sont bien présents afin de garantir le chargement du bloc aussi bien dans l'éditeur que sur le site public.
 - Pour recompiler les scripts du bloc après modification, exécutez `npm run build`, puis (optionnel) contrôlez dans la console du navigateur WordPress que le bloc `jlg/sidebar-search` n'émet aucun avertissement de script manquant.
-- Afin d'assurer une lisibilité optimale dans l'éditeur, la feuille de style `sidebar-search-editor.scss` applique désormais par défaut `var(--wp-admin-theme-color)` (ou une teinte sombre) lorsque `--sidebar-text-color` n'est pas défini. Le script de vue ajoute automatiquement une classe `sidebar-search--editor` ou `sidebar-search--frontend` pour conserver une palette cohérente entre l'édition et l'affichage public.
+- Afin d'assurer une lisibilité optimale dans l'éditeur et sur le site public, la feuille de style `sidebar-search-editor.scss` s'appuie sur la couleur de texte courante (`currentColor`) et sur les variables de preset WordPress pour calculer les teintes d'arrière-plan. Les classes `sidebar-search--scheme-light` et `sidebar-search--scheme-dark` forcent respectivement une palette claire ou sombre lorsque l'autodétection ne suffit pas.
+- Le script d'édition et le script de vue détectent automatiquement le contraste du conteneur pour appliquer la classe adaptée lorsque `search_color_scheme` vaut `auto`. En cas de besoin, vous pouvez forcer la palette via l'attribut du bloc ou en ajoutant la classe appropriée dans vos gabarits.
+- Recommandation : lorsque le bloc est inséré dans des modèles de page ou des patrons, validez l'accessibilité couleur en prévisualisant les variantes claire et sombre, et forcez la palette qui garantit un ratio de contraste suffisant sur vos fonds personnalisés.
 
 ### Icônes personnalisées
 

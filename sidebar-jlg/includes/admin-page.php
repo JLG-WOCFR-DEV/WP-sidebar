@@ -417,6 +417,15 @@ $textTransformLabels = [
                                     <option value="flex-end" <?php selected($options['search_alignment'], 'flex-end'); ?>><?php esc_html_e('Droite', 'sidebar-jlg'); ?></option>
                                 </select>
                             </p>
+                            <p>
+                                <label><?php esc_html_e( 'Palette de contraste', 'sidebar-jlg' ); ?></label>
+                                <select name="sidebar_jlg_settings[search_color_scheme]">
+                                    <option value="auto" <?php selected($options['search_color_scheme'] ?? 'auto', 'auto'); ?>><?php esc_html_e('Automatique', 'sidebar-jlg'); ?></option>
+                                    <option value="light" <?php selected($options['search_color_scheme'] ?? 'auto', 'light'); ?>><?php esc_html_e('Fond clair', 'sidebar-jlg'); ?></option>
+                                    <option value="dark" <?php selected($options['search_color_scheme'] ?? 'auto', 'dark'); ?>><?php esc_html_e('Fond sombre', 'sidebar-jlg'); ?></option>
+                                </select>
+                                <span class="description"><?php esc_html_e( 'Le mode automatique détecte le contraste pour garantir la lisibilité, mais vous pouvez forcer un rendu clair ou sombre si besoin.', 'sidebar-jlg' ); ?></span>
+                            </p>
                         </div>
                     </td>
                 </tr>

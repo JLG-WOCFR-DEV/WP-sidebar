@@ -33,6 +33,7 @@ class DefaultSettings
             'search_method'     => 'default',
             'search_shortcode'  => '',
             'search_alignment'  => 'flex-start',
+            'search_color_scheme' => 'auto',
             'debug_mode'        => false,
             'show_close_button' => true,
             // Automatically close the sidebar after clicking menu or social links.

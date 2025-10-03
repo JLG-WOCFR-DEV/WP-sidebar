@@ -12,6 +12,7 @@ class SearchBlock
 
     private const METHODS = ['default', 'shortcode', 'hook'];
     private const ALIGNMENTS = ['flex-start', 'center', 'flex-end'];
+    private const COLOR_SCHEMES = ['auto', 'light', 'dark'];
 
     private SettingsRepository $settings;
     private string $pluginFile;
@@ -98,6 +99,9 @@ class SearchBlock
         $rawAlignment = $attributes['search_alignment'] ?? $options['search_alignment'] ?? 'flex-start';
         $normalized['search_alignment'] = in_array($rawAlignment, self::ALIGNMENTS, true) ? $rawAlignment : 'flex-start';
 
+        $rawScheme = $attributes['search_color_scheme'] ?? $options['search_color_scheme'] ?? 'auto';
+        $normalized['search_color_scheme'] = in_array($rawScheme, self::COLOR_SCHEMES, true) ? $rawScheme : 'auto';
+
         $rawShortcode = $attributes['search_shortcode'] ?? $options['search_shortcode'] ?? '';
         if (is_string($rawShortcode)) {
             $rawShortcode = trim($rawShortcode);
@@ -134,6 +138,11 @@ class SearchBlock
         $currentAlignment = isset($options['search_alignment']) ? (string) $options['search_alignment'] : 'flex-start';
         if ($currentAlignment !== $attributes['search_alignment']) {
             $updates['search_alignment'] = $attributes['search_alignment'];
+        }
+
+        $currentScheme = isset($options['search_color_scheme']) ? (string) $options['search_color_scheme'] : 'auto';
+        if ($currentScheme !== $attributes['search_color_scheme']) {
+            $updates['search_color_scheme'] = $attributes['search_color_scheme'];
         }
 
         $currentShortcode = isset($options['search_shortcode']) ? (string) $options['search_shortcode'] : '';
@@ -175,10 +184,16 @@ class SearchBlock
         $alignment = $options['search_alignment'] ?? 'flex-start';
         $alignmentClass = $this->getAlignmentClass($alignment);
         $alignmentStyle = '--sidebar-search-alignment:' . $alignment . ';';
+        $colorScheme = $options['search_color_scheme'] ?? 'auto';
+        if (!in_array($colorScheme, self::COLOR_SCHEMES, true)) {
+            $colorScheme = 'auto';
+        }
+        $schemeClass = $this->getSchemeClass($colorScheme);
+        $appliedScheme = $colorScheme === 'light' ? 'light' : 'dark';
 
         ob_start();
         ?>
-        <div class="sidebar-search <?php echo esc_attr($alignmentClass); ?>" data-sidebar-search-align="<?php echo esc_attr($alignment); ?>" style="<?php echo esc_attr($alignmentStyle); ?>">
+        <div class="sidebar-search <?php echo esc_attr(trim($alignmentClass . ' ' . $schemeClass)); ?>" data-sidebar-search-align="<?php echo esc_attr($alignment); ?>" data-sidebar-search-scheme="<?php echo esc_attr($colorScheme); ?>" data-sidebar-search-applied-scheme="<?php echo esc_attr($appliedScheme); ?>" style="<?php echo esc_attr($alignmentStyle); ?>">
             <?php
             switch ($options['search_method']) {
                 case 'shortcode':
@@ -214,6 +229,18 @@ class SearchBlock
         }
     }
 
+    private function getSchemeClass(string $scheme): string
+    {
+        switch ($scheme) {
+            case 'light':
+                return 'sidebar-search--scheme-light';
+            case 'dark':
+                return 'sidebar-search--scheme-dark';
+            default:
+                return 'sidebar-search--scheme-dark';
+        }
+    }
+
     private function isRestRequest(): bool
     {
         if (function_exists('wp_is_json_request') && wp_is_json_request()) {
@@ -236,12 +263,18 @@ class SearchBlock
 
         $options = $this->settings->getOptions();
 
+        $colorScheme = (string) ($options['search_color_scheme'] ?? 'auto');
+        if (!in_array($colorScheme, self::COLOR_SCHEMES, true)) {
+            $colorScheme = 'auto';
+        }
+
         $data = [
             'blockName' => self::BLOCK_NAME,
             'defaults' => [
                 'enable_search' => (bool) ($options['enable_search'] ?? false),
                 'search_method' => (string) ($options['search_method'] ?? 'default'),
                 'search_alignment' => (string) ($options['search_alignment'] ?? 'flex-start'),
+                'search_color_scheme' => $colorScheme,
                 'search_shortcode' => (string) ($options['search_shortcode'] ?? ''),
             ],
             'version' => $this->version,

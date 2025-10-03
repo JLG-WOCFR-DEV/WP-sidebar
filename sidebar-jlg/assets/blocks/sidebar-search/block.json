@@ -24,6 +24,10 @@
       "type": "string",
       "default": "flex-start"
     },
+    "search_color_scheme": {
+      "type": "string",
+      "default": "auto"
+    },
     "search_shortcode": {
       "type": "string",
       "default": ""
