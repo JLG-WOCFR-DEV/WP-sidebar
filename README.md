@@ -35,6 +35,7 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 - Le bloc affiche un aperçu direct dans l'éditeur grâce au script d'édition (`sidebar-jlg/assets/js/blocks/sidebar-search.js`) et réutilise le rendu PHP (`render_callback`) pour conserver la logique de la sidebar en front.
 - Les scripts générés sont exposés via `block.json` et chargés automatiquement par WordPress depuis `sidebar-jlg/assets/build`. Après compilation, vérifiez que les fichiers `sidebar-search(.asset).php` et `sidebar-search-view(.asset).php` sont bien présents afin de garantir le chargement du bloc aussi bien dans l'éditeur que sur le site public.
 - Pour recompiler les scripts du bloc après modification, exécutez `npm run build`, puis (optionnel) contrôlez dans la console du navigateur WordPress que le bloc `jlg/sidebar-search` n'émet aucun avertissement de script manquant.
+- Afin d'assurer une lisibilité optimale dans l'éditeur, la feuille de style `sidebar-search-editor.scss` applique désormais par défaut `var(--wp-admin-theme-color)` (ou une teinte sombre) lorsque `--sidebar-text-color` n'est pas défini. Le script de vue ajoute automatiquement une classe `sidebar-search--editor` ou `sidebar-search--frontend` pour conserver une palette cohérente entre l'édition et l'affichage public.
 
 ### Icônes personnalisées
 

@@ -1,4 +1,32 @@
 (() => {
+    const getEnvironmentClass = () => {
+        if (typeof document === 'undefined') {
+            return '';
+        }
+
+        const body = document.body;
+        if (!body) {
+            return '';
+        }
+
+        const editorClassCandidates = [
+            'block-editor-page',
+            'block-editor-iframe__body',
+            'edit-site-visual-editor__body',
+            'site-editor-iframe__body'
+        ];
+
+        const isEditor = editorClassCandidates.some((className) => body.classList.contains(className));
+
+        if (isEditor) {
+            return 'sidebar-search--editor';
+        }
+
+        return 'sidebar-search--frontend';
+    };
+
+    const environmentClass = getEnvironmentClass();
+
     const applyAlignmentProperty = (element) => {
         if (!element) {
             return;
@@ -12,9 +40,18 @@
         element.style.setProperty('--sidebar-search-alignment', alignment);
     };
 
+    const applyEnvironmentClass = (element) => {
+        if (!element || !environmentClass) {
+            return;
+        }
+
+        element.classList.add(environmentClass);
+    };
+
     const scan = (root = document) => {
         root.querySelectorAll('[data-sidebar-search-align]').forEach((node) => {
             applyAlignmentProperty(node);
+            applyEnvironmentClass(node);
         });
     };
 
