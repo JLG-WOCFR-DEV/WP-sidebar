@@ -11,8 +11,8 @@ import {
     Notice,
     Spinner,
 } from '@wordpress/components';
-import apiFetch from '@wordpress/api-fetch';
-import { useEffect, useMemo, useRef, useState, RawHTML } from '@wordpress/element';
+import { useServerSideRender } from '@wordpress/server-side-render';
+import { useEffect, useMemo, useRef, RawHTML } from '@wordpress/element';
 import '../../css/sidebar-search-editor.scss';
 
 const METHOD_OPTIONS = [
@@ -33,12 +33,7 @@ const blockName = window.SidebarJlgSearchBlock?.blockName ?? metadata.name;
 registerBlockType(metadata, {
     edit({ attributes, setAttributes }) {
         const initRef = useRef(false);
-        const requestRef = useRef(0);
-        const [renderState, setRenderState] = useState({
-            status: 'idle',
-            rendered: '',
-            errorMessage: null,
-        });
+        const previousMarkupRef = useRef('');
 
         useEffect(() => {
             if (initRef.current) {
@@ -81,71 +76,42 @@ registerBlockType(metadata, {
             }
         }, [normalizedAttributes.search_alignment]);
 
-        useEffect(() => {
-            if (!normalizedAttributes.enable_search) {
-                setRenderState({
-                    status: 'idle',
-                    rendered: '',
-                    errorMessage: null,
-                });
-                return;
-            }
-
-            const currentRequest = requestRef.current + 1;
-            requestRef.current = currentRequest;
-
-            setRenderState((prevState) => ({
-                ...prevState,
-                status: 'loading',
-                errorMessage: null,
-            }));
-
-            const path = `/wp/v2/block-renderer/${ encodeURIComponent(blockName) }?context=edit`;
-
-            apiFetch({
-                path,
-                method: 'POST',
-                data: {
-                    attributes: {
-                        enable_search: normalizedAttributes.enable_search,
-                        search_method: normalizedAttributes.search_method,
-                        search_alignment: normalizedAttributes.search_alignment,
-                        search_shortcode: normalizedAttributes.search_shortcode,
-                    },
-                },
-            })
-                .then((response) => {
-                    if (requestRef.current !== currentRequest) {
-                        return;
-                    }
-
-                    const rendered = typeof response?.rendered === 'string' ? response.rendered : '';
-
-                    setRenderState({
-                        status: 'success',
-                        rendered,
-                        errorMessage: null,
-                    });
-                })
-                .catch((error) => {
-                    if (requestRef.current !== currentRequest) {
-                        return;
-                    }
-
-                    setRenderState((prevState) => ({
-                        ...prevState,
-                        status: 'error',
-                        errorMessage:
-                            error?.message ?? __('Une erreur est survenue lors du chargement de l’aperçu.', 'sidebar-jlg'),
-                    }));
-                });
-        }, [
+        const serverRequestArgs = useMemo(() => ({
+            block: blockName,
+            attributes: {
+                enable_search: normalizedAttributes.enable_search,
+                search_method: normalizedAttributes.search_method,
+                search_alignment: normalizedAttributes.search_alignment,
+                search_shortcode: normalizedAttributes.search_shortcode,
+            },
+            httpMethod: 'POST',
+        }), [
+            blockName,
             normalizedAttributes.enable_search,
             normalizedAttributes.search_method,
             normalizedAttributes.search_alignment,
             normalizedAttributes.search_shortcode,
-            blockName,
         ]);
+
+        const serverRender = useServerSideRender(serverRequestArgs);
+
+        useEffect(() => {
+            if (!normalizedAttributes.enable_search) {
+                previousMarkupRef.current = '';
+                return;
+            }
+
+            if (serverRender.status === 'success') {
+                const rendered = typeof serverRender.content === 'string' ? serverRender.content : '';
+                const trimmed = rendered.trim();
+
+                if (trimmed !== '') {
+                    previousMarkupRef.current = rendered;
+                } else {
+                    previousMarkupRef.current = '';
+                }
+            }
+        }, [normalizedAttributes.enable_search, serverRender.status, serverRender.content]);
 
         const renderPreviewContent = () => {
             const containerProps = {
@@ -164,14 +130,25 @@ registerBlockType(metadata, {
                 );
             }
 
-            const serverMarkup = renderState.rendered?.trim?.() ?? '';
-            const isLoading = renderState.status === 'loading';
-            const hasServerMarkup = serverMarkup !== '';
-            let hasServerContent = hasServerMarkup;
+            const rawServerMarkup = typeof serverRender.content === 'string' ? serverRender.content : '';
+            const trimmedServerMarkup = rawServerMarkup.trim();
+            const storedMarkup = previousMarkupRef.current ?? '';
+            const trimmedStoredMarkup = storedMarkup.trim();
+            const isLoading = normalizedAttributes.enable_search
+                && (serverRender.status === 'loading' || serverRender.status === 'idle');
+            const hasImmediateMarkup = trimmedServerMarkup !== '';
+            const shouldUseStoredMarkup = !hasImmediateMarkup && isLoading && trimmedStoredMarkup !== '';
+            const markupToDisplay = hasImmediateMarkup
+                ? rawServerMarkup
+                : shouldUseStoredMarkup
+                    ? storedMarkup
+                    : '';
+            const trimmedMarkupToDisplay = markupToDisplay.trim();
+            let hasServerContent = trimmedMarkupToDisplay !== '';
 
-            if (hasServerMarkup && typeof window !== 'undefined' && window.document) {
+            if (hasServerContent && typeof window !== 'undefined' && window.document) {
                 const wrapper = window.document.createElement('div');
-                wrapper.innerHTML = serverMarkup;
+                wrapper.innerHTML = trimmedMarkupToDisplay;
                 const serverContainer = wrapper.querySelector('.sidebar-search');
                 const target = serverContainer ?? wrapper;
                 const hasElementChildren = target.children.length > 0;
@@ -191,16 +168,20 @@ registerBlockType(metadata, {
                 </div>
             );
 
+            const errorMessage = serverRender.status === 'error'
+                ? serverRender.error ?? __('Une erreur est survenue lors du chargement de l’aperçu.', 'sidebar-jlg')
+                : null;
+
             return (
                 <>
-                    { renderState.errorMessage && (
+                    { errorMessage && (
                         <Notice status="error" isDismissible={ false }>
-                            { renderState.errorMessage }
+                            { errorMessage }
                         </Notice>
                     ) }
-                    { hasServerMarkup && hasServerContent ? (
+                    { trimmedMarkupToDisplay !== '' && hasServerContent ? (
                         <div className="sidebar-search__render" aria-live="polite">
-                            <RawHTML>{ serverMarkup }</RawHTML>
+                            <RawHTML>{ markupToDisplay }</RawHTML>
                             { isLoading && loadingContent }
                         </div>
                     ) : (
