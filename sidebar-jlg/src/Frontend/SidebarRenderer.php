@@ -272,6 +272,14 @@ class SidebarRenderer
             $this->assignVariable($variables, '--neon-spread', $this->formatPixelValue($this->resolveOption($options, 'neon_spread')));
         }
 
+        $navAriaLabel = $this->resolveAccessibleLabelOption($options, 'nav_aria_label', __('Navigation principale', 'sidebar-jlg'));
+        $toggleExpandLabel = $this->resolveAccessibleLabelOption($options, 'toggle_open_label', __('Afficher le sous-menu', 'sidebar-jlg'));
+        $toggleCollapseLabel = $this->resolveAccessibleLabelOption($options, 'toggle_close_label', __('Masquer le sous-menu', 'sidebar-jlg'));
+
+        $this->assignVariable($variables, '--sidebar-nav-label', $this->formatCssStringValue($navAriaLabel));
+        $this->assignVariable($variables, '--sidebar-toggle-open-label', $this->formatCssStringValue($toggleExpandLabel));
+        $this->assignVariable($variables, '--sidebar-toggle-close-label', $this->formatCssStringValue($toggleCollapseLabel));
+
         $safeAreaFallbackDefaults = [
             'block_start' => '0px',
             'block_end' => '0px',
@@ -427,6 +435,37 @@ class SidebarRenderer
         }
 
         return rtrim(rtrim(sprintf('%.4f', $floatValue), '0'), '.');
+    }
+
+    private function resolveAccessibleLabelOption(array $options, string $key, string $fallback): string
+    {
+        $rawValue = $options[$key] ?? null;
+
+        if (!is_string($rawValue)) {
+            return $fallback;
+        }
+
+        $trimmed = trim($rawValue);
+
+        if ($trimmed === '') {
+            return $fallback;
+        }
+
+        return sanitize_text_field($trimmed);
+    }
+
+    private function formatCssStringValue(?string $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        return $trimmed;
     }
 
     private function resolveContentMargin(array $options): ?string

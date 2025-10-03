@@ -36,6 +36,9 @@ class DefaultSettings
             'show_close_button' => true,
             // Automatically close the sidebar after clicking menu or social links.
             'close_on_link_click' => false,
+            'nav_aria_label'   => '',
+            'toggle_open_label'  => '',
+            'toggle_close_label' => '',
             'hamburger_top_position' => ['value' => '4', 'unit' => 'rem'],
             'hamburger_color'      => 'rgba(255, 255, 255, 1)',
             'header_logo_type'  => 'text',

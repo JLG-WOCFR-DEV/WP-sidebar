@@ -322,6 +322,28 @@ $textTransformLabels = [
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e( 'Libellé ARIA de la navigation', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <input type="text" class="regular-text" name="sidebar_jlg_settings[nav_aria_label]" value="<?php echo esc_attr( $options['nav_aria_label'] ?? '' ); ?>" />
+                        <p class="description"><?php esc_html_e( 'Définit le texte de l’attribut aria-label du bloc de navigation pour les lecteurs d’écran.', 'sidebar-jlg' ); ?></p>
+                        <p class="description"><?php esc_html_e( 'Laissez vide pour utiliser automatiquement la traduction fournie par le plugin.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e( 'Libellés du bouton de sous-menu', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <p>
+                            <label for="sidebar-jlg-toggle-open-label"><?php esc_html_e( 'Texte lorsque le sous-menu est fermé', 'sidebar-jlg' ); ?></label>
+                            <input type="text" id="sidebar-jlg-toggle-open-label" name="sidebar_jlg_settings[toggle_open_label]" value="<?php echo esc_attr( $options['toggle_open_label'] ?? '' ); ?>" class="regular-text" />
+                        </p>
+                        <p>
+                            <label for="sidebar-jlg-toggle-close-label"><?php esc_html_e( 'Texte lorsque le sous-menu est ouvert', 'sidebar-jlg' ); ?></label>
+                            <input type="text" id="sidebar-jlg-toggle-close-label" name="sidebar_jlg_settings[toggle_close_label]" value="<?php echo esc_attr( $options['toggle_close_label'] ?? '' ); ?>" class="regular-text" />
+                        </p>
+                        <p class="description"><?php esc_html_e( 'Ces textes alimentent les attributs aria-label et la mention pour les lecteurs d’écran. Laissez vide pour conserver les libellés traduits par défaut.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e( 'Barre de recherche', 'sidebar-jlg' ); ?></th>
                     <td>
                         <label><input type="checkbox" name="sidebar_jlg_settings[enable_search]" value="1" <?php checked( $options['enable_search'], 1 ); ?> /> <?php esc_html_e( 'Activer la barre de recherche.', 'sidebar-jlg' ); ?></label>

@@ -225,6 +225,24 @@ class SettingsRepository
             }
         }
 
+        $textOptionKeys = ['nav_aria_label', 'toggle_open_label', 'toggle_close_label'];
+        foreach ($textOptionKeys as $textKey) {
+            if (!array_key_exists($textKey, $revalidated)) {
+                continue;
+            }
+
+            $rawValue = $revalidated[$textKey];
+            if (!is_string($rawValue)) {
+                $revalidated[$textKey] = '';
+                continue;
+            }
+
+            $sanitizedValue = sanitize_text_field($rawValue);
+            if ($sanitizedValue !== $rawValue) {
+                $revalidated[$textKey] = $sanitizedValue;
+            }
+        }
+
         foreach (self::ABSINT_OPTION_KEYS as $intKey) {
             $defaultValue = isset($defaults[$intKey]) ? absint($defaults[$intKey]) : 0;
             $currentValue = $revalidated[$intKey] ?? $defaultValue;

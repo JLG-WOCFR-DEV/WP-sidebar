@@ -35,7 +35,38 @@ if (isset($options['social_orientation']) && is_string($options['social_orientat
     $socialOrientation = $options['social_orientation'];
 }
 
-$renderMenuNodes = static function (array $nodes, string $layout) use (&$renderMenuNodes): string {
+$defaultNavAriaLabel = __('Navigation principale', 'sidebar-jlg');
+$navAriaLabelOption = '';
+if (isset($options['nav_aria_label']) && is_string($options['nav_aria_label'])) {
+    $navAriaLabelOption = trim((string) $options['nav_aria_label']);
+}
+if ($navAriaLabelOption !== '') {
+    $navAriaLabelOption = sanitize_text_field($navAriaLabelOption);
+}
+$navAriaLabel = $navAriaLabelOption !== '' ? $navAriaLabelOption : $defaultNavAriaLabel;
+
+$defaultToggleExpandLabel = __('Afficher le sous-menu', 'sidebar-jlg');
+$defaultToggleCollapseLabel = __('Masquer le sous-menu', 'sidebar-jlg');
+
+$toggleExpandLabelOption = '';
+if (isset($options['toggle_open_label']) && is_string($options['toggle_open_label'])) {
+    $toggleExpandLabelOption = trim((string) $options['toggle_open_label']);
+}
+if ($toggleExpandLabelOption !== '') {
+    $toggleExpandLabelOption = sanitize_text_field($toggleExpandLabelOption);
+}
+$toggleExpandLabel = $toggleExpandLabelOption !== '' ? $toggleExpandLabelOption : $defaultToggleExpandLabel;
+
+$toggleCollapseLabelOption = '';
+if (isset($options['toggle_close_label']) && is_string($options['toggle_close_label'])) {
+    $toggleCollapseLabelOption = trim((string) $options['toggle_close_label']);
+}
+if ($toggleCollapseLabelOption !== '') {
+    $toggleCollapseLabelOption = sanitize_text_field($toggleCollapseLabelOption);
+}
+$toggleCollapseLabel = $toggleCollapseLabelOption !== '' ? $toggleCollapseLabelOption : $defaultToggleCollapseLabel;
+
+$renderMenuNodes = static function (array $nodes, string $layout) use (&$renderMenuNodes, $toggleExpandLabel, $toggleCollapseLabel): string {
     if ($nodes === []) {
         return '';
     }
@@ -81,8 +112,6 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
 
         $submenuId = '';
         $toggleExpandedAttr = 'false';
-        $toggleLabelExpand = esc_attr__('Afficher le sous-menu', 'sidebar-jlg');
-        $toggleLabelCollapse = esc_attr__('Masquer le sous-menu', 'sidebar-jlg');
         if ($isInitiallyExpanded) {
             $toggleExpandedAttr = 'true';
         }
@@ -127,11 +156,11 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
                     aria-expanded="<?php echo esc_attr($toggleExpandedAttr); ?>"
                     aria-controls="<?php echo esc_attr($submenuId); ?>"
                     aria-haspopup="true"
-                    aria-label="<?php echo esc_attr($toggleExpandedAttr === 'true' ? $toggleLabelCollapse : $toggleLabelExpand); ?>"
-                    data-label-expand="<?php echo esc_attr($toggleLabelExpand); ?>"
-                    data-label-collapse="<?php echo esc_attr($toggleLabelCollapse); ?>"
+                    aria-label="<?php echo esc_attr($toggleExpandedAttr === 'true' ? $toggleCollapseLabel : $toggleExpandLabel); ?>"
+                    data-label-expand="<?php echo esc_attr($toggleExpandLabel); ?>"
+                    data-label-collapse="<?php echo esc_attr($toggleCollapseLabel); ?>"
                 >
-                    <span class="screen-reader-text"><?php echo esc_html($toggleExpandedAttr === 'true' ? $toggleLabelCollapse : $toggleLabelExpand); ?></span>
+                    <span class="screen-reader-text"><?php echo esc_html($toggleExpandedAttr === 'true' ? $toggleCollapseLabel : $toggleExpandLabel); ?></span>
                     <span aria-hidden="true" class="submenu-toggle-indicator"></span>
                 </button>
                 <ul
@@ -152,7 +181,14 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
 
 ob_start();
 ?>
-<nav class="<?php echo esc_attr($navigationClassAttr); ?>" role="navigation" aria-label="<?php esc_attr_e('Navigation principale', 'sidebar-jlg'); ?>">
+<nav
+    class="<?php echo esc_attr($navigationClassAttr); ?>"
+    role="navigation"
+    aria-label="<?php echo esc_attr($navAriaLabel); ?>"
+    data-default-aria-label="<?php echo esc_attr($defaultNavAriaLabel); ?>"
+    data-default-toggle-expand="<?php echo esc_attr($defaultToggleExpandLabel); ?>"
+    data-default-toggle-collapse="<?php echo esc_attr($defaultToggleCollapseLabel); ?>"
+>
     <ul class="<?php echo esc_attr($menuClassAttr); ?>">
         <?php echo $renderMenuNodes($menuNodes, $layoutStyle); ?>
 
