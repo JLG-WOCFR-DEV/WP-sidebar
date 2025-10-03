@@ -12,6 +12,7 @@ class SearchBlock
 
     private const METHODS = ['default', 'shortcode', 'hook'];
     private const ALIGNMENTS = ['flex-start', 'center', 'flex-end'];
+    private const HEADING_LEVELS = ['h2', 'h3', 'h4', 'h5', 'h6'];
 
     private SettingsRepository $settings;
     private string $pluginFile;
@@ -106,6 +107,28 @@ class SearchBlock
         }
         $normalized['search_shortcode'] = $rawShortcode === '' ? '' : wp_kses_post($rawShortcode);
 
+        $rawHeading = $attributes['heading'] ?? $options['heading'] ?? '';
+        if (is_string($rawHeading)) {
+            $rawHeading = trim($rawHeading);
+        } else {
+            $rawHeading = '';
+        }
+        $normalized['heading'] = $rawHeading === '' ? '' : wp_kses_post($rawHeading);
+
+        $rawDescription = $attributes['description'] ?? $options['description'] ?? '';
+        if (is_string($rawDescription)) {
+            $rawDescription = trim($rawDescription);
+        } else {
+            $rawDescription = '';
+        }
+        $normalized['description'] = $rawDescription === '' ? '' : wp_kses_post($rawDescription);
+
+        $rawHeadingLevel = $attributes['heading_level'] ?? $options['heading_level'] ?? 'h2';
+        if (!is_string($rawHeadingLevel) || !in_array($rawHeadingLevel, self::HEADING_LEVELS, true)) {
+            $rawHeadingLevel = 'h2';
+        }
+        $normalized['heading_level'] = $rawHeadingLevel;
+
         return $normalized;
     }
 
@@ -139,6 +162,21 @@ class SearchBlock
         $currentShortcode = isset($options['search_shortcode']) ? (string) $options['search_shortcode'] : '';
         if ($currentShortcode !== $attributes['search_shortcode']) {
             $updates['search_shortcode'] = $attributes['search_shortcode'];
+        }
+
+        $currentHeading = isset($options['heading']) ? (string) $options['heading'] : '';
+        if ($currentHeading !== $attributes['heading']) {
+            $updates['heading'] = $attributes['heading'];
+        }
+
+        $currentDescription = isset($options['description']) ? (string) $options['description'] : '';
+        if ($currentDescription !== $attributes['description']) {
+            $updates['description'] = $attributes['description'];
+        }
+
+        $currentHeadingLevel = isset($options['heading_level']) ? (string) $options['heading_level'] : 'h2';
+        if ($currentHeadingLevel !== $attributes['heading_level']) {
+            $updates['heading_level'] = $attributes['heading_level'];
         }
 
         if ($updates === []) {
@@ -182,9 +220,28 @@ class SearchBlock
         ]);
         $classAttribute = implode(' ', $classNames);
 
+        $heading = isset($options['heading']) ? (string) $options['heading'] : '';
+        $heading = $heading !== '' ? wp_kses_post($heading) : '';
+        $description = isset($options['description']) ? (string) $options['description'] : '';
+        $description = $description !== '' ? wp_kses_post($description) : '';
+        $headingLevel = isset($options['heading_level']) ? (string) $options['heading_level'] : 'h2';
+        if (!in_array($headingLevel, self::HEADING_LEVELS, true)) {
+            $headingLevel = 'h2';
+        }
+
         ob_start();
         ?>
         <div class="<?php echo esc_attr($classAttribute); ?>" data-sidebar-search-align="<?php echo esc_attr($alignment); ?>" data-sidebar-search-scheme="auto" style="<?php echo esc_attr($alignmentStyle); ?>">
+            <?php if ($heading !== '') : ?>
+                <<?php echo tag_escape($headingLevel); ?> class="sidebar-search__heading">
+                    <?php echo $heading; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                </<?php echo tag_escape($headingLevel); ?>>
+            <?php endif; ?>
+            <?php if ($description !== '') : ?>
+                <div class="sidebar-search__description">
+                    <?php echo wp_kses_post(wpautop($description)); ?>
+                </div>
+            <?php endif; ?>
             <?php
             switch ($options['search_method']) {
                 case 'shortcode':
@@ -249,6 +306,11 @@ class SearchBlock
                 'search_method' => (string) ($options['search_method'] ?? 'default'),
                 'search_alignment' => (string) ($options['search_alignment'] ?? 'flex-start'),
                 'search_shortcode' => (string) ($options['search_shortcode'] ?? ''),
+                'heading' => (string) ($options['heading'] ?? ''),
+                'description' => (string) ($options['description'] ?? ''),
+                'heading_level' => in_array((string) ($options['heading_level'] ?? 'h2'), self::HEADING_LEVELS, true)
+                    ? (string) ($options['heading_level'] ?? 'h2')
+                    : 'h2',
             ],
             'version' => $this->version,
         ];
