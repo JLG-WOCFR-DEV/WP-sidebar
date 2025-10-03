@@ -28,6 +28,7 @@ class DefaultSettings
             'content_margin'    => ['value' => '2', 'unit' => 'rem'],
             'width_desktop'     => 280,
             'width_tablet'      => 320,
+            'width_mobile'      => '100%',
             'enable_search'     => false,
             'search_method'     => 'default',
             'search_shortcode'  => '',

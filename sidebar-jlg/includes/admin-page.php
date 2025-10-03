@@ -286,6 +286,11 @@ $textTransformLabels = [
                     <td>
                         <p><label><?php esc_html_e( 'Largeur (Desktop)', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[width_desktop]" value="<?php echo esc_attr( $options['width_desktop'] ); ?>" class="small-text"/> px</p>
                         <p><label><?php esc_html_e( 'Largeur (Tablette)', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[width_tablet]" value="<?php echo esc_attr( $options['width_tablet'] ); ?>" class="small-text"/> px <em class="description"><?php esc_html_e( 'Appliquée entre 768px et 992px.', 'sidebar-jlg' ); ?></em></p>
+                        <p>
+                            <label><?php esc_html_e( 'Largeur (Mobile)', 'sidebar-jlg' ); ?></label>
+                            <input type="text" name="sidebar_jlg_settings[width_mobile]" value="<?php echo esc_attr( $options['width_mobile'] ); ?>" class="small-text" />
+                            <em class="description"><?php esc_html_e( '100 % par défaut pour couvrir l’écran. Accepte toute valeur CSS (320px, 85%, calc(100% - 2rem)…) appliquée sous 768px.', 'sidebar-jlg' ); ?></em>
+                        </p>
                     </td>
                 </tr>
                 <tr>

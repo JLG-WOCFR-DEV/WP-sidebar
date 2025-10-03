@@ -201,6 +201,8 @@ body[data-sidebar-position="right"] .pro-sidebar {
         background-color: color-mix(in srgb, var(--mobile-bg-color) calc(var(--mobile-bg-opacity) * 100%), transparent);
         -webkit-backdrop-filter: blur(var(--mobile-blur));
         backdrop-filter: blur(var(--mobile-blur));
+        width: var(--sidebar-width-mobile, 100%);
+        max-width: 100%;
     }
     body.sidebar-open .pro-sidebar { visibility: visible; }
     body.jlg-sidebar-position-left .pro-sidebar.animation-slide-left,

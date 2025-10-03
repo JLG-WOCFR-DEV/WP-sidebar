@@ -1050,6 +1050,10 @@ class SidebarPreviewModule {
             this.currentOptions.width_tablet = value;
         });
 
+        this.bindField('sidebar_jlg_settings[width_mobile]', (value) => {
+            this.currentOptions.width_mobile = value;
+        });
+
         this.bindDimensionField('sidebar_jlg_settings[horizontal_bar_height]', 'horizontal_bar_height');
 
         this.bindField('sidebar_jlg_settings[overlay_color]', (value) => {
@@ -1254,6 +1258,7 @@ class SidebarPreviewModule {
             ['--sidebar-hover-color', this.currentOptions.font_hover_color],
             ['--sidebar-width-desktop', this.formatDimension(this.currentOptions.width_desktop)],
             ['--sidebar-width-tablet', this.formatDimension(this.currentOptions.width_tablet)],
+            ['--sidebar-width-mobile', this.formatDimension(this.currentOptions.width_mobile)],
             ['--sidebar-overlay-color', this.currentOptions.overlay_color],
             ['--sidebar-overlay-opacity', this.formatOpacity(this.currentOptions.overlay_opacity)],
             ['--sidebar-hamburger-color', this.currentOptions.hamburger_color],

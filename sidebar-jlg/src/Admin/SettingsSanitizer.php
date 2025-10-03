@@ -253,6 +253,12 @@ class SettingsSanitizer
             $existingOptions,
             $defaults
         );
+        $sanitized['width_mobile'] = $this->sanitizeCssDimensionOption(
+            $input,
+            'width_mobile',
+            $existingOptions,
+            $defaults
+        );
         $sanitized['enable_search'] = !empty($input['enable_search']);
         $sanitized['search_method'] = $this->sanitizeChoice(
             $input['search_method'] ?? null,
@@ -847,6 +853,19 @@ class SettingsSanitizer
         }
 
         return absint($existing);
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @param array<string, mixed> $existingOptions
+     * @param array<string, mixed> $defaults
+     */
+    private function sanitizeCssDimensionOption(array $input, string $key, array $existingOptions, array $defaults): string
+    {
+        $existing = $existingOptions[$key] ?? ($defaults[$key] ?? '');
+        $fallback = $existing !== '' ? $existing : ($defaults[$key] ?? '');
+
+        return ValueNormalizer::normalizeCssDimension($input[$key] ?? null, $fallback);
     }
 
     /**

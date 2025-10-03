@@ -13,6 +13,7 @@ class SidebarRenderer
     private const DYNAMIC_STYLE_DEFAULTS = [
         'width_desktop' => 280,
         'width_tablet' => 320,
+        'width_mobile' => '100%',
         'bg_color_type' => 'solid',
         'bg_color' => 'rgba(26, 29, 36, 1)',
         'bg_color_start' => '#18181b',
@@ -155,6 +156,7 @@ class SidebarRenderer
 
         $this->assignVariable($variables, '--sidebar-width-desktop', $this->formatPixelValue($this->resolveOption($options, 'width_desktop')));
         $this->assignVariable($variables, '--sidebar-width-tablet', $this->formatPixelValue($this->resolveOption($options, 'width_tablet')));
+        $this->assignVariable($variables, '--sidebar-width-mobile', $this->sanitizeCssString($this->resolveOption($options, 'width_mobile')));
 
         $bgType = $this->sanitizeCssString($this->resolveOption($options, 'bg_color_type')) ?? self::DYNAMIC_STYLE_DEFAULTS['bg_color_type'];
         if ($bgType === 'gradient') {
