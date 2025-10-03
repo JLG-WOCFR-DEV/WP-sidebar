@@ -24,26 +24,37 @@ class MenuCache
         return '' === $locale ? 'default' : $locale;
     }
 
-    public function getTransientKey(string $locale): string
+    public function getTransientKey(string $locale, ?string $suffix = null): string
     {
-        $normalized = $this->normalizeLocale($locale);
+        $normalizedLocale = $this->normalizeLocale($locale);
+        $normalizedSuffix = $this->normalizeSuffix($suffix);
 
-        return 'sidebar_jlg_full_html_' . $normalized;
+        return 'sidebar_jlg_full_html_' . $normalizedLocale . $normalizedSuffix;
     }
 
-    public function get(string $locale)
+    public function get(string $locale, ?string $suffix = null)
     {
-        $value = get_transient($this->getTransientKey($locale));
+        $value = get_transient($this->getTransientKey($locale, $suffix));
 
         if ($value === false) {
             return false;
         }
 
         if (!is_string($value)) {
-            $this->delete($locale);
+            $this->delete($locale, $suffix);
 
             if (function_exists('error_log')) {
-                error_log('[Sidebar JLG] Invalid sidebar cache payload cleared for locale ' . $this->normalizeLocale($locale));
+                $suffixNotice = '';
+                $normalizedSuffix = $this->normalizeSuffixValue($suffix);
+                if ($normalizedSuffix !== null) {
+                    $suffixNotice = ' and profile ' . $normalizedSuffix;
+                }
+
+                error_log(
+                    '[Sidebar JLG] Invalid sidebar cache payload cleared for locale '
+                    . $this->normalizeLocale($locale)
+                    . $suffixNotice
+                );
             }
 
             return false;
@@ -52,28 +63,45 @@ class MenuCache
         return $value;
     }
 
-    public function set(string $locale, string $html): void
+    public function set(string $locale, string $html, ?string $suffix = null): void
     {
-        set_transient($this->getTransientKey($locale), $html, self::CACHE_TTL);
-        $this->rememberLocale($locale);
+        set_transient($this->getTransientKey($locale, $suffix), $html, self::CACHE_TTL);
+        $this->rememberLocale($locale, $suffix);
     }
 
-    public function delete(string $locale): void
+    public function delete(string $locale, ?string $suffix = null): void
     {
-        delete_transient($this->getTransientKey($locale));
+        delete_transient($this->getTransientKey($locale, $suffix));
+
+        if ($suffix !== null) {
+            // Clear legacy cache entries that were stored without profile context.
+            delete_transient($this->getTransientKey($locale, null));
+        }
     }
 
     public function clear(): void
     {
-        $cachedLocales = $this->getCachedLocales();
+        $cachedEntries = $this->getCachedLocales();
 
-        foreach ($cachedLocales as $locale) {
-            $this->delete($locale);
+        foreach ($cachedEntries as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            $locale = $entry['locale'] ?? null;
+            if (!is_string($locale) || $locale === '') {
+                continue;
+            }
+
+            $suffix = $entry['suffix'] ?? null;
+            $suffix = is_string($suffix) ? $suffix : null;
+
+            $this->delete($locale, $suffix);
         }
 
         delete_transient('sidebar_jlg_full_html');
 
-        if (!empty($cachedLocales)) {
+        if (!empty($cachedEntries)) {
             delete_option($this->optionName);
         }
     }
@@ -83,18 +111,20 @@ class MenuCache
         delete_option($this->optionName);
     }
 
-    public function rememberLocale(string $locale): void
+    public function rememberLocale(string $locale, ?string $suffix = null): void
     {
-        $normalized = $this->normalizeLocale($locale);
+        $normalizedLocale = $this->normalizeLocale($locale);
+        $normalizedSuffix = $this->normalizeSuffixValue($suffix);
 
-        if ($normalized === '') {
+        if ($normalizedLocale === '') {
             return;
         }
 
         $existing = get_option($this->optionName, null);
+        $entry = $this->createLocaleEntry($normalizedLocale, $normalizedSuffix);
 
         if ($existing === null) {
-            add_option($this->optionName, [$normalized], '', 'no');
+            add_option($this->optionName, [$entry], '', 'no');
             return;
         }
 
@@ -102,11 +132,18 @@ class MenuCache
             $existing = [];
         }
 
-        if (in_array($normalized, $existing, true)) {
-            return;
+        foreach ($existing as $stored) {
+            $parsed = $this->parseLocaleEntry($stored);
+            if ($parsed === null) {
+                continue;
+            }
+
+            if ($parsed['locale'] === $normalizedLocale && $parsed['suffix'] === $normalizedSuffix) {
+                return;
+            }
         }
 
-        $existing[] = $normalized;
+        $existing[] = $entry;
         update_option($this->optionName, $existing, 'no');
     }
 
@@ -120,14 +157,18 @@ class MenuCache
 
         $normalized = [];
 
-        foreach ($stored as $locale) {
-            $normalizedLocale = $this->normalizeLocale($locale);
-            if ($normalizedLocale !== '') {
-                $normalized[] = $normalizedLocale;
+        foreach ($stored as $entry) {
+            $parsed = $this->parseLocaleEntry($entry);
+
+            if ($parsed === null) {
+                continue;
             }
+
+            $key = $parsed['locale'] . '|' . ($parsed['suffix'] ?? '');
+            $normalized[$key] = $parsed;
         }
 
-        return array_values(array_unique($normalized));
+        return array_values($normalized);
     }
 
     private function normalizeLocale(string $locale): string
@@ -139,5 +180,74 @@ class MenuCache
         }
 
         return $normalized;
+    }
+
+    private function normalizeSuffix(?string $suffix): string
+    {
+        $normalized = $this->normalizeSuffixValue($suffix);
+
+        if ($normalized === null || $normalized === '') {
+            return '';
+        }
+
+        return '_' . $normalized;
+    }
+
+    private function normalizeSuffixValue(?string $suffix): ?string
+    {
+        if ($suffix === null) {
+            return null;
+        }
+
+        $trimmed = trim((string) $suffix);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $sanitized = preg_replace('/[^A-Za-z0-9_\-]/', '', $trimmed);
+
+        if ($sanitized === null || $sanitized === '') {
+            $sanitized = substr(md5($trimmed), 0, 12);
+        }
+
+        return strtolower($sanitized);
+    }
+
+    private function createLocaleEntry(string $locale, ?string $suffix): array
+    {
+        $entry = ['locale' => $locale];
+
+        if ($suffix !== null && $suffix !== '') {
+            $entry['suffix'] = $suffix;
+        }
+
+        return $entry;
+    }
+
+    private function parseLocaleEntry($entry): ?array
+    {
+        if (is_array($entry)) {
+            $locale = isset($entry['locale']) ? (string) $entry['locale'] : '';
+            $suffix = $entry['suffix'] ?? null;
+            $suffix = is_string($suffix) ? $suffix : null;
+        } elseif (is_string($entry)) {
+            $locale = $entry;
+            $suffix = null;
+        } else {
+            return null;
+        }
+
+        $normalizedLocale = $this->normalizeLocale($locale);
+        $normalizedSuffix = $this->normalizeSuffixValue($suffix);
+
+        if ($normalizedLocale === '') {
+            return null;
+        }
+
+        return [
+            'locale' => $normalizedLocale,
+            'suffix' => $normalizedSuffix,
+        ];
     }
 }

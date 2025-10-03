@@ -539,32 +539,37 @@ assertSame("Termé alert('x')", $GLOBALS['test_get_categories_requests'][0]['sea
 reset_test_environment();
 $GLOBALS['test_current_user_can'] = false;
 $GLOBALS['wp_test_options'] = ['sidebar_jlg_settings' => ['should' => 'stay']];
-$GLOBALS['wp_test_transients'] = ['sidebar_jlg_full_html_default' => '<div>keep</div>'];
+$GLOBALS['wp_test_transients'] = ['sidebar_jlg_full_html_default_default' => '<div>keep</div>'];
 invoke_endpoint($endpoints, 'ajax_reset_settings');
 assertSame('Permission refusée.', $GLOBALS['json_error_payloads'][0] ?? null, 'Unauthorized reset request rejected');
 assertSame([], $GLOBALS['checked_nonces'], 'Nonce not validated when reset unauthorized');
 assertSame(['should' => 'stay'], get_option('sidebar_jlg_settings'), 'Unauthorized reset leaves settings untouched');
-assertSame('<div>keep</div>', get_transient('sidebar_jlg_full_html_default'), 'Unauthorized reset leaves caches untouched');
+assertSame('<div>keep</div>', get_transient('sidebar_jlg_full_html_default_default'), 'Unauthorized reset leaves caches untouched');
 
 reset_test_environment();
 $GLOBALS['wp_test_options'] = ['sidebar_jlg_settings' => ['should' => 'stay']];
-$GLOBALS['wp_test_transients'] = ['sidebar_jlg_full_html_default' => '<div>keep</div>'];
+$GLOBALS['wp_test_transients'] = ['sidebar_jlg_full_html_default_default' => '<div>keep</div>'];
 $GLOBALS['test_nonce_results']['jlg_reset_nonce'] = 'Nonce invalide.';
 $_POST = ['nonce' => 'bad'];
 invoke_endpoint($endpoints, 'ajax_reset_settings');
 assertSame('Nonce invalide.', $GLOBALS['json_error_payloads'][0] ?? null, 'Reset nonce failure returns error');
 assertSame(['jlg_reset_nonce', 'nonce', 'bad'], $GLOBALS['checked_nonces'][0] ?? null, 'Reset nonce validated before failure');
 assertSame(['should' => 'stay'], get_option('sidebar_jlg_settings'), 'Nonce failure leaves settings untouched');
-assertSame('<div>keep</div>', get_transient('sidebar_jlg_full_html_default'), 'Nonce failure leaves caches untouched');
+assertSame('<div>keep</div>', get_transient('sidebar_jlg_full_html_default_default'), 'Nonce failure leaves caches untouched');
 
 reset_test_environment();
 $GLOBALS['wp_test_options'] = [
     'sidebar_jlg_settings' => ['foo' => 'bar'],
-    'sidebar_jlg_cached_locales' => ['default', 'fr_FR'],
+    'sidebar_jlg_cached_locales' => [
+        'default',
+        ['locale' => 'default', 'suffix' => 'default'],
+        ['locale' => 'fr_FR', 'suffix' => 'default'],
+    ],
 ];
 $GLOBALS['wp_test_transients'] = [
-    'sidebar_jlg_full_html_default' => '<div>cached</div>',
-    'sidebar_jlg_full_html_fr_FR' => '<div>cached-fr</div>',
+    'sidebar_jlg_full_html_default' => '<div>legacy-default</div>',
+    'sidebar_jlg_full_html_default_default' => '<div>cached</div>',
+    'sidebar_jlg_full_html_fr_FR_default' => '<div>cached-fr</div>',
     'sidebar_jlg_full_html' => '<div>legacy</div>',
 ];
 $_POST = ['nonce' => 'reset-nonce'];
@@ -572,8 +577,9 @@ invoke_endpoint($endpoints, 'ajax_reset_settings');
 assertSame('Réglages réinitialisés.', $GLOBALS['json_success_payloads'][0] ?? null, 'Reset settings success message returned');
 assertSame('missing', get_option('sidebar_jlg_settings', 'missing'), 'Settings option deleted during reset');
 assertSame('missing', get_option('sidebar_jlg_cached_locales', 'missing'), 'Cached locales option deleted during reset');
-assertSame(false, get_transient('sidebar_jlg_full_html_default'), 'Default locale cache cleared during reset');
-assertSame(false, get_transient('sidebar_jlg_full_html_fr_FR'), 'Additional locale cache cleared during reset');
+assertSame(false, get_transient('sidebar_jlg_full_html_default'), 'Legacy default locale cache cleared during reset');
+assertSame(false, get_transient('sidebar_jlg_full_html_default_default'), 'Default locale profile cache cleared during reset');
+assertSame(false, get_transient('sidebar_jlg_full_html_fr_FR_default'), 'Additional locale cache cleared during reset');
 assertSame(false, get_transient('sidebar_jlg_full_html'), 'Legacy cache cleared during reset');
 assertSame(['jlg_reset_nonce', 'nonce', 'reset-nonce'], $GLOBALS['checked_nonces'][0] ?? null, 'Reset nonce validated before clearing settings');
 

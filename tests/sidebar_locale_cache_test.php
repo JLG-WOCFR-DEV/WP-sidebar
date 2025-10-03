@@ -53,6 +53,34 @@ function assertNotContains(string $needle, string $haystack, string $message): v
     assertTrue(strpos($haystack, $needle) === false, $message);
 }
 
+function cachedLocaleExists(array $entries, string $locale, ?string $suffix): bool {
+    foreach ($entries as $entry) {
+        if (is_array($entry)) {
+            $entryLocale = isset($entry['locale']) ? (string) $entry['locale'] : '';
+            $entrySuffix = $entry['suffix'] ?? null;
+            if ($entrySuffix !== null && !is_string($entrySuffix)) {
+                $entrySuffix = null;
+            }
+        } elseif (is_string($entry)) {
+            $entryLocale = $entry;
+            $entrySuffix = null;
+        } else {
+            continue;
+        }
+
+        if ($entryLocale === $locale) {
+            $normalizedSuffix = $suffix ?? null;
+            $entryNormalized = is_string($entrySuffix) ? $entrySuffix : null;
+
+            if ($entryNormalized === $normalizedSuffix) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 $default_settings = $settingsRepository->getDefaultSettings();
 $default_settings['social_icons'] = [];
 update_option('sidebar_jlg_settings', $default_settings);
@@ -108,7 +136,7 @@ assertContains('href="http://example.com/category/321"', $french_html, 'Category
 assertContains('calc(var(--sidebar-width-desktop) + 10px + 5%)', $french_inline_styles, 'Content margin calc expression flattened');
 assertNotContains('calc(calc', $french_inline_styles, 'Content margin does not contain nested calc');
 assertNotContains('Open menu', $french_html, 'English menu label absent in French cache');
-assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']), 'French transient stored');
+assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR_default']), 'French transient stored');
 
 switch_to_locale('en_US');
 ob_start();
@@ -117,7 +145,7 @@ $english_html = ob_get_clean();
 
 assertContains('Open menu', $english_html, 'English menu label rendered after locale switch');
 assertNotContains('Ouvrir le menu', $english_html, 'French label absent in English cache');
-assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US']), 'English transient stored');
+assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US_default']), 'English transient stored');
 
 switch_to_locale('fr_FR');
 ob_start();
@@ -127,13 +155,13 @@ $french_cached_html = ob_get_clean();
 assertContains('Ouvrir le menu', $french_cached_html, 'French cache reused correctly');
 
 $cached_locales_option = get_option('sidebar_jlg_cached_locales', []);
-assertTrue(in_array('fr_FR', $cached_locales_option, true), 'French locale tracked');
-assertTrue(in_array('en_US', $cached_locales_option, true), 'English locale tracked');
+assertTrue(cachedLocaleExists($cached_locales_option, 'fr_FR', 'default'), 'French locale tracked');
+assertTrue(cachedLocaleExists($cached_locales_option, 'en_US', 'default'), 'English locale tracked');
 
 $menuCache->clear();
 
-assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']), 'French transient cleared');
-assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US']), 'English transient cleared');
+assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR_default']), 'French transient cleared');
+assertTrue(!isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US_default']), 'English transient cleared');
 assertTrue(!isset($GLOBALS['wp_test_options']['sidebar_jlg_cached_locales']), 'Cached locales option cleared');
 
 $menuCache->clear();
@@ -153,7 +181,7 @@ ob_start();
 $renderer->render();
 $first_dynamic_html = ob_get_clean();
 
-$dynamic_transient_key = 'sidebar_jlg_full_html_en_US';
+$dynamic_transient_key = 'sidebar_jlg_full_html_en_US_default';
 assertTrue(!isset($GLOBALS['wp_test_transients'][$dynamic_transient_key]), 'Dynamic sidebar render skips transient storage');
 assertContains('#1', $first_dynamic_html, 'Dynamic render includes first shortcode marker');
 
@@ -184,7 +212,7 @@ ob_start();
 $renderer->render();
 $search_disabled_first_html = ob_get_clean();
 
-$search_disabled_transient_key = 'sidebar_jlg_full_html_en_US';
+$search_disabled_transient_key = 'sidebar_jlg_full_html_en_US_default';
 assertTrue(isset($GLOBALS['wp_test_transients'][$search_disabled_transient_key]), 'Sidebar cache stored when search disabled despite shortcode method');
 
 ob_start();
@@ -195,7 +223,7 @@ assertTrue($search_disabled_first_html === $search_disabled_second_html, 'Cached
 assertTrue(($GLOBALS['wp_test_shortcode_calls'] ?? 0) === 0, 'Shortcode not executed when search disabled');
 
 $cached_locales_option = get_option('sidebar_jlg_cached_locales', []);
-assertTrue(in_array('en_US', $cached_locales_option, true), 'Locale cached when search disabled with shortcode method');
+assertTrue(cachedLocaleExists($cached_locales_option, 'en_US', 'default'), 'Locale cached when search disabled with shortcode method');
 
 $menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
@@ -216,7 +244,7 @@ $default_search_settings['search_method'] = 'default';
 
 update_option('sidebar_jlg_settings', $default_search_settings);
 
-$default_search_transient_key = 'sidebar_jlg_full_html_en_US';
+$default_search_transient_key = 'sidebar_jlg_full_html_en_US_default';
 switch_to_locale('en_US');
 ob_start();
 $renderer->render();
@@ -275,8 +303,10 @@ $GLOBALS['wp_test_function_overrides']['update_option'] = static function ($name
 };
 
 $GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] = SIDEBAR_JLG_VERSION;
-$GLOBALS['wp_test_options']['sidebar_jlg_cached_locales'] = ['fr_FR'];
-$GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR'] = '<div>cached</div>';
+$GLOBALS['wp_test_options']['sidebar_jlg_cached_locales'] = [
+    ['locale' => 'fr_FR', 'suffix' => 'default'],
+];
+$GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR_default'] = '<div>cached</div>';
 $GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
     'menu_items' => [
         [
@@ -292,7 +322,7 @@ $revalidatingPlugin = new SidebarPlugin(__DIR__ . '/../sidebar-jlg/sidebar-jlg.p
 $revalidatingPlugin->register();
 
 assertTrue(
-    !isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']),
+    !isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR_default']),
     'Cache transient cleared when revalidation updates corrupted options'
 );
 assertTrue(
