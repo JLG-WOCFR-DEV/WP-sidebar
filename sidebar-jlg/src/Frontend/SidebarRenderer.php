@@ -503,27 +503,31 @@ class SidebarRenderer
     {
         $profile = $this->profileSelector->selectProfile();
         $options = $profile['settings'];
+        $profileId = isset($profile['id']) && is_string($profile['id']) && $profile['id'] !== ''
+            ? $profile['id']
+            : 'default';
         if (empty($options['enable_sidebar'])) {
             return;
         }
 
         $currentLocale = $this->cache->getLocaleForCache();
-        $transientKey = $this->cache->getTransientKey($currentLocale);
+        $transientKey = $this->cache->getTransientKey($currentLocale, $profileId);
 
         $cacheEnabled = (bool) \apply_filters(
             'sidebar_jlg_cache_enabled',
             !$this->is_sidebar_output_dynamic($options),
             $options,
             $currentLocale,
-            $transientKey
+            $transientKey,
+            $profileId
         );
 
         $html = false;
 
         if ($cacheEnabled) {
-            $html = $this->cache->get($currentLocale);
+            $html = $this->cache->get($currentLocale, $profileId);
         } else {
-            $this->cache->delete($currentLocale);
+            $this->cache->delete($currentLocale, $profileId);
             $this->cache->forgetLocaleIndex();
         }
 
@@ -562,7 +566,7 @@ class SidebarRenderer
             }
 
             if ($cacheEnabled) {
-                $this->cache->set($currentLocale, $html);
+                $this->cache->set($currentLocale, $html, $profileId);
             }
         }
 

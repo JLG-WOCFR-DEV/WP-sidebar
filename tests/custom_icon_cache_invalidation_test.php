@@ -73,9 +73,12 @@ $GLOBALS['wp_test_function_overrides']['do_action'] = static function ($hook, ..
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
 $GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] = SIDEBAR_JLG_VERSION;
-$GLOBALS['wp_test_options']['sidebar_jlg_cached_locales'] = ['fr_FR', 'en_US'];
-$GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR'] = '<div>FR</div>';
-$GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US'] = '<div>EN</div>';
+$GLOBALS['wp_test_options']['sidebar_jlg_cached_locales'] = [
+    ['locale' => 'fr_FR', 'suffix' => 'default'],
+    ['locale' => 'en_US', 'suffix' => 'default'],
+];
+$GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR_default'] = '<div>FR</div>';
+$GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US_default'] = '<div>EN</div>';
 $GLOBALS['wp_test_options']['sidebar_jlg_custom_icon_index'] = [
     'custom-change.svg' => [
         'mtime' => 0,
@@ -90,11 +93,11 @@ $iconLibrary = $plugin->getIconLibrary();
 $iconLibrary->getAllIcons();
 
 assertTrue(
-    !isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR']),
+    !isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR_default']),
     'French sidebar cache cleared when custom icons change'
 );
 assertTrue(
-    !isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US']),
+    !isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US_default']),
     'English sidebar cache cleared when custom icons change'
 );
 assertTrue(
