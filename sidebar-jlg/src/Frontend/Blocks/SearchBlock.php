@@ -175,10 +175,16 @@ class SearchBlock
         $alignment = $options['search_alignment'] ?? 'flex-start';
         $alignmentClass = $this->getAlignmentClass($alignment);
         $alignmentStyle = '--sidebar-search-alignment:' . $alignment . ';';
+        $classNames = array_filter([
+            'sidebar-search',
+            $alignmentClass,
+            'sidebar-search--scheme-light',
+        ]);
+        $classAttribute = implode(' ', $classNames);
 
         ob_start();
         ?>
-        <div class="sidebar-search <?php echo esc_attr($alignmentClass); ?>" data-sidebar-search-align="<?php echo esc_attr($alignment); ?>" style="<?php echo esc_attr($alignmentStyle); ?>">
+        <div class="<?php echo esc_attr($classAttribute); ?>" data-sidebar-search-align="<?php echo esc_attr($alignment); ?>" data-sidebar-search-scheme="auto" style="<?php echo esc_attr($alignmentStyle); ?>">
             <?php
             switch ($options['search_method']) {
                 case 'shortcode':

@@ -148,9 +148,18 @@ registerBlockType(metadata, {
         ]);
 
         const renderPreviewContent = () => {
+            const containerClassNames = [
+                'sidebar-search',
+                alignmentClass,
+                'sidebar-search--scheme-light',
+            ]
+                .filter(Boolean)
+                .join(' ');
+
             const containerProps = {
-                className: `sidebar-search ${ alignmentClass }`,
+                className: containerClassNames,
                 'data-sidebar-search-align': normalizedAttributes.search_alignment,
+                'data-sidebar-search-scheme': 'auto',
                 style: { '--sidebar-search-alignment': normalizedAttributes.search_alignment },
             };
 

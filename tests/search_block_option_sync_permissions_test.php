@@ -96,6 +96,21 @@ $expectedOptions['search_shortcode'] = '[example]';
 $storedAfterAuthorized = get_option('sidebar_jlg_settings');
 assertSameValue($expectedOptions, $storedAfterAuthorized, 'Options are synchronized for authorized users in admin context.');
 
+// Scenario 3: rendered markup exposes contrast helpers and scheme metadata.
+$GLOBALS['test_current_user_can'] = false;
+$GLOBALS['test_is_admin'] = false;
+
+$renderBlock = $createBlock();
+$markup = $renderBlock->render([
+    'enable_search' => true,
+    'search_method' => 'default',
+    'search_alignment' => 'flex-start',
+    'search_shortcode' => '',
+]);
+
+assertSameValue(true, strpos($markup, 'data-sidebar-search-scheme="auto"') !== false, 'Markup exposes automatic scheme data attribute.');
+assertSameValue(true, strpos($markup, 'sidebar-search--scheme-light') !== false, 'Markup includes the light scheme class by default.');
+
 if ($testsPassed) {
     echo "Search block option synchronization permission tests passed.\n";
     exit(0);
