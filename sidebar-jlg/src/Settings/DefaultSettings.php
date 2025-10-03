@@ -36,8 +36,10 @@ class DefaultSettings
             'show_close_button' => true,
             // Automatically close the sidebar after clicking menu or social links.
             'close_on_link_click' => false,
-            'hamburger_top_position' => ['value' => '4', 'unit' => 'rem'],
-            'hamburger_color'      => 'rgba(255, 255, 255, 1)',
+            'hamburger_top_position'     => ['value' => '4', 'unit' => 'rem'],
+            'hamburger_horizontal_offset'=> ['value' => '15', 'unit' => 'px'],
+            'hamburger_size'             => ['value' => '50', 'unit' => 'px'],
+            'hamburger_color'            => 'rgba(255, 255, 255, 1)',
             'header_logo_type'  => 'text',
             'header_logo_image' => '',
             'header_logo_size'  => 150,

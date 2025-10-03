@@ -74,6 +74,47 @@ assertSame('#abcdef', $result_valid['overlay_color'] ?? '', 'Overlay color accep
 assertSame(0.4, $result_valid['overlay_opacity'] ?? null, 'Overlay opacity falls back to existing value when missing');
 assertSame('#eeccdd', $result_valid['border_color'] ?? '', 'Border color accepts valid hex values without modification');
 
+$hamburger_dimensions_input = [
+    'hamburger_horizontal_offset' => ['value' => '2.5', 'unit' => 'rem'],
+    'hamburger_size' => ['value' => '3.75', 'unit' => 'rem'],
+];
+
+$hamburger_dimensions_result = $method->invoke($sanitizer, $hamburger_dimensions_input, $defaults->all());
+
+assertSame(
+    '2.5rem',
+    ValueNormalizer::dimensionToCss($hamburger_dimensions_result['hamburger_horizontal_offset'] ?? null, ''),
+    'Hamburger horizontal offset accepts valid dimension values'
+);
+assertSame(
+    '3.75rem',
+    ValueNormalizer::dimensionToCss($hamburger_dimensions_result['hamburger_size'] ?? null, ''),
+    'Hamburger size accepts valid dimension values'
+);
+
+$existing_hamburger_dimensions = array_merge($defaults->all(), [
+    'hamburger_horizontal_offset' => ['value' => '20', 'unit' => 'px'],
+    'hamburger_size' => ['value' => '60', 'unit' => 'px'],
+]);
+
+$hamburger_dimensions_invalid = [
+    'hamburger_horizontal_offset' => ['value' => 'invalid', 'unit' => 'vh'],
+    'hamburger_size' => ['value' => '', 'unit' => 'rem'],
+];
+
+$hamburger_dimensions_invalid_result = $method->invoke($sanitizer, $hamburger_dimensions_invalid, $existing_hamburger_dimensions);
+
+assertSame(
+    ValueNormalizer::dimensionToCss($existing_hamburger_dimensions['hamburger_horizontal_offset'], ''),
+    ValueNormalizer::dimensionToCss($hamburger_dimensions_invalid_result['hamburger_horizontal_offset'] ?? null, ''),
+    'Hamburger horizontal offset falls back to existing value when input is invalid'
+);
+assertSame(
+    ValueNormalizer::dimensionToCss($existing_hamburger_dimensions['hamburger_size'], ''),
+    ValueNormalizer::dimensionToCss($hamburger_dimensions_invalid_result['hamburger_size'] ?? null, ''),
+    'Hamburger size falls back to existing value when input is invalid'
+);
+
 $input_close_on_click = [
     'close_on_link_click' => '1',
 ];

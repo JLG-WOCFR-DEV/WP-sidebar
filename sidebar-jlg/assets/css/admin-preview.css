@@ -276,18 +276,25 @@
 #sidebar-jlg-preview .hamburger-menu {
     position: absolute;
     inset-block-start: var(--sidebar-hamburger-top);
-    inset-inline-start: calc(100% + 24px);
+    inset-inline-start: calc(100% + var(--sidebar-hamburger-inline-offset, 24px));
     transform: translateX(-50%);
     background: transparent;
     border: none;
     padding: 0;
     cursor: default;
+    width: var(--sidebar-hamburger-size, 50px);
+    height: var(--sidebar-hamburger-size, 50px);
 }
 
 #sidebar-jlg-preview .hamburger-menu .icon-1,
 #sidebar-jlg-preview .hamburger-menu .icon-2,
 #sidebar-jlg-preview .hamburger-menu .icon-3 {
     background-color: var(--sidebar-hamburger-color);
+}
+
+#sidebar-jlg-preview .hamburger-menu .hamburger-icon {
+    width: calc(var(--sidebar-hamburger-size, 50px) * 0.64);
+    height: calc(var(--sidebar-hamburger-size, 50px) * 0.48);
 }
 
 #sidebar-jlg-preview .sidebar-menu {

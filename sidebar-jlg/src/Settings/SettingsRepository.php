@@ -14,6 +14,8 @@ class SettingsRepository
         'floating_vertical_margin',
         'border_radius',
         'hamburger_top_position',
+        'hamburger_horizontal_offset',
+        'hamburger_size',
         'header_padding_top',
         'horizontal_bar_height',
         'letter_spacing',
