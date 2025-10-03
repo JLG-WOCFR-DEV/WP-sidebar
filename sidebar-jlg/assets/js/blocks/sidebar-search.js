@@ -1,12 +1,13 @@
 import metadata from '../../blocks/sidebar-search/block.json';
 import { registerBlockType } from '@wordpress/blocks';
 import { __ } from '@wordpress/i18n';
-import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import { InspectorControls, RichText, useBlockProps } from '@wordpress/block-editor';
 import {
     PanelBody,
     SelectControl,
     TextareaControl,
     ToggleControl,
+    TextControl,
     __experimentalVStack as VStack,
     Notice,
     Spinner,
@@ -25,6 +26,14 @@ const ALIGNMENT_OPTIONS = [
     { value: 'flex-start', label: __('Alignement à gauche', 'sidebar-jlg') },
     { value: 'center', label: __('Alignement centré', 'sidebar-jlg') },
     { value: 'flex-end', label: __('Alignement à droite', 'sidebar-jlg') },
+];
+
+const HEADING_LEVEL_OPTIONS = [
+    { value: 'h2', label: __('Titre 2', 'sidebar-jlg') },
+    { value: 'h3', label: __('Titre 3', 'sidebar-jlg') },
+    { value: 'h4', label: __('Titre 4', 'sidebar-jlg') },
+    { value: 'h5', label: __('Titre 5', 'sidebar-jlg') },
+    { value: 'h6', label: __('Titre 6', 'sidebar-jlg') },
 ];
 
 const localizedDefaults = window.SidebarJlgSearchBlock?.defaults ?? {};
@@ -48,7 +57,15 @@ registerBlockType(metadata, {
             initRef.current = true;
 
             const initialValues = {};
-            ['enable_search', 'search_method', 'search_alignment', 'search_shortcode'].forEach((key) => {
+            [
+                'enable_search',
+                'search_method',
+                'search_alignment',
+                'search_shortcode',
+                'heading',
+                'description',
+                'heading_level',
+            ].forEach((key) => {
                 if (attributes[key] === undefined && localizedDefaults[key] !== undefined) {
                     initialValues[key] = localizedDefaults[key];
                 }
@@ -64,7 +81,18 @@ registerBlockType(metadata, {
             search_method: attributes.search_method ?? 'default',
             search_alignment: attributes.search_alignment ?? 'flex-start',
             search_shortcode: attributes.search_shortcode ?? '',
-        }), [attributes.enable_search, attributes.search_method, attributes.search_alignment, attributes.search_shortcode]);
+            heading: attributes.heading ?? '',
+            description: attributes.description ?? '',
+            heading_level: attributes.heading_level ?? 'h2',
+        }), [
+            attributes.enable_search,
+            attributes.search_method,
+            attributes.search_alignment,
+            attributes.search_shortcode,
+            attributes.heading,
+            attributes.description,
+            attributes.heading_level,
+        ]);
 
         const blockProps = useBlockProps({
             className: 'sidebar-jlg-search-block',
@@ -111,6 +139,9 @@ registerBlockType(metadata, {
                         search_method: normalizedAttributes.search_method,
                         search_alignment: normalizedAttributes.search_alignment,
                         search_shortcode: normalizedAttributes.search_shortcode,
+                        heading: normalizedAttributes.heading,
+                        description: normalizedAttributes.description,
+                        heading_level: normalizedAttributes.heading_level,
                     },
                 },
             })
@@ -194,6 +225,29 @@ registerBlockType(metadata, {
                 </div>
             );
 
+            const headingLevelOption = HEADING_LEVEL_OPTIONS.find(
+                ({ value }) => value === normalizedAttributes.heading_level
+            );
+            const headingTagName = headingLevelOption?.value ?? 'h2';
+            const hasHeading = normalizedAttributes.heading?.trim?.();
+            const hasDescription = normalizedAttributes.description?.trim?.();
+
+            const previewHeading = hasHeading ? (
+                <RichText.Content
+                    tagName={ headingTagName }
+                    className="sidebar-search__heading"
+                    value={ normalizedAttributes.heading }
+                />
+            ) : null;
+
+            const previewDescription = hasDescription ? (
+                <RichText.Content
+                    tagName="div"
+                    className="sidebar-search__description"
+                    value={ normalizedAttributes.description }
+                />
+            ) : null;
+
             const emptyMessage = (
                 <div className="sidebar-search__placeholder">
                     { __('Aucun contenu n’a été retourné par le serveur pour cette configuration.', 'sidebar-jlg') }
@@ -214,6 +268,8 @@ registerBlockType(metadata, {
                         </div>
                     ) : (
                         <div { ...containerProps } aria-live="polite">
+                            { previewHeading }
+                            { previewDescription }
                             { isLoading ? loadingContent : emptyMessage }
                         </div>
                     ) }
@@ -242,6 +298,22 @@ registerBlockType(metadata, {
                                 value={ normalizedAttributes.search_alignment }
                                 options={ ALIGNMENT_OPTIONS }
                                 onChange={(value) => setAttributes({ search_alignment: value }) }
+                            />
+                            <TextControl
+                                label={ __('Titre', 'sidebar-jlg') }
+                                value={ normalizedAttributes.heading }
+                                onChange={(value) => setAttributes({ heading: value }) }
+                            />
+                            <SelectControl
+                                label={ __('Niveau de titre', 'sidebar-jlg') }
+                                value={ normalizedAttributes.heading_level }
+                                options={ HEADING_LEVEL_OPTIONS }
+                                onChange={(value) => setAttributes({ heading_level: value }) }
+                            />
+                            <TextareaControl
+                                label={ __('Description', 'sidebar-jlg') }
+                                value={ normalizedAttributes.description }
+                                onChange={(value) => setAttributes({ description: value }) }
                             />
                             { normalizedAttributes.search_method === 'shortcode' && (
                                 <TextareaControl

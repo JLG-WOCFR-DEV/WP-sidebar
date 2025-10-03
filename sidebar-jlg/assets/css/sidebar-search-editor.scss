@@ -15,6 +15,22 @@
     color: var(--sidebar-search-color);
 }
 
+.sidebar-search__heading {
+    margin: 0 0 0.5rem;
+    color: var(--sidebar-search-color);
+    font-weight: 600;
+}
+
+.sidebar-search__description {
+    margin: 0 0 1rem;
+    color: var(--sidebar-search-muted-color);
+    font-size: 0.875rem;
+}
+
+.sidebar-search__description p:last-child {
+    margin-bottom: 0;
+}
+
 .sidebar-search.sidebar-search--editor {
     --sidebar-search-foreground: var(
         --sidebar-text-color,
