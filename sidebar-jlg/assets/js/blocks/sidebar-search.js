@@ -9,8 +9,10 @@ import {
     ToggleControl,
     __experimentalVStack as VStack,
     Notice,
+    Spinner,
 } from '@wordpress/components';
-import { useEffect, useMemo, useRef } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
+import { useEffect, useMemo, useRef, useState, RawHTML } from '@wordpress/element';
 import '../../css/sidebar-search-editor.scss';
 
 const METHOD_OPTIONS = [
@@ -29,8 +31,14 @@ const localizedDefaults = window.SidebarJlgSearchBlock?.defaults ?? {};
 const blockName = window.SidebarJlgSearchBlock?.blockName ?? metadata.name;
 
 registerBlockType(metadata, {
-    edit({ attributes, setAttributes, clientId }) {
+    edit({ attributes, setAttributes }) {
         const initRef = useRef(false);
+        const requestRef = useRef(0);
+        const [renderState, setRenderState] = useState({
+            status: 'idle',
+            rendered: '',
+            errorMessage: null,
+        });
 
         useEffect(() => {
             if (initRef.current) {
@@ -73,55 +81,134 @@ registerBlockType(metadata, {
             }
         }, [normalizedAttributes.search_alignment]);
 
+        useEffect(() => {
+            if (!normalizedAttributes.enable_search) {
+                setRenderState({
+                    status: 'idle',
+                    rendered: '',
+                    errorMessage: null,
+                });
+                return;
+            }
+
+            const currentRequest = requestRef.current + 1;
+            requestRef.current = currentRequest;
+
+            setRenderState((prevState) => ({
+                ...prevState,
+                status: 'loading',
+                errorMessage: null,
+            }));
+
+            const path = `/wp/v2/block-renderer/${ encodeURIComponent(blockName) }?context=edit`;
+
+            apiFetch({
+                path,
+                method: 'POST',
+                data: {
+                    attributes: {
+                        enable_search: normalizedAttributes.enable_search,
+                        search_method: normalizedAttributes.search_method,
+                        search_alignment: normalizedAttributes.search_alignment,
+                        search_shortcode: normalizedAttributes.search_shortcode,
+                    },
+                },
+            })
+                .then((response) => {
+                    if (requestRef.current !== currentRequest) {
+                        return;
+                    }
+
+                    const rendered = typeof response?.rendered === 'string' ? response.rendered : '';
+
+                    setRenderState({
+                        status: 'success',
+                        rendered,
+                        errorMessage: null,
+                    });
+                })
+                .catch((error) => {
+                    if (requestRef.current !== currentRequest) {
+                        return;
+                    }
+
+                    setRenderState((prevState) => ({
+                        ...prevState,
+                        status: 'error',
+                        errorMessage:
+                            error?.message ?? __('Une erreur est survenue lors du chargement de l’aperçu.', 'sidebar-jlg'),
+                    }));
+                });
+        }, [
+            normalizedAttributes.enable_search,
+            normalizedAttributes.search_method,
+            normalizedAttributes.search_alignment,
+            normalizedAttributes.search_shortcode,
+            blockName,
+        ]);
+
         const renderPreviewContent = () => {
+            const containerProps = {
+                className: `sidebar-search ${ alignmentClass }`,
+                'data-sidebar-search-align': normalizedAttributes.search_alignment,
+                style: { '--sidebar-search-alignment': normalizedAttributes.search_alignment },
+            };
+
             if (!normalizedAttributes.enable_search) {
                 return (
-                    <Notice status="info" isDismissible={ false }>
-                        { __('La recherche est désactivée pour cette instance.', 'sidebar-jlg') }
-                    </Notice>
-                );
-            }
-
-            if (normalizedAttributes.search_method === 'shortcode') {
-                if (!normalizedAttributes.search_shortcode) {
-                    return (
-                        <div className="sidebar-search__placeholder">
-                            { __('Ajoutez un shortcode valide pour afficher un aperçu.', 'sidebar-jlg') }
-                        </div>
-                    );
-                }
-
-                return (
-                    <code className="sidebar-search__shortcode-preview">
-                        { normalizedAttributes.search_shortcode }
-                    </code>
-                );
-            }
-
-            if (normalizedAttributes.search_method === 'hook') {
-                return (
-                    <div className="sidebar-search__placeholder">
-                        { __('Le contenu sera injecté via le hook "jlg_sidebar_search_area".', 'sidebar-jlg') }
+                    <div { ...containerProps }>
+                        <Notice status="info" isDismissible={ false }>
+                            { __('La recherche est désactivée pour cette instance.', 'sidebar-jlg') }
+                        </Notice>
                     </div>
                 );
             }
 
+            const serverMarkup = renderState.rendered?.trim?.() ?? '';
+            const isLoading = renderState.status === 'loading';
+            const hasServerMarkup = serverMarkup !== '';
+            let hasServerContent = hasServerMarkup;
+
+            if (hasServerMarkup && typeof window !== 'undefined' && window.document) {
+                const wrapper = window.document.createElement('div');
+                wrapper.innerHTML = serverMarkup;
+                const serverContainer = wrapper.querySelector('.sidebar-search');
+                const target = serverContainer ?? wrapper;
+                const hasElementChildren = target.children.length > 0;
+                const textContent = target.textContent ? target.textContent.trim() : '';
+                hasServerContent = hasElementChildren || textContent !== '';
+            }
+
+            const loadingContent = (
+                <div className="sidebar-search__loading">
+                    <Spinner />
+                </div>
+            );
+
+            const emptyMessage = (
+                <div className="sidebar-search__placeholder">
+                    { __('Aucun contenu n’a été retourné par le serveur pour cette configuration.', 'sidebar-jlg') }
+                </div>
+            );
+
             return (
-                <form className="search-form" role="search" aria-label={ __('Formulaire de recherche', 'sidebar-jlg') }>
-                    <label htmlFor={`sidebar-search-input-${ clientId }`}>
-                        <span className="screen-reader-text">{ __('Rechercher :', 'sidebar-jlg') }</span>
-                        <input
-                            id={`sidebar-search-input-${ clientId }`}
-                            className="search-field"
-                            type="search"
-                            placeholder={ __('Rechercher…', 'sidebar-jlg') }
-                            readOnly
-                        />
-                    </label>
-                    <button type="submit" className="search-submit" disabled>
-                        { __('Recherche', 'sidebar-jlg') }
-                    </button>
-                </form>
+                <>
+                    { renderState.errorMessage && (
+                        <Notice status="error" isDismissible={ false }>
+                            { renderState.errorMessage }
+                        </Notice>
+                    ) }
+                    { hasServerMarkup && hasServerContent ? (
+                        <div className="sidebar-search__render" aria-live="polite">
+                            <RawHTML>{ serverMarkup }</RawHTML>
+                            { isLoading && loadingContent }
+                        </div>
+                    ) : (
+                        <div { ...containerProps } aria-live="polite">
+                            { isLoading ? loadingContent : emptyMessage }
+                        </div>
+                    ) }
+                </>
             );
         };
 
@@ -159,13 +246,7 @@ registerBlockType(metadata, {
                     </PanelBody>
                 </InspectorControls>
                 <div { ...blockProps } data-sidebar-search-block-name={ blockName }>
-                    <div
-                        className={ `sidebar-search ${ alignmentClass }` }
-                        data-sidebar-search-align={ normalizedAttributes.search_alignment }
-                        style={ { '--sidebar-search-alignment': normalizedAttributes.search_alignment } }
-                    >
-                        { renderPreviewContent() }
-                    </div>
+                    { renderPreviewContent() }
                 </div>
             </>
         );
