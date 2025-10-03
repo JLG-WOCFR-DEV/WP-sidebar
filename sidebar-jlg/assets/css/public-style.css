@@ -612,18 +612,19 @@ body.sidebar-js-enhanced .sidebar-menu .submenu.is-open {
     display: block;
     position: fixed;
     inset-block-start: calc(var(--hamburger-top-position, 2rem) + var(--jlg-safe-area-inset-block-start));
-    inset-inline-start: calc(15px + var(--jlg-safe-area-inset-inline-start));
+    inset-inline-start: calc(var(--hamburger-inline-offset, 15px) + var(--jlg-safe-area-inset-inline-start));
     inset-inline-end: auto;
     z-index: 1001;
     background: none; border: none;
     padding: 0; cursor: pointer;
-    width: 50px; height: 50px;
+    width: var(--hamburger-size, 50px);
+    height: var(--hamburger-size, 50px);
     display: flex; align-items: center; justify-content: center;
 }
 .hamburger-menu.orientation-right,
 .hamburger-menu[data-position="right"] {
     inset-inline-start: auto;
-    inset-inline-end: calc(15px + var(--jlg-safe-area-inset-inline-end));
+    inset-inline-end: calc(var(--hamburger-inline-offset, 15px) + var(--jlg-safe-area-inset-inline-end));
 }
 .hamburger-menu.orientation-left,
 .hamburger-menu[data-position="left"] {
@@ -636,22 +637,30 @@ body.sidebar-js-enhanced .sidebar-menu .submenu.is-open {
     background-color: rgba(255,255,255,0.1);
     color: var(--sidebar-text-hover-color);
 }
-.hamburger-icon { position: relative; width: 32px; height: 24px; }
+.hamburger-icon {
+    position: relative;
+    width: calc(var(--hamburger-size, 50px) * 0.64);
+    height: calc(var(--hamburger-size, 50px) * 0.48);
+}
 .icon-1, .icon-2, .icon-3 {
     position: absolute;
     inset-inline-start: 0;
-    width: 32px; height: 3px;
+    width: calc(var(--hamburger-size, 50px) * 0.64);
+    height: max(3px, calc(var(--hamburger-size, 50px) * 0.06));
     background-color: var(--hamburger-color, var(--sidebar-text-color, #fff));
     transition: all 400ms cubic-bezier(.84,.06,.52,1.8);
 }
 .icon-1 { inset-block-start: 0; }
 .icon-2 { inset-block-start: 50%; transform: translateY(-50%); }
 .icon-3 { inset-block-end: 0; }
-.hamburger-menu.is-active .icon-1 { transform: rotate(40deg); inset-block-start: 10px; }
+.hamburger-menu.is-active .icon-1 {
+    transform: rotate(40deg);
+    inset-block-start: calc(var(--hamburger-size, 50px) * 0.2);
+}
 .hamburger-menu.is-active .icon-2 { opacity: 0; }
 .hamburger-menu.is-active .icon-3 {
     transform: rotate(-40deg);
-    inset-block-start: 10px;
+    inset-block-start: calc(var(--hamburger-size, 50px) * 0.2);
     inset-block-end: auto;
 }
 @media (min-width: 993px) { .hamburger-menu { display: none !important; } }

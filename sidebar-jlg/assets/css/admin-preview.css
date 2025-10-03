@@ -16,6 +16,8 @@
     --sidebar-overlay-opacity: 0.5;
     --sidebar-hamburger-color: #ffffff;
     --sidebar-hamburger-top: 3.5rem;
+    --sidebar-hamburger-inline: 15px;
+    --sidebar-hamburger-size: 50px;
     --sidebar-floating-margin: 4rem;
     --sidebar-content-margin: 2rem;
     --sidebar-border-radius: 12px;
@@ -276,18 +278,27 @@
 #sidebar-jlg-preview .hamburger-menu {
     position: absolute;
     inset-block-start: var(--sidebar-hamburger-top);
-    inset-inline-start: calc(100% + 24px);
+    inset-inline-start: calc(100% + var(--sidebar-hamburger-inline));
     transform: translateX(-50%);
     background: transparent;
     border: none;
     padding: 0;
     cursor: default;
+    width: var(--sidebar-hamburger-size);
+    height: var(--sidebar-hamburger-size);
+}
+
+#sidebar-jlg-preview .hamburger-icon {
+    width: calc(var(--sidebar-hamburger-size) * 0.64);
+    height: calc(var(--sidebar-hamburger-size) * 0.48);
 }
 
 #sidebar-jlg-preview .hamburger-menu .icon-1,
 #sidebar-jlg-preview .hamburger-menu .icon-2,
 #sidebar-jlg-preview .hamburger-menu .icon-3 {
     background-color: var(--sidebar-hamburger-color);
+    width: calc(var(--sidebar-hamburger-size) * 0.64);
+    height: max(3px, calc(var(--sidebar-hamburger-size) * 0.06));
 }
 
 #sidebar-jlg-preview .sidebar-menu {

@@ -35,6 +35,8 @@ class SidebarRenderer
         'header_alignment_mobile' => 'center',
         'header_logo_size' => 150,
         'hamburger_top_position' => '4rem',
+        'hamburger_horizontal_offset' => '15px',
+        'hamburger_size' => '50px',
         'hamburger_color' => 'rgba(255, 255, 255, 1)',
         'content_margin' => '2rem',
         'floating_vertical_margin' => '4rem',
@@ -226,6 +228,8 @@ class SidebarRenderer
         $this->assignVariable($variables, '--header-alignment-mobile', $this->sanitizeCssString($this->resolveOption($options, 'header_alignment_mobile')));
         $this->assignVariable($variables, '--header-logo-size', $this->formatPixelValue($this->resolveOption($options, 'header_logo_size')));
         $this->assignVariable($variables, '--hamburger-top-position', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_top_position')));
+        $this->assignVariable($variables, '--hamburger-inline-offset', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_horizontal_offset')));
+        $this->assignVariable($variables, '--hamburger-size', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_size')));
 
         $hamburgerColor = $this->sanitizeCssString($options['hamburger_color'] ?? null);
         if ($hamburgerColor === null) {
