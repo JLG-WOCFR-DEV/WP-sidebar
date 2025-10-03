@@ -96,13 +96,15 @@ $textTransformLabels = [
         $options = wp_parse_args( $options ?? [], $defaults );
 
         $dimensionUnits = [
-            'floating_vertical_margin' => ['px', 'rem', 'em', '%', 'vh', 'vw'],
-            'border_radius'           => ['px', 'rem', 'em', '%'],
-            'horizontal_bar_height'   => ['px', 'rem', 'em', 'vh', 'vw'],
-            'content_margin'          => ['px', 'rem', 'em', '%'],
-            'hamburger_top_position'  => ['px', 'rem', 'em', 'vh', 'vw'],
-            'header_padding_top'      => ['px', 'rem', 'em', '%'],
-            'letter_spacing'          => ['px', 'rem', 'em'],
+            'floating_vertical_margin'  => ['px', 'rem', 'em', '%', 'vh', 'vw'],
+            'border_radius'            => ['px', 'rem', 'em', '%'],
+            'horizontal_bar_height'    => ['px', 'rem', 'em', 'vh', 'vw'],
+            'content_margin'           => ['px', 'rem', 'em', '%'],
+            'hamburger_top_position'   => ['px', 'rem', 'em', 'vh', 'vw'],
+            'hamburger_horizontal_offset' => ['px', 'rem', 'em', '%', 'vh', 'vw'],
+            'hamburger_size'           => ['px', 'rem', 'em', '%', 'vh', 'vw'],
+            'header_padding_top'       => ['px', 'rem', 'em', '%'],
+            'letter_spacing'           => ['px', 'rem', 'em'],
         ];
 
         $dimensionValues = [];
@@ -314,6 +316,44 @@ $textTransformLabels = [
                                 <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_top_position][unit]" value="<?php echo esc_attr( $hamburgerOffset['unit'] ); ?>" />
                             </div>
                             <em class="description"><?php esc_html_e( 'Unités CSS (ex: 4rem, 15px).', 'sidebar-jlg' ); ?></em>
+                        </p>
+                        <?php $hamburgerInlineOffset = $dimensionValues['hamburger_horizontal_offset']; ?>
+                        <p>
+                            <label><?php esc_html_e( 'Décalage horizontal', 'sidebar-jlg' ); ?></label>
+                            <div
+                                class="sidebar-jlg-unit-control"
+                                data-sidebar-unit-control
+                                data-setting-name="sidebar_jlg_settings[hamburger_horizontal_offset]"
+                                data-label="<?php esc_attr_e( 'Décalage horizontal', 'sidebar-jlg' ); ?>"
+                                data-help="<?php esc_attr_e( 'Définit la distance entre le bord de l’écran et le bouton hamburger.', 'sidebar-jlg' ); ?>"
+                                data-error-message="<?php esc_attr_e( 'Le décalage horizontal ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                data-default-value="<?php echo esc_attr( $defaults['hamburger_horizontal_offset']['value'] ?? '15' ); ?>"
+                                data-default-unit="<?php echo esc_attr( $defaults['hamburger_horizontal_offset']['unit'] ?? 'px' ); ?>"
+                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['hamburger_horizontal_offset'] ) ); ?>"
+                            >
+                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[hamburger_horizontal_offset][value]" value="<?php echo esc_attr( $hamburgerInlineOffset['value'] ); ?>" />
+                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_horizontal_offset][unit]" value="<?php echo esc_attr( $hamburgerInlineOffset['unit'] ); ?>" />
+                            </div>
+                            <em class="description"><?php esc_html_e( 'Unités CSS (ex: 15px, 2rem).', 'sidebar-jlg' ); ?></em>
+                        </p>
+                        <?php $hamburgerSize = $dimensionValues['hamburger_size']; ?>
+                        <p>
+                            <label><?php esc_html_e( 'Taille du bouton', 'sidebar-jlg' ); ?></label>
+                            <div
+                                class="sidebar-jlg-unit-control"
+                                data-sidebar-unit-control
+                                data-setting-name="sidebar_jlg_settings[hamburger_size]"
+                                data-label="<?php esc_attr_e( 'Taille du bouton', 'sidebar-jlg' ); ?>"
+                                data-help="<?php esc_attr_e( 'Contrôle la largeur et la hauteur du bouton hamburger.', 'sidebar-jlg' ); ?>"
+                                data-error-message="<?php esc_attr_e( 'La taille du bouton ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                data-default-value="<?php echo esc_attr( $defaults['hamburger_size']['value'] ?? '50' ); ?>"
+                                data-default-unit="<?php echo esc_attr( $defaults['hamburger_size']['unit'] ?? 'px' ); ?>"
+                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['hamburger_size'] ) ); ?>"
+                            >
+                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[hamburger_size][value]" value="<?php echo esc_attr( $hamburgerSize['value'] ); ?>" />
+                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_size][unit]" value="<?php echo esc_attr( $hamburgerSize['unit'] ); ?>" />
+                            </div>
+                            <em class="description"><?php esc_html_e( 'Unités CSS (ex: 50px, 3rem).', 'sidebar-jlg' ); ?></em>
                         </p>
                         <p><label><?php esc_html_e( 'Couleur des barres', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[hamburger_color]" value="<?php echo esc_attr( $options['hamburger_color'] ); ?>" class="color-picker-rgba"/> <em class="description"><?php esc_html_e( 'Utilisez une couleur contrastée pour les barres du bouton.', 'sidebar-jlg' ); ?></em></p>
                         <p><label><input type="checkbox" name="sidebar_jlg_settings[show_close_button]" value="1" <?php checked( $options['show_close_button'], 1 ); ?> /> <?php esc_html_e( 'Afficher le bouton de fermeture (X) dans la sidebar.', 'sidebar-jlg' ); ?></label></p>

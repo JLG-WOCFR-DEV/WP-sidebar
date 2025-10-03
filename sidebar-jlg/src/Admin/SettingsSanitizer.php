@@ -16,6 +16,8 @@ class SettingsSanitizer
         'border_radius' => ['px', 'rem', 'em', '%'],
         'content_margin' => ['px', 'rem', 'em', '%'],
         'hamburger_top_position' => ['px', 'rem', 'em', 'vh', 'vw'],
+        'hamburger_horizontal_offset' => ['px', 'rem', 'em', '%', 'vh', 'vw'],
+        'hamburger_size' => ['px', 'rem', 'em', '%', 'vh', 'vw'],
         'header_padding_top' => ['px', 'rem', 'em', '%'],
         'letter_spacing' => ['px', 'rem', 'em'],
     ];
@@ -283,6 +285,18 @@ class SettingsSanitizer
         $sanitized['hamburger_top_position'] = $this->sanitizeDimension(
             $input,
             'hamburger_top_position',
+            $existingOptions,
+            $defaults
+        );
+        $sanitized['hamburger_horizontal_offset'] = $this->sanitizeDimension(
+            $input,
+            'hamburger_horizontal_offset',
+            $existingOptions,
+            $defaults
+        );
+        $sanitized['hamburger_size'] = $this->sanitizeDimension(
+            $input,
+            'hamburger_size',
             $existingOptions,
             $defaults
         );

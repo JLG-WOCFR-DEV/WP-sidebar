@@ -216,6 +216,47 @@ assertSame(
     'Invalid horizontal bar height falls back to existing value'
 );
 
+$hamburger_existing = array_merge($defaults->all(), [
+    'hamburger_horizontal_offset' => ['value' => '24', 'unit' => 'px'],
+    'hamburger_size' => ['value' => '48', 'unit' => 'px'],
+]);
+
+$hamburger_input_valid = [
+    'hamburger_horizontal_offset' => ['value' => '2.5', 'unit' => 'rem'],
+    'hamburger_size' => ['value' => '3', 'unit' => 'rem'],
+];
+
+$hamburger_result_valid = $method->invoke($sanitizer, $hamburger_input_valid, $hamburger_existing);
+
+assertSame(
+    '2.5rem',
+    ValueNormalizer::dimensionToCss($hamburger_result_valid['hamburger_horizontal_offset'] ?? '', ''),
+    'Hamburger horizontal offset accepts allowed units'
+);
+assertSame(
+    '3rem',
+    ValueNormalizer::dimensionToCss($hamburger_result_valid['hamburger_size'] ?? '', ''),
+    'Hamburger size accepts allowed units'
+);
+
+$hamburger_input_invalid = [
+    'hamburger_horizontal_offset' => ['value' => '30', 'unit' => '%'],
+    'hamburger_size' => ['value' => '4', 'unit' => 'vh'],
+];
+
+$hamburger_result_invalid = $method->invoke($sanitizer, $hamburger_input_invalid, $hamburger_existing);
+
+assertSame(
+    '30%',
+    ValueNormalizer::dimensionToCss($hamburger_result_invalid['hamburger_horizontal_offset'] ?? '', ''),
+    'Hamburger offset accepts percentage units'
+);
+assertSame(
+    '4vh',
+    ValueNormalizer::dimensionToCss($hamburger_result_invalid['hamburger_size'] ?? '', ''),
+    'Hamburger size accepts viewport units'
+);
+
 $existing_invalid_alignment = array_merge($defaults->all(), [
     'header_alignment_desktop' => 'diagonal',
 ]);

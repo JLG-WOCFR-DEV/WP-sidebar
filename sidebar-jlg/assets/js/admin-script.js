@@ -501,6 +501,8 @@ class SidebarPreviewModule {
             'floating_vertical_margin',
             'border_radius',
             'hamburger_top_position',
+            'hamburger_horizontal_offset',
+            'hamburger_size',
             'header_padding_top',
             'horizontal_bar_height',
             'letter_spacing',
@@ -1081,6 +1083,8 @@ class SidebarPreviewModule {
         });
 
         this.bindDimensionField('sidebar_jlg_settings[hamburger_top_position]', 'hamburger_top_position');
+        this.bindDimensionField('sidebar_jlg_settings[hamburger_horizontal_offset]', 'hamburger_horizontal_offset');
+        this.bindDimensionField('sidebar_jlg_settings[hamburger_size]', 'hamburger_size');
 
         this.bindDimensionField('sidebar_jlg_settings[content_margin]', 'content_margin');
 
@@ -1288,6 +1292,8 @@ class SidebarPreviewModule {
             ['--sidebar-overlay-opacity', this.formatOpacity(this.currentOptions.overlay_opacity)],
             ['--sidebar-hamburger-color', this.currentOptions.hamburger_color],
             ['--sidebar-hamburger-top', this.formatDimension(this.currentOptions.hamburger_top_position)],
+            ['--sidebar-hamburger-inline', this.formatDimension(this.currentOptions.hamburger_horizontal_offset)],
+            ['--sidebar-hamburger-size', this.formatDimension(this.currentOptions.hamburger_size)],
             ['--sidebar-content-margin', this.formatDimension(this.currentOptions.content_margin)],
             ['--sidebar-floating-margin', this.formatDimension(this.currentOptions.floating_vertical_margin)],
             ['--sidebar-border-radius', this.formatDimension(this.currentOptions.border_radius)],
