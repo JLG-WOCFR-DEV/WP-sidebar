@@ -19,7 +19,9 @@ class SettingsRepository
         'letter_spacing',
     ];
 
-    private const SIMPLE_DIMENSION_OPTION_KEYS = [];
+    private const SIMPLE_DIMENSION_OPTION_KEYS = [
+        'width_mobile',
+    ];
 
     private const OPACITY_OPTION_KEYS = [
         'overlay_opacity',

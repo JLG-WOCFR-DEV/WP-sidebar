@@ -51,6 +51,7 @@ $input_invalid = [
     'overlay_color'   => 'not-a-color',
     'overlay_opacity' => 1.7,
     'border_color'    => '#fff; background: url(javascript:alert(1))',
+    'width_mobile'    => 'calc(100% - 20pt)',
 ];
 
 $result_invalid = $method->invoke($sanitizer, $input_invalid, $existing_options);
@@ -62,10 +63,12 @@ assertSame(
     $result_invalid['border_color'] ?? '',
     'Border color falls back to existing value when sanitized input is invalid'
 );
+assertSame('100%', $result_invalid['width_mobile'] ?? '', 'Invalid mobile width falls back to existing value');
 
 $input_valid = [
     'overlay_color'   => '#ABCDEF',
     'border_color'    => '#EECCDD',
+    'width_mobile'    => '88%',
 ];
 
 $result_valid = $method->invoke($sanitizer, $input_valid, $existing_options);
@@ -73,6 +76,7 @@ $result_valid = $method->invoke($sanitizer, $input_valid, $existing_options);
 assertSame('#abcdef', $result_valid['overlay_color'] ?? '', 'Overlay color accepts valid hex values');
 assertSame(0.4, $result_valid['overlay_opacity'] ?? null, 'Overlay opacity falls back to existing value when missing');
 assertSame('#eeccdd', $result_valid['border_color'] ?? '', 'Border color accepts valid hex values without modification');
+assertSame('88%', $result_valid['width_mobile'] ?? '', 'Mobile width accepts valid CSS dimension values');
 
 $input_close_on_click = [
     'close_on_link_click' => '1',
@@ -105,16 +109,18 @@ $result_close_zero = $method->invoke($sanitizer, $input_close_on_click_zero, $ex
 assertSame(false, $result_close_zero['close_on_link_click'] ?? null, 'Close-on-click option treats "0" as disabled');
 
 $existing_numeric_general = array_merge($defaults->all(), [
-    'border_width'   => 4,
-    'width_desktop'  => 360,
-    'width_tablet'   => 280,
+    'border_width'     => 4,
+    'width_desktop'    => 360,
+    'width_tablet'     => 280,
+    'width_mobile'     => '75%',
     'header_logo_size' => 96,
 ]);
 
 $input_empty_numeric_general = [
-    'border_width'   => '',
-    'width_desktop'  => '   ',
-    'width_tablet'   => 'abc',
+    'border_width'     => '',
+    'width_desktop'    => '   ',
+    'width_tablet'     => 'abc',
+    'width_mobile'     => ['value' => 'oops'],
     'header_logo_size' => false,
 ];
 
@@ -124,6 +130,7 @@ assertSame(4, $result_numeric_general['border_width'] ?? null, 'Empty border wid
 assertSame(360, $result_numeric_general['width_desktop'] ?? null, 'Empty desktop width keeps existing value');
 assertSame(280, $result_numeric_general['width_tablet'] ?? null, 'Non-numeric tablet width keeps existing value');
 assertSame(96, $result_numeric_general['header_logo_size'] ?? null, 'Non-numeric header logo size keeps existing value');
+assertSame('75%', $result_numeric_general['width_mobile'] ?? null, 'Invalid mobile width keeps existing value');
 
 $input_min = [
     'overlay_opacity' => -0.3,
