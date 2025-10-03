@@ -196,7 +196,6 @@ body[data-sidebar-position="right"] .pro-sidebar {
 /* Logique de visibilité */
 @media (max-width: 992px) {
     .pro-sidebar {
-        visibility: hidden;
         background-color: var(--mobile-bg-color);
         background-color: color-mix(in srgb, var(--mobile-bg-color) calc(var(--mobile-bg-opacity) * 100%), transparent);
         -webkit-backdrop-filter: blur(var(--mobile-blur));
@@ -204,16 +203,17 @@ body[data-sidebar-position="right"] .pro-sidebar {
         width: var(--sidebar-width-mobile, 100%);
         max-width: 100%;
     }
-    body.sidebar-open .pro-sidebar { visibility: visible; }
-    body.jlg-sidebar-position-left .pro-sidebar.animation-slide-left,
-    body[data-sidebar-position="left"] .pro-sidebar.animation-slide-left { transform: translateX(-100%); }
-    body.jlg-sidebar-position-right .pro-sidebar.animation-slide-left,
-    body[data-sidebar-position="right"] .pro-sidebar.animation-slide-left { transform: translateX(100%); }
-    body.sidebar-open .pro-sidebar.animation-slide-left { transform: translateX(0); }
-    .pro-sidebar.animation-fade { opacity: 0; }
-    body.sidebar-open .pro-sidebar.animation-fade { opacity: 1; }
-    .pro-sidebar.animation-scale { transform: scale(0.95); opacity: 0; }
-    body.sidebar-open .pro-sidebar.animation-scale { transform: scale(1); opacity: 1; }
+    body.sidebar-js-enhanced .pro-sidebar { visibility: hidden; }
+    body.sidebar-js-enhanced.sidebar-open .pro-sidebar { visibility: visible; }
+    body.sidebar-js-enhanced.jlg-sidebar-position-left .pro-sidebar.animation-slide-left,
+    body.sidebar-js-enhanced[data-sidebar-position="left"] .pro-sidebar.animation-slide-left { transform: translateX(-100%); }
+    body.sidebar-js-enhanced.jlg-sidebar-position-right .pro-sidebar.animation-slide-left,
+    body.sidebar-js-enhanced[data-sidebar-position="right"] .pro-sidebar.animation-slide-left { transform: translateX(100%); }
+    body.sidebar-js-enhanced.sidebar-open .pro-sidebar.animation-slide-left { transform: translateX(0); }
+    body.sidebar-js-enhanced .pro-sidebar.animation-fade { opacity: 0; }
+    body.sidebar-js-enhanced.sidebar-open .pro-sidebar.animation-fade { opacity: 1; }
+    body.sidebar-js-enhanced .pro-sidebar.animation-scale { transform: scale(0.95); opacity: 0; }
+    body.sidebar-js-enhanced.sidebar-open .pro-sidebar.animation-scale { transform: scale(1); opacity: 1; }
 
     body.jlg-sidebar-horizontal-bar .pro-sidebar {
         inset-inline-start: 0;
@@ -223,16 +223,16 @@ body[data-sidebar-position="right"] .pro-sidebar {
         max-height: min(85vh, 640px);
     }
 
-    body.jlg-sidebar-horizontal-bar .pro-sidebar.animation-slide-left,
-    body.jlg-sidebar-horizontal-bar .pro-sidebar.animation-fade,
-    body.jlg-sidebar-horizontal-bar .pro-sidebar.animation-scale {
+    body.sidebar-js-enhanced.jlg-sidebar-horizontal-bar .pro-sidebar.animation-slide-left,
+    body.sidebar-js-enhanced.jlg-sidebar-horizontal-bar .pro-sidebar.animation-fade,
+    body.sidebar-js-enhanced.jlg-sidebar-horizontal-bar .pro-sidebar.animation-scale {
         transform: translateY(-100%);
         opacity: 0;
     }
 
-    body.jlg-sidebar-horizontal-bar.sidebar-open .pro-sidebar.animation-slide-left,
-    body.jlg-sidebar-horizontal-bar.sidebar-open .pro-sidebar.animation-fade,
-    body.jlg-sidebar-horizontal-bar.sidebar-open .pro-sidebar.animation-scale {
+    body.sidebar-js-enhanced.jlg-sidebar-horizontal-bar.sidebar-open .pro-sidebar.animation-slide-left,
+    body.sidebar-js-enhanced.jlg-sidebar-horizontal-bar.sidebar-open .pro-sidebar.animation-fade,
+    body.sidebar-js-enhanced.jlg-sidebar-horizontal-bar.sidebar-open .pro-sidebar.animation-scale {
         transform: translateY(0);
         opacity: 1;
     }
