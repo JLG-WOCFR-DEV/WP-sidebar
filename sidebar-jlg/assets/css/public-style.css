@@ -32,7 +32,7 @@ body.sidebar-scroll-lock {
     overflow: hidden;
 }
 .sidebar-overlay,
-body.sidebar-open .pro-sidebar {
+body.sidebar-js-enhanced.sidebar-open .pro-sidebar {
     touch-action: pan-y;
 }
 body.jlg-sidebar-active.jlg-sidebar-horizontal-bar { padding-inline-start: 0 !important; }
@@ -883,8 +883,8 @@ body.sidebar-js-enhanced .sidebar-menu .submenu.is-open {
     .social-icons a:hover,
     .social-icons a:focus,
     .social-icons a:focus-visible,
-    body.sidebar-open .pro-sidebar,
-    body.jlg-sidebar-horizontal-bar.sidebar-open .pro-sidebar {
+    body.sidebar-js-enhanced.sidebar-open .pro-sidebar,
+    body.sidebar-js-enhanced.jlg-sidebar-horizontal-bar.sidebar-open .pro-sidebar {
         transform: none !important;
     }
 
