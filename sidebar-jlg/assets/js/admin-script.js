@@ -528,6 +528,10 @@ class SidebarPreviewModule {
         this.hamburger = null;
         this.overlay = null;
 
+        this.defaultNavAriaLabel = '';
+        this.defaultToggleExpandLabel = '';
+        this.defaultToggleCollapseLabel = '';
+
         this.menuContainer = null;
         this.socialContainer = null;
         this.menuObserver = null;
@@ -802,6 +806,13 @@ class SidebarPreviewModule {
         this.hamburger = this.viewport ? this.viewport.querySelector('#hamburger-btn') : null;
 
         this.overlay = this.viewport ? this.viewport.querySelector('.sidebar-overlay') : null;
+
+        if (this.nav) {
+            this.defaultNavAriaLabel = this.nav.getAttribute('data-default-aria-label') || this.nav.getAttribute('aria-label') || '';
+            this.defaultToggleExpandLabel = this.nav.getAttribute('data-default-toggle-expand') || '';
+            this.defaultToggleCollapseLabel = this.nav.getAttribute('data-default-toggle-collapse') || '';
+        }
+
         this.syncOverlayVisibility();
 
         if (this.hamburger) {
@@ -815,6 +826,7 @@ class SidebarPreviewModule {
 
         this.captureDefaultFontStackFromMarkup();
         this.updatePreviewSizeClasses();
+        this.updateAccessibilityLabels();
     }
 
     setupToolbar() {
@@ -1097,6 +1109,18 @@ class SidebarPreviewModule {
             this.currentOptions.app_name = value;
         });
 
+        this.bindField('sidebar_jlg_settings[nav_aria_label]', (value) => {
+            this.currentOptions.nav_aria_label = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[toggle_open_label]', (value) => {
+            this.currentOptions.toggle_open_label = value;
+        });
+
+        this.bindField('sidebar_jlg_settings[toggle_close_label]', (value) => {
+            this.currentOptions.toggle_close_label = value;
+        });
+
         this.bindField('sidebar_jlg_settings[header_logo_type]', (value) => {
             this.currentOptions.header_logo_type = value;
         });
@@ -1245,6 +1269,7 @@ class SidebarPreviewModule {
         this.updateHeader();
         this.renderMenu();
         this.renderSocial();
+        this.updateAccessibilityLabels();
     }
 
     applyCssVariables() {
@@ -1685,6 +1710,66 @@ class SidebarPreviewModule {
                 this.menuSocialItem.parentElement.removeChild(this.menuSocialItem);
             }
         }
+    }
+
+    updateAccessibilityLabels() {
+        const navLabelValue = typeof this.currentOptions.nav_aria_label === 'string'
+            ? this.currentOptions.nav_aria_label.trim()
+            : '';
+        const navLabel = navLabelValue !== ''
+            ? navLabelValue
+            : (this.defaultNavAriaLabel || '');
+
+        if (this.nav) {
+            if (navLabel) {
+                this.nav.setAttribute('aria-label', navLabel);
+            } else {
+                this.nav.removeAttribute('aria-label');
+            }
+        }
+
+        const expandValue = typeof this.currentOptions.toggle_open_label === 'string'
+            ? this.currentOptions.toggle_open_label.trim()
+            : '';
+        const collapseValue = typeof this.currentOptions.toggle_close_label === 'string'
+            ? this.currentOptions.toggle_close_label.trim()
+            : '';
+
+        const expandLabel = expandValue !== '' ? expandValue : (this.defaultToggleExpandLabel || '');
+        const collapseLabel = collapseValue !== '' ? collapseValue : (this.defaultToggleCollapseLabel || '');
+
+        if (!this.menuList) {
+            return;
+        }
+
+        const toggles = this.menuList.querySelectorAll('.submenu-toggle');
+        toggles.forEach((button) => {
+            if (expandLabel) {
+                button.setAttribute('data-label-expand', expandLabel);
+            } else {
+                button.removeAttribute('data-label-expand');
+            }
+
+            if (collapseLabel) {
+                button.setAttribute('data-label-collapse', collapseLabel);
+            } else {
+                button.removeAttribute('data-label-collapse');
+            }
+
+            const isExpanded = button.getAttribute('aria-expanded') === 'true';
+            const labelForState = isExpanded ? collapseLabel : expandLabel;
+
+            if (labelForState) {
+                button.setAttribute('aria-label', labelForState);
+            } else {
+                button.removeAttribute('aria-label');
+            }
+
+            const srText = button.querySelector('.screen-reader-text');
+            if (srText) {
+                srText.textContent = labelForState || '';
+            }
+        });
     }
 }
 

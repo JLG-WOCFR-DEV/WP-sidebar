@@ -277,6 +277,9 @@ class SettingsSanitizer
         $sanitized['show_close_button'] = !empty($input['show_close_button']);
         // Checkbox -> boolean conversion for the automatic closing behaviour.
         $sanitized['close_on_link_click'] = !empty($input['close_on_link_click']);
+        $sanitized['nav_aria_label'] = sanitize_text_field($input['nav_aria_label'] ?? $existingOptions['nav_aria_label']);
+        $sanitized['toggle_open_label'] = sanitize_text_field($input['toggle_open_label'] ?? $existingOptions['toggle_open_label']);
+        $sanitized['toggle_close_label'] = sanitize_text_field($input['toggle_close_label'] ?? $existingOptions['toggle_close_label']);
         $sanitized['hamburger_top_position'] = $this->sanitizeDimension(
             $input,
             'hamburger_top_position',
