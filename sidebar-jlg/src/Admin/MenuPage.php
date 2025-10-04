@@ -59,6 +59,35 @@ class MenuPage
             'sidebar_jlg_settings',
             [$this->sanitizer, 'sanitize_settings']
         );
+
+        register_setting(
+            'sidebar_jlg_options_group',
+            'sidebar_jlg_profiles',
+            [
+                'type' => 'array',
+                'sanitize_callback' => [$this->sanitizer, 'sanitize_profiles'],
+                'default' => [],
+                'show_in_rest' => [
+                    'schema' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                        ],
+                    ],
+                ],
+            ]
+        );
+
+        register_setting(
+            'sidebar_jlg_options_group',
+            'sidebar_jlg_active_profile',
+            [
+                'type' => 'string',
+                'sanitize_callback' => [$this->sanitizer, 'sanitize_active_profile'],
+                'default' => '',
+                'show_in_rest' => true,
+            ]
+        );
     }
 
     public function enqueueAssets(string $hook): void
@@ -93,6 +122,17 @@ class MenuPage
 
         $defaults = $this->settings->getDefaultSettings();
         $options = $this->settings->getOptionsWithRevalidation();
+        $rawProfiles = get_option('sidebar_jlg_profiles', []);
+        $profiles = $this->sanitizer->sanitize_profiles_collection($rawProfiles);
+        $activeProfile = get_option('sidebar_jlg_active_profile', '');
+        $activeProfile = $this->sanitizer->sanitize_active_profile($activeProfile, 'sidebar_jlg_active_profile', $profiles);
+
+        $profileChoices = [
+            'post_types' => $this->getProfilePostTypeChoices(),
+            'taxonomies' => $this->getProfileTaxonomyChoices(),
+            'roles' => $this->getProfileRoleChoices(),
+            'languages' => $this->getProfileLanguageChoices(),
+        ];
 
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -101,6 +141,10 @@ class MenuPage
             'tools_nonce' => wp_create_nonce('jlg_tools_nonce'),
             'preview_nonce' => wp_create_nonce('jlg_preview_nonce'),
             'options' => wp_parse_args($options, $defaults),
+            'profiles' => $profiles,
+            'active_profile' => $activeProfile,
+            'profiles_nonce' => wp_create_nonce('sidebar_jlg_profiles'),
+            'profile_choices' => $profileChoices,
             'icons_manifest' => $this->icons->getIconManifest(),
             'icon_fetch_action' => 'jlg_get_icon_svg',
             'icon_upload_action' => 'jlg_upload_custom_icon',
@@ -142,12 +186,30 @@ class MenuPage
                 'navMenuFilterAll' => __('Tous les éléments', 'sidebar-jlg'),
                 'navMenuFilterTopLevel' => __('Uniquement le niveau 1', 'sidebar-jlg'),
                 'navMenuFilterBranch' => __('Branche de la page courante', 'sidebar-jlg'),
+                'profilesDefaultTitle' => __('Nouveau profil', 'sidebar-jlg'),
+                'profilesListEmpty' => __('Aucun profil n’a encore été créé.', 'sidebar-jlg'),
+                'profilesActionsLabel' => __('Actions sur les profils', 'sidebar-jlg'),
+                'profilesActiveLabel' => __('Profil actif', 'sidebar-jlg'),
+                'profilesDeleteConfirm' => __('Supprimer ce profil ?', 'sidebar-jlg'),
+                'profilesSettingsEmpty' => __('Aucun réglage personnalisé n’est défini pour ce profil.', 'sidebar-jlg'),
+                'profilesSettingsSummary' => __('Réglages personnalisés : %d champ(s).', 'sidebar-jlg'),
+                'profilesCloneSuccess' => __('Les réglages actuels ont été associés au profil.', 'sidebar-jlg'),
+                'profilesCloneError' => __('Impossible de copier les réglages actuels.', 'sidebar-jlg'),
+                'profilesTaxonomyTermsPlaceholder' => __('Slugs ou IDs séparés par des virgules', 'sidebar-jlg'),
+                'profilesConditionsDescription' => __('Définissez les règles qui activent ce profil.', 'sidebar-jlg'),
+                'profilesInactiveBadge' => __('Profil désactivé', 'sidebar-jlg'),
+                'profilesUseCurrentSettings' => __('Utiliser les réglages actuels', 'sidebar-jlg'),
+                'profilesClearSettings' => __('Réinitialiser les réglages du profil', 'sidebar-jlg'),
+                'profilesClearActive' => __('Ne sélectionner aucun profil actif', 'sidebar-jlg'),
+                'profilesDefaultActiveLabel' => __('Réglages globaux', 'sidebar-jlg'),
+                'profilesDeleteLabel' => __('Supprimer', 'sidebar-jlg'),
             ],
             'preview_messages' => [
                 'loading' => __('Chargement de l’aperçu…', 'sidebar-jlg'),
                 'error' => __('Impossible de charger l’aperçu. Vérifiez vos droits ou votre connexion réseau.', 'sidebar-jlg'),
                 'emptyMenu' => __('Ajoutez des éléments de menu pour alimenter la prévisualisation.', 'sidebar-jlg'),
                 'refresh' => __('Actualiser l’aperçu', 'sidebar-jlg'),
+                'activeProfile' => __('Profil actif : %s', 'sidebar-jlg'),
             ],
         ]);
     }
@@ -183,5 +245,177 @@ class MenuPage
             '<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
             esc_html($message)
         );
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function getProfilePostTypeChoices(): array
+    {
+        if (!function_exists('get_post_types')) {
+            return [
+                ['value' => 'post', 'label' => __('Article', 'sidebar-jlg')],
+                ['value' => 'page', 'label' => __('Page', 'sidebar-jlg')],
+            ];
+        }
+
+        $objects = get_post_types(['public' => true], 'objects');
+        if (!is_array($objects)) {
+            $objects = [];
+        }
+
+        $choices = [];
+        foreach ($objects as $object) {
+            if (!is_object($object)) {
+                continue;
+            }
+
+            $name = isset($object->name) ? sanitize_key((string) $object->name) : '';
+            if ($name === '') {
+                continue;
+            }
+
+            $label = '';
+            if (isset($object->labels->singular_name) && is_string($object->labels->singular_name)) {
+                $label = $object->labels->singular_name;
+            } elseif (isset($object->label) && is_string($object->label)) {
+                $label = $object->label;
+            } else {
+                $label = ucfirst($name);
+            }
+
+            $choices[$name] = [
+                'value' => $name,
+                'label' => $label,
+            ];
+        }
+
+        if (!isset($choices['post'])) {
+            $choices['post'] = ['value' => 'post', 'label' => __('Article', 'sidebar-jlg')];
+        }
+
+        if (!isset($choices['page'])) {
+            $choices['page'] = ['value' => 'page', 'label' => __('Page', 'sidebar-jlg')];
+        }
+
+        return array_values($choices);
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function getProfileTaxonomyChoices(): array
+    {
+        if (!function_exists('get_taxonomies')) {
+            return [];
+        }
+
+        $objects = get_taxonomies(['public' => true], 'objects');
+        if (!is_array($objects)) {
+            $objects = [];
+        }
+
+        $choices = [];
+        foreach ($objects as $object) {
+            if (!is_object($object)) {
+                continue;
+            }
+
+            $name = isset($object->name) ? sanitize_key((string) $object->name) : '';
+            if ($name === '') {
+                continue;
+            }
+
+            $label = '';
+            if (isset($object->labels->singular_name) && is_string($object->labels->singular_name)) {
+                $label = $object->labels->singular_name;
+            } elseif (isset($object->label) && is_string($object->label)) {
+                $label = $object->label;
+            } else {
+                $label = ucfirst($name);
+            }
+
+            $choices[$name] = [
+                'value' => $name,
+                'label' => $label,
+            ];
+        }
+
+        return array_values($choices);
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function getProfileRoleChoices(): array
+    {
+        if (!function_exists('get_editable_roles')) {
+            return [];
+        }
+
+        $roles = get_editable_roles();
+        if (!is_array($roles)) {
+            $roles = [];
+        }
+
+        $choices = [];
+        foreach ($roles as $slug => $role) {
+            $roleSlug = sanitize_key((string) $slug);
+            if ($roleSlug === '') {
+                continue;
+            }
+
+            $label = '';
+            if (isset($role['name']) && is_string($role['name'])) {
+                $label = $role['name'];
+            } else {
+                $label = ucfirst($roleSlug);
+            }
+
+            $choices[$roleSlug] = [
+                'value' => $roleSlug,
+                'label' => $label,
+            ];
+        }
+
+        return array_values($choices);
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function getProfileLanguageChoices(): array
+    {
+        if (!function_exists('get_available_languages')) {
+            return [];
+        }
+
+        $languages = get_available_languages();
+        if (!is_array($languages)) {
+            $languages = [];
+        }
+
+        $choices = [];
+        foreach ($languages as $language) {
+            $code = is_string($language) ? trim($language) : '';
+            if ($code === '') {
+                continue;
+            }
+
+            $label = $code;
+            if (function_exists('locale_get_display_language')) {
+                $display = locale_get_display_language($code, get_locale());
+                if (is_string($display) && $display !== '') {
+                    $label = sprintf('%s (%s)', $display, $code);
+                }
+            }
+
+            $choices[$code] = [
+                'value' => $code,
+                'label' => $label,
+            ];
+        }
+
+        return array_values($choices);
     }
 }
