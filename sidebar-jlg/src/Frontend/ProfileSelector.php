@@ -46,6 +46,10 @@ class ProfileSelector
                 continue;
             }
 
+            if ($this->isProfileDisabled($profile)) {
+                continue;
+            }
+
             $normalized = $this->normalizeProfile($profile, $defaultOptions);
             if ($normalized === null) {
                 continue;
