@@ -514,6 +514,9 @@ class SidebarPreviewModule {
             this.currentOptions[key] = parseDimensionValue(this.currentOptions[key], initial.unit);
         });
 
+        this.isComparing = false;
+        this.afterOptionsSnapshot = SidebarPreviewModule.cloneObject(this.currentOptions);
+
         this.$ = typeof window !== 'undefined' ? window.jQuery : null;
 
         const initialPreviewSize = this.container ? this.container.getAttribute('data-preview-size') : '';
@@ -760,11 +763,15 @@ class SidebarPreviewModule {
         this.viewport.appendChild(wrapper);
     }
 
-    loadPreview() {
+    loadPreview(overrideOptions = null) {
         if (!this.ajaxUrl || !this.nonce || !this.action) {
             this.renderFallback(this.messages.error || '');
             return Promise.reject(new Error('Missing preview configuration.'));
         }
+
+        const payloadOptions = overrideOptions !== null
+            ? SidebarPreviewModule.cloneObject(overrideOptions)
+            : SidebarPreviewModule.cloneObject(this.currentOptions || {});
 
         return new Promise((resolve, reject) => {
             this.$.ajax({
@@ -774,7 +781,7 @@ class SidebarPreviewModule {
                 data: {
                     action: this.action,
                     nonce: this.nonce,
-                    options: JSON.stringify(this.currentOptions || {})
+                    options: JSON.stringify(payloadOptions || {})
                 }
             })
                 .done((response) => {
@@ -883,8 +890,9 @@ class SidebarPreviewModule {
 
         if (this.viewport) {
             this.viewport.setAttribute('data-preview-size', this.previewSize);
-            const label = this.getPreviewButtonLabel(this.previewSize) || SidebarPreviewModule.getPreviewLabel(this.previewSize);
-            this.viewport.setAttribute('data-preview-label', label);
+            const baseLabel = this.getPreviewButtonLabel(this.previewSize) || SidebarPreviewModule.getPreviewLabel(this.previewSize);
+            const composedLabel = this.isComparing ? `${baseLabel} · Avant` : baseLabel;
+            this.viewport.setAttribute('data-preview-label', composedLabel);
             this.replaceClass(this.viewport, 'preview-', this.previewSize);
         }
 
@@ -894,6 +902,21 @@ class SidebarPreviewModule {
         }
 
         this.syncOverlayVisibility();
+        this.updateComparisonClass();
+    }
+
+    updateComparisonClass() {
+        if (this.container) {
+            this.container.classList.toggle('is-comparing', this.isComparing);
+        }
+
+        if (this.viewport) {
+            if (this.isComparing) {
+                this.viewport.setAttribute('data-compare-mode', 'before');
+            } else {
+                this.viewport.removeAttribute('data-compare-mode');
+            }
+        }
     }
 
     getPreviewButtonLabel(size) {
@@ -1194,6 +1217,9 @@ class SidebarPreviewModule {
         }
 
         const update = () => {
+            if (this.isComparing) {
+                this.disableComparison();
+            }
             const value = this.getFieldValue(elements);
             handler(value, elements);
             if (!this.isInitializing) {
@@ -1225,6 +1251,9 @@ class SidebarPreviewModule {
         }
 
         const update = () => {
+            if (this.isComparing) {
+                this.disableComparison();
+            }
             const fallbackUnit = this.initialOptions[optionKey] && typeof this.initialOptions[optionKey].unit === 'string'
                 ? this.initialOptions[optionKey].unit
                 : 'px';
@@ -1274,6 +1303,86 @@ class SidebarPreviewModule {
         this.renderMenu();
         this.renderSocial();
         this.updateAccessibilityLabels();
+        if (!this.isComparing) {
+            this.afterOptionsSnapshot = SidebarPreviewModule.cloneObject(this.currentOptions);
+        }
+        this.updatePreviewSizeClasses();
+    }
+
+    enableComparison() {
+        if (this.isComparing) {
+            return this.isComparing;
+        }
+
+        this.afterOptionsSnapshot = SidebarPreviewModule.cloneObject(this.currentOptions);
+        this.currentOptions = SidebarPreviewModule.cloneObject(this.initialOptions);
+        this.isComparing = true;
+        this.applyOptions();
+
+        return this.isComparing;
+    }
+
+    disableComparison() {
+        if (!this.isComparing) {
+            return this.isComparing;
+        }
+
+        const snapshot = this.afterOptionsSnapshot && typeof this.afterOptionsSnapshot === 'object'
+            ? SidebarPreviewModule.cloneObject(this.afterOptionsSnapshot)
+            : SidebarPreviewModule.cloneObject(this.initialOptions);
+
+        this.isComparing = false;
+        this.currentOptions = snapshot;
+        this.applyOptions();
+
+        return this.isComparing;
+    }
+
+    toggleComparison(forceState) {
+        const shouldEnable = typeof forceState === 'boolean' ? forceState : !this.isComparing;
+        if (shouldEnable) {
+            this.enableComparison();
+        } else {
+            this.disableComparison();
+        }
+
+        return this.isComparing;
+    }
+
+    isComparisonActive() {
+        return this.isComparing;
+    }
+
+    refreshPreview() {
+        if (!this.$) {
+            return Promise.resolve();
+        }
+
+        const wasComparing = this.isComparing;
+        if (wasComparing) {
+            this.disableComparison();
+        }
+
+        this.setState('loading');
+        this.setStatus(this.messages.loading || '', false);
+
+        const requestOptions = SidebarPreviewModule.cloneObject(this.currentOptions);
+
+        return this.loadPreview(requestOptions)
+            .then((data) => {
+                this.setState('ready');
+                this.clearStatus();
+                this.setupToolbar();
+                this.setupBindings();
+                this.applyOptions();
+                if (wasComparing) {
+                    this.enableComparison();
+                }
+                return data;
+            })
+            .catch((error) => {
+                return Promise.reject(error);
+            });
     }
 
     applyCssVariables() {
@@ -1816,6 +1925,12 @@ jQuery(document).ready(function($) {
         window.SidebarJLGPreview = previewModule;
     }
 
+    const stylePresetsData = (typeof sidebarJLG.style_presets === 'object' && sidebarJLG.style_presets !== null)
+        ? sidebarJLG.style_presets
+        : {};
+    initializeStylePresetCards(stylePresetsData);
+    initializePreviewToolbar(previewModule);
+
     function rebuildIconLookups(manifest) {
         iconManifest = Array.isArray(manifest) ? manifest : [];
 
@@ -1855,6 +1970,216 @@ jQuery(document).ready(function($) {
     function logDebug(message, data = '') {
         if (debugMode) {
             console.log(`[Sidebar JLG Debug] ${message}`, data);
+        }
+    }
+
+    function applyPresetValues(values) {
+        if (!values || typeof values !== 'object') {
+            return;
+        }
+
+        const unitControlContainers = new Set();
+
+        Object.entries(values).forEach(([optionKey, optionValue]) => {
+            if (optionValue && typeof optionValue === 'object' && Object.prototype.hasOwnProperty.call(optionValue, 'value') && Object.prototype.hasOwnProperty.call(optionValue, 'unit')) {
+                const valueInput = document.querySelector(`[name="sidebar_jlg_settings[${optionKey}][value]"]`);
+                const unitInput = document.querySelector(`[name="sidebar_jlg_settings[${optionKey}][unit]"]`);
+
+                if (valueInput) {
+                    valueInput.value = optionValue.value;
+                    triggerFieldUpdate(valueInput);
+                    const container = valueInput.closest('[data-sidebar-unit-control]');
+                    if (container) {
+                        unitControlContainers.add(container);
+                    }
+                }
+
+                if (unitInput) {
+                    unitInput.value = optionValue.unit;
+                    triggerFieldUpdate(unitInput);
+                }
+
+                return;
+            }
+
+            const selector = `[name="sidebar_jlg_settings[${optionKey}]"]`;
+            const elements = Array.from(document.querySelectorAll(selector));
+            if (!elements.length) {
+                return;
+            }
+
+            const type = elements[0].type || elements[0].getAttribute('type') || '';
+
+            if (type === 'radio') {
+                elements.forEach((element) => {
+                    element.checked = element.value === optionValue;
+                    if (element.checked) {
+                        triggerFieldUpdate(element);
+                    }
+                });
+                return;
+            }
+
+            if (type === 'checkbox') {
+                const isChecked = optionValue === true || optionValue === '1' || optionValue === 1 || optionValue === 'on';
+                elements.forEach((element) => {
+                    element.checked = isChecked;
+                    triggerFieldUpdate(element);
+                });
+                return;
+            }
+
+            elements.forEach((element) => {
+                const $element = $(element);
+                if ($element.hasClass('color-picker') || $element.hasClass('color-picker-rgba')) {
+                    if (typeof $element.wpColorPicker === 'function') {
+                        $element.wpColorPicker('color', optionValue);
+                    } else {
+                        element.value = optionValue;
+                        triggerFieldUpdate(element);
+                    }
+                    return;
+                }
+
+                element.value = optionValue;
+                triggerFieldUpdate(element);
+            });
+        });
+
+        if (unitControlContainers.size) {
+            initializeUnitControls();
+        }
+    }
+
+    function initializeStylePresetCards(presets) {
+        const container = document.querySelector('.sidebar-jlg-style-presets');
+        if (!container) {
+            return;
+        }
+
+        const cards = Array.from(container.querySelectorAll('.sidebar-jlg-style-preset-card'));
+        if (!cards.length) {
+            return;
+        }
+
+        const radios = cards
+            .map((card) => card.querySelector('input[name="sidebar_jlg_settings[style_preset]"]'))
+            .filter(Boolean);
+
+        const setActiveCard = (key) => {
+            cards.forEach((card) => {
+                const cardKey = card.getAttribute('data-preset-key');
+                card.classList.toggle('is-active', cardKey === key);
+            });
+        };
+
+        const applyPresetForKey = (key) => {
+            if (!presets || typeof presets !== 'object') {
+                return;
+            }
+
+            const preset = presets[key];
+            if (!preset || typeof preset !== 'object') {
+                return;
+            }
+
+            const values = preset.values || {};
+            applyPresetValues(values);
+        };
+
+        radios.forEach((radio) => {
+            radio.addEventListener('change', () => {
+                if (!radio.checked) {
+                    return;
+                }
+
+                const key = radio.value;
+                setActiveCard(key);
+
+                if (key === 'custom') {
+                    return;
+                }
+
+                if (window.SidebarJLGPreview && typeof window.SidebarJLGPreview.disableComparison === 'function') {
+                    window.SidebarJLGPreview.disableComparison();
+                }
+
+                applyPresetForKey(key);
+
+                if (window.SidebarJLGPreview && typeof window.SidebarJLGPreview.refreshPreview === 'function') {
+                    window.SidebarJLGPreview.refreshPreview().catch(() => {});
+                }
+            });
+        });
+
+        const activeRadio = radios.find((radio) => radio.checked);
+        if (activeRadio) {
+            setActiveCard(activeRadio.value);
+        }
+    }
+
+    function initializePreviewToolbar(previewInstance) {
+        if (!previewInstance) {
+            return;
+        }
+
+        const refreshButton = document.getElementById('sidebar-jlg-preview-refresh');
+        if (refreshButton && typeof previewInstance.refreshPreview === 'function') {
+            const visibleLabel = refreshButton.querySelector('[aria-hidden="true"]');
+            const originalText = visibleLabel ? visibleLabel.textContent : '';
+            const loadingText = getI18nString('previewRefreshLoading', 'Actualisation…');
+            const defaultText = getI18nString('previewRefreshLabel', originalText || 'Actualiser');
+
+            refreshButton.addEventListener('click', () => {
+                if (refreshButton.disabled) {
+                    return;
+                }
+
+                refreshButton.disabled = true;
+                if (visibleLabel) {
+                    visibleLabel.textContent = loadingText;
+                }
+
+                previewInstance.refreshPreview()
+                    .catch(() => {})
+                    .finally(() => {
+                        refreshButton.disabled = false;
+                        if (visibleLabel) {
+                            visibleLabel.textContent = defaultText;
+                        }
+                    });
+            });
+        }
+
+        const compareButton = document.getElementById('sidebar-jlg-preview-compare');
+        if (compareButton && typeof previewInstance.toggleComparison === 'function') {
+            const visibleLabel = compareButton.querySelector('[aria-hidden="true"]');
+            const srLabel = compareButton.querySelector('.screen-reader-text');
+            const labelOff = getI18nString('previewCompareToggleOff', 'Comparer avant/après');
+            const labelOn = getI18nString('previewCompareToggleOn', 'Afficher l’après');
+            const srText = getI18nString('previewCompareSr', 'Basculer entre l’aperçu avant et après vos modifications');
+
+            const updateButtonState = (isActive) => {
+                compareButton.classList.toggle('is-active', !!isActive);
+                compareButton.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                if (visibleLabel) {
+                    visibleLabel.textContent = isActive ? labelOn : labelOff;
+                }
+                if (srLabel) {
+                    srLabel.textContent = srText;
+                }
+            };
+
+            compareButton.addEventListener('click', () => {
+                const nextState = previewInstance.toggleComparison();
+                updateButtonState(nextState);
+            });
+
+            if (typeof previewInstance.isComparisonActive === 'function') {
+                updateButtonState(previewInstance.isComparisonActive());
+            } else {
+                updateButtonState(false);
+            }
         }
     }
 
@@ -2296,29 +2621,6 @@ jQuery(document).ready(function($) {
             $('.logo-preview img').attr('src', attachment.url).show();
         });
         mediaFrame.open();
-    });
-
-    // --- Préréglages de style ---
-    $('#style-preset-select').on('change', function() {
-        const preset = $(this).val();
-        if (preset === 'custom') return;
-
-        const presets = {
-            moderne_dark: {
-                bg_color: '#1a1d24',
-                accent_color: '#0d6efd',
-                font_color: '#e0e0e0',
-                font_hover_color: '#ffffff'
-            }
-        };
-
-        if (presets[preset]) {
-            const p = presets[preset];
-            $('input[name="sidebar_jlg_settings[bg_color]"]').val(p.bg_color).trigger('change');
-            $('input[name="sidebar_jlg_settings[accent_color]"]').val(p.accent_color).trigger('change');
-            $('input[name="sidebar_jlg_settings[font_color]"]').val(p.font_color).trigger('change');
-            $('input[name="sidebar_jlg_settings[font_hover_color]"]').val(p.font_hover_color).trigger('change');
-        }
     });
 
     // --- Modale Icônes ---

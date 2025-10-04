@@ -18,7 +18,7 @@ final class OptionChoices
         'header_logo_type' => ['text', 'image'],
         'header_alignment_desktop' => ['flex-start', 'center', 'flex-end'],
         'header_alignment_mobile' => ['flex-start', 'center', 'flex-end'],
-        'style_preset' => ['custom', 'moderne_dark'],
+        'style_preset' => ['custom', 'moderne_dark', 'zen_light', 'retro_wave', 'emerald_focus'],
         'bg_color_type' => ['solid', 'gradient'],
         'accent_color_type' => ['solid', 'gradient'],
         'font_color_type' => ['solid', 'gradient'],

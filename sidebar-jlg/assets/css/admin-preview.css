@@ -198,6 +198,15 @@
     max-width: 1160px;
 }
 
+.sidebar-jlg-preview.is-comparing .sidebar-jlg-preview__viewport {
+    box-shadow: 0 12px 28px rgba(34, 113, 177, 0.16);
+    border-color: rgba(34, 113, 177, 0.35);
+}
+
+.sidebar-jlg-preview__viewport[data-compare-mode="before"]::after {
+    background: linear-gradient(135deg, rgba(34, 113, 177, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%);
+}
+
 .sidebar-jlg-preview[data-preview-size="mobile"] .sidebar-overlay {
     display: block !important;
     opacity: var(--sidebar-overlay-opacity);

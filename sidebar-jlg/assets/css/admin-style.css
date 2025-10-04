@@ -3,6 +3,84 @@
 .sidebar-jlg-admin-wrap .tab-content.active { display: block; }
 .sidebar-jlg-admin-wrap .form-table input[type="range"] { vertical-align: middle; }
 
+.sidebar-jlg-style-presets { margin-bottom: 8px; }
+.sidebar-jlg-style-presets__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+.sidebar-jlg-style-preset-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 14px;
+    padding: 14px;
+    background: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+    min-height: 210px;
+}
+.sidebar-jlg-style-preset-card input {
+    position: absolute;
+    inset: 12px;
+    width: calc(100% - 24px);
+    height: calc(100% - 24px);
+    opacity: 0;
+}
+.sidebar-jlg-style-preset-card__thumbnail {
+    position: relative;
+    border-radius: 10px;
+    height: 110px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sidebar-jlg-style-preset-card__accent {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.sidebar-jlg-style-preset-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.sidebar-jlg-style-preset-card__title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #1d2327;
+}
+.sidebar-jlg-style-preset-card__description {
+    color: #50575e;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+.sidebar-jlg-style-preset-card__font {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6c7781;
+}
+.sidebar-jlg-style-preset-card:hover {
+    border-color: #2271b1;
+    box-shadow: 0 6px 18px rgba(34, 113, 177, 0.18);
+    transform: translateY(-2px);
+}
+.sidebar-jlg-style-preset-card:focus-within {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.2);
+}
+.sidebar-jlg-style-preset-card.is-active {
+    border-color: #2271b1;
+    box-shadow: 0 8px 22px rgba(34, 113, 177, 0.25);
+}
+
 /* Styles pour le toggle On/Off */
 .jlg-switch { position: relative; display: inline-block; width: 60px; height: 34px; }
 .jlg-switch input { opacity: 0; width: 0; height: 0; }

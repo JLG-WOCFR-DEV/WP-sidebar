@@ -41,6 +41,32 @@ $textTransformLabels = [
     'lowercase'  => __( 'Minuscules', 'sidebar-jlg' ),
     'capitalize' => __( 'Capitaliser', 'sidebar-jlg' ),
 ];
+$stylePresets = [];
+if ( ! empty( $defaults['style_presets'] ) && is_array( $defaults['style_presets'] ) ) {
+    foreach ( $defaults['style_presets'] as $presetKey => $presetData ) {
+        if ( is_array( $presetData ) ) {
+            $stylePresets[ $presetKey ] = $presetData;
+        }
+    }
+}
+if ( ! isset( $stylePresets['custom'] ) ) {
+    $stylePresets = array_merge(
+        [
+            'custom' => [
+                'label'       => __( 'Personnalisé', 'sidebar-jlg' ),
+                'description' => '',
+                'preview'     => [
+                    'type'   => 'solid',
+                    'colors' => ['#1a1d24'],
+                    'accent' => '#0d6efd',
+                    'font'   => '',
+                ],
+                'values'      => [],
+            ],
+        ],
+        $stylePresets
+    );
+}
 ?>
 <div class="wrap sidebar-jlg-admin-wrap">
     <h1><?php esc_html_e( 'Réglages de la Sidebar JLG', 'sidebar-jlg' ); ?></h1>
@@ -83,6 +109,14 @@ $textTransformLabels = [
             <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button is-active" data-preview-size="desktop" aria-pressed="true">
                 <span class="screen-reader-text"><?php esc_html_e( 'Prévisualiser en mode bureau', 'sidebar-jlg' ); ?></span>
                 <span aria-hidden="true"><?php esc_html_e( 'Desktop', 'sidebar-jlg' ); ?></span>
+            </button>
+            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button" id="sidebar-jlg-preview-refresh">
+                <span class="screen-reader-text"><?php esc_html_e( 'Rafraîchir l’aperçu avec le rendu serveur', 'sidebar-jlg' ); ?></span>
+                <span aria-hidden="true"><?php esc_html_e( 'Actualiser', 'sidebar-jlg' ); ?></span>
+            </button>
+            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button" id="sidebar-jlg-preview-compare" aria-pressed="false">
+                <span class="screen-reader-text"><?php esc_html_e( 'Comparer l’aperçu avant et après vos réglages', 'sidebar-jlg' ); ?></span>
+                <span aria-hidden="true"><?php esc_html_e( 'Comparer avant/après', 'sidebar-jlg' ); ?></span>
             </button>
         </div>
         <div class="sidebar-jlg-preview__status" role="status" aria-live="polite"></div>
@@ -429,11 +463,62 @@ $textTransformLabels = [
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Préréglage de style', 'sidebar-jlg' ); ?></th>
                     <td>
-                        <select name="sidebar_jlg_settings[style_preset]" id="style-preset-select">
-                            <option value="custom" <?php selected($options['style_preset'], 'custom'); ?>><?php esc_html_e('Personnalisé', 'sidebar-jlg'); ?></option>
-                            <option value="moderne_dark" <?php selected($options['style_preset'], 'moderne_dark'); ?>><?php esc_html_e('Critique Moderne (Dark)', 'sidebar-jlg'); ?></option>
-                        </select>
-                        <p class="description"><?php esc_html_e('Choisir un préréglage mettra à jour automatiquement les options de couleur ci-dessous.', 'sidebar-jlg'); ?></p>
+                        <fieldset class="sidebar-jlg-style-presets" data-style-preset-current="<?php echo esc_attr( $options['style_preset'] ); ?>">
+                            <legend class="screen-reader-text"><?php esc_html_e( 'Choisir un préréglage de style', 'sidebar-jlg' ); ?></legend>
+                            <div class="sidebar-jlg-style-presets__grid">
+                                <?php foreach ( $stylePresets as $presetKey => $presetData ) :
+                                    $isActive          = $options['style_preset'] === $presetKey;
+                                    $inputId           = 'style-preset-' . sanitize_html_class( $presetKey );
+                                    $descriptionId     = $inputId . '-description';
+                                    $presetLabel       = isset( $presetData['label'] ) ? $presetData['label'] : $presetKey;
+                                    $presetDescription = isset( $presetData['description'] ) ? $presetData['description'] : '';
+                                    $previewData       = isset( $presetData['preview'] ) && is_array( $presetData['preview'] ) ? $presetData['preview'] : [];
+                                    $previewColors     = isset( $previewData['colors'] ) && is_array( $previewData['colors'] ) ? array_values( array_filter( $previewData['colors'] ) ) : [];
+                                    $previewType       = isset( $previewData['type'] ) ? $previewData['type'] : 'solid';
+                                    $previewAccent     = isset( $previewData['accent'] ) ? $previewData['accent'] : '';
+                                    $previewFont       = isset( $previewData['font'] ) ? $previewData['font'] : '';
+                                    $thumbnailStyle    = '';
+
+                                    if ( 'gradient' === $previewType && count( $previewColors ) >= 2 ) {
+                                        $thumbnailStyle = sprintf(
+                                            'background-image: linear-gradient(135deg, %1$s 0%%, %2$s 100%%);',
+                                            $previewColors[0],
+                                            $previewColors[1]
+                                        );
+                                    } elseif ( ! empty( $previewColors ) ) {
+                                        $thumbnailStyle = sprintf( 'background-color: %s;', $previewColors[0] );
+                                    } else {
+                                        $thumbnailStyle = 'background-color: #1a1d24;';
+                                    }
+                                    ?>
+                                    <label class="sidebar-jlg-style-preset-card<?php echo $isActive ? ' is-active' : ''; ?>" data-preset-key="<?php echo esc_attr( $presetKey ); ?>">
+                                        <input
+                                            type="radio"
+                                            id="<?php echo esc_attr( $inputId ); ?>"
+                                            name="sidebar_jlg_settings[style_preset]"
+                                            value="<?php echo esc_attr( $presetKey ); ?>"
+                                            <?php checked( $isActive ); ?>
+                                            <?php if ( $presetDescription ) : ?>aria-describedby="<?php echo esc_attr( $descriptionId ); ?>"<?php endif; ?>
+                                        />
+                                        <span class="sidebar-jlg-style-preset-card__thumbnail" style="<?php echo esc_attr( $thumbnailStyle ); ?>">
+                                            <?php if ( $previewAccent ) : ?>
+                                                <span class="sidebar-jlg-style-preset-card__accent" style="background-color: <?php echo esc_attr( $previewAccent ); ?>"></span>
+                                            <?php endif; ?>
+                                        </span>
+                                        <span class="sidebar-jlg-style-preset-card__meta">
+                                            <span class="sidebar-jlg-style-preset-card__title"><?php echo esc_html( $presetLabel ); ?></span>
+                                            <?php if ( $presetDescription ) : ?>
+                                                <span class="sidebar-jlg-style-preset-card__description" id="<?php echo esc_attr( $descriptionId ); ?>"><?php echo esc_html( $presetDescription ); ?></span>
+                                            <?php endif; ?>
+                                            <?php if ( $previewFont ) : ?>
+                                                <span class="sidebar-jlg-style-preset-card__font"><?php echo esc_html( $previewFont ); ?></span>
+                                            <?php endif; ?>
+                                        </span>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </fieldset>
+                        <p class="description"><?php esc_html_e( 'Choisir un préréglage met à jour automatiquement les couleurs, la typographie et certains effets associés.', 'sidebar-jlg' ); ?></p>
                     </td>
                 </tr>
                 <tr>

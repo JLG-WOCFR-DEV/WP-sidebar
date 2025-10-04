@@ -94,6 +94,53 @@ class MenuPage
         $defaults = $this->settings->getDefaultSettings();
         $options = $this->settings->getOptionsWithRevalidation();
 
+        $stylePresetsForJs = [];
+        $stylePresets = $defaults['style_presets'] ?? [];
+        if (is_array($stylePresets)) {
+            foreach ($stylePresets as $presetKey => $presetData) {
+                if (!is_array($presetData)) {
+                    continue;
+                }
+
+                $preview = $presetData['preview'] ?? [];
+                $values = $presetData['values'] ?? [];
+                $normalizedValues = [];
+
+                if (is_array($values)) {
+                    foreach ($values as $optionKey => $optionValue) {
+                        if (is_array($optionValue) && array_key_exists('value', $optionValue) && array_key_exists('unit', $optionValue)) {
+                            $normalizedValues[$optionKey] = [
+                                'value' => isset($optionValue['value']) ? (string) $optionValue['value'] : '',
+                                'unit'  => isset($optionValue['unit']) ? (string) $optionValue['unit'] : '',
+                            ];
+                            continue;
+                        }
+
+                        if (is_scalar($optionValue) || $optionValue === null) {
+                            $normalizedValues[$optionKey] = $optionValue;
+                            continue;
+                        }
+
+                        $normalizedValues[$optionKey] = $optionValue;
+                    }
+                }
+
+                $stylePresetsForJs[$presetKey] = [
+                    'label'       => isset($presetData['label']) ? (string) $presetData['label'] : (string) $presetKey,
+                    'description' => isset($presetData['description']) ? (string) $presetData['description'] : '',
+                    'preview'     => [
+                        'type'   => isset($preview['type']) ? (string) $preview['type'] : 'solid',
+                        'colors' => isset($preview['colors']) && is_array($preview['colors'])
+                            ? array_map('strval', $preview['colors'])
+                            : [],
+                        'accent' => isset($preview['accent']) ? (string) $preview['accent'] : '',
+                        'font'   => isset($preview['font']) ? (string) $preview['font'] : '',
+                    ],
+                    'values'      => $normalizedValues,
+                ];
+            }
+        }
+
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('jlg_ajax_nonce'),
@@ -107,6 +154,7 @@ class MenuPage
             'icon_upload_max_size' => IconLibrary::MAX_CUSTOM_ICON_FILESIZE,
             'preview_action' => 'jlg_render_preview',
             'svg_url_restrictions' => $this->sanitizer->getSvgUrlRestrictions(),
+            'style_presets' => $stylePresetsForJs,
             'i18n' => [
                 'menuItemDefaultTitle' => __('Nouvel élément', 'sidebar-jlg'),
                 'socialIconDefaultTitle' => __('Nouvelle icône', 'sidebar-jlg'),
@@ -142,6 +190,11 @@ class MenuPage
                 'navMenuFilterAll' => __('Tous les éléments', 'sidebar-jlg'),
                 'navMenuFilterTopLevel' => __('Uniquement le niveau 1', 'sidebar-jlg'),
                 'navMenuFilterBranch' => __('Branche de la page courante', 'sidebar-jlg'),
+                'previewCompareToggleOn' => __('Afficher l’après', 'sidebar-jlg'),
+                'previewCompareToggleOff' => __('Comparer avant/après', 'sidebar-jlg'),
+                'previewCompareSr' => __('Basculer entre l’aperçu avant et après vos modifications', 'sidebar-jlg'),
+                'previewRefreshLabel' => __('Actualiser', 'sidebar-jlg'),
+                'previewRefreshLoading' => __('Actualisation…', 'sidebar-jlg'),
             ],
             'preview_messages' => [
                 'loading' => __('Chargement de l’aperçu…', 'sidebar-jlg'),
