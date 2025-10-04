@@ -19,6 +19,42 @@ if (!function_exists('get_queried_object')) {
     }
 }
 
+if (!function_exists('get_queried_object_id')) {
+    function get_queried_object_id()
+    {
+        return $GLOBALS['test_queried_object_id'] ?? 0;
+    }
+}
+
+if (!function_exists('get_object_taxonomies')) {
+    function get_object_taxonomies($object)
+    {
+        if (is_string($object) || is_int($object)) {
+            $objectKey = (string) $object;
+            return $GLOBALS['test_object_taxonomies'][$objectKey] ?? [];
+        }
+
+        return [];
+    }
+}
+
+if (!function_exists('wp_get_post_terms')) {
+    function wp_get_post_terms($postId, $taxonomy, $args = [])
+    {
+        $postKey = (int) $postId;
+        $taxonomyKey = is_string($taxonomy) ? $taxonomy : (string) $taxonomy;
+
+        return $GLOBALS['test_post_terms'][$postKey][$taxonomyKey] ?? [];
+    }
+}
+
+if (!function_exists('get_the_terms')) {
+    function get_the_terms($postId, $taxonomy)
+    {
+        return wp_get_post_terms($postId, $taxonomy);
+    }
+}
+
 if (!function_exists('wp_get_current_user')) {
     function wp_get_current_user()
     {
@@ -74,6 +110,21 @@ $baseSettings['profiles'] = [
             'animation_type' => 'fade',
         ],
     ],
+    [
+        'id' => 'news-category-profile',
+        'priority' => 12,
+        'conditions' => [
+            'taxonomies' => [
+                [
+                    'taxonomy' => 'category',
+                    'terms' => ['news'],
+                ],
+            ],
+        ],
+        'settings' => [
+            'animation_type' => 'zoom',
+        ],
+    ],
 ];
 
 $settingsRepository->saveOptions($baseSettings);
@@ -108,6 +159,9 @@ $resetContext = static function (): void {
     $GLOBALS['wp_test_transients'] = [];
     $GLOBALS['test_post_type'] = null;
     $GLOBALS['test_queried_object'] = null;
+    $GLOBALS['test_queried_object_id'] = null;
+    $GLOBALS['test_object_taxonomies'] = [];
+    $GLOBALS['test_post_terms'] = [];
 };
 
 // Scenario 1: Subscriber role disables the sidebar entirely.
@@ -181,6 +235,32 @@ assertTrue(is_array($localizedData), 'Localized data generated for fallback prof
 assertSame('default', $localizedData['active_profile_id'] ?? null, 'Fallback profile identifier exposed');
 assertSame(true, $localizedData['is_fallback_profile'] ?? null, 'Fallback indicator flagged for default profile');
 assertSame('slide-left', $localizedData['animation_type'] ?? null, 'Fallback profile keeps default animation type');
+
+// Scenario 5: Taxonomy terms from singular content trigger matching profile.
+$resetContext();
+$GLOBALS['test_current_user'] = (object) ['roles' => ['editor']];
+$GLOBALS['test_post_type'] = 'post';
+$GLOBALS['test_queried_object_id'] = 123;
+$GLOBALS['test_queried_object'] = (object) ['post_type' => 'post', 'ID' => 123];
+$GLOBALS['test_object_taxonomies'] = ['post' => ['category']];
+$GLOBALS['test_post_terms'] = [
+    123 => [
+        'category' => [
+            (object) ['term_id' => 7, 'slug' => 'news'],
+        ],
+    ],
+];
+
+$localizedData = null;
+$GLOBALS['wp_test_function_overrides']['wp_localize_script'] = static function (...$args) use (&$localizedData): void {
+    $localizedData = $args[2] ?? null;
+};
+
+$renderer->enqueueAssets();
+assertTrue(is_array($localizedData), 'Localized data generated when taxonomy profile matches');
+assertSame('news-category-profile', $localizedData['active_profile_id'] ?? null, 'Taxonomy profile identifier exposed when terms match');
+assertSame(false, $localizedData['is_fallback_profile'] ?? null, 'Taxonomy profile flagged as non-fallback');
+assertSame('zoom', $localizedData['animation_type'] ?? null, 'Taxonomy profile overrides animation type');
 
 $resetContext();
 $GLOBALS['test_current_user'] = null;
