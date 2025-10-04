@@ -63,6 +63,24 @@ class SearchBlock
         $blockType = register_block_type($blockDir, $registerArgs);
 
         if ($blockType instanceof WP_Block_Type) {
+            // Ensure both block editor scripts and preview scripts load translations.
+            $handles = array_filter([
+                $blockType->editor_script ?? null,
+                $blockType->script ?? null,
+                $blockType->view_script ?? null,
+            ], static fn($handle) => is_string($handle) && $handle !== '');
+
+            foreach ($handles as $handle) {
+                if (wp_script_is($handle, 'registered')) {
+                    // Translation JSON files must be generated via `wp i18n make-json`.
+                    wp_set_script_translations(
+                        $handle,
+                        'sidebar-jlg',
+                        plugin_dir_path($this->pluginFile) . 'languages'
+                    );
+                }
+            }
+
             $this->localizeEditorDefaults($blockType);
         }
     }
