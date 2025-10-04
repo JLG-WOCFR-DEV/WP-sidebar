@@ -97,8 +97,8 @@ class SidebarRenderer
 
     public function enqueueAssets(): void
     {
-        $profile = $this->profileSelector->selectProfile();
-        $options = $profile['settings'];
+        $profile = $this->getActiveProfile();
+        $options = isset($profile['settings']) && is_array($profile['settings']) ? $profile['settings'] : [];
         if (empty($options['enable_sidebar'])) {
             return;
         }
@@ -501,8 +501,8 @@ class SidebarRenderer
 
     public function render(): void
     {
-        $profile = $this->profileSelector->selectProfile();
-        $options = $profile['settings'];
+        $profile = $this->getActiveProfile();
+        $options = isset($profile['settings']) && is_array($profile['settings']) ? $profile['settings'] : [];
         $profileId = isset($profile['id']) && is_string($profile['id']) && $profile['id'] !== ''
             ? $profile['id']
             : 'default';
@@ -589,20 +589,19 @@ class SidebarRenderer
             return;
         }
 
-        $options = $this->settings->getOptions();
-        if (empty($options['enable_sidebar'])) {
+        $state = $this->resolveActiveSidebarState();
+        if ($state === null) {
             return;
         }
 
-        $position = $this->resolveSidebarPosition($options);
-        $encodedPosition = json_encode($position, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+        $encodedPosition = json_encode($state['position'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
         if (!is_string($encodedPosition)) {
             return;
         }
 
         printf(
-            '<script id="sidebar-jlg-body-data">document.body.dataset.sidebarPosition=%s;</script>',
+            '<script id="sidebar-jlg-body-data">document.body.dataset.sidebarPosition=%1$s;document.body.setAttribute("data-sidebar-position",%1$s);</script>',
             $encodedPosition
         );
 
@@ -1296,13 +1295,14 @@ class SidebarRenderer
 
     public function addBodyClasses(array $classes): array
     {
-        $options = $this->settings->getOptions();
-        if (empty($options['enable_sidebar'])) {
+        $state = $this->resolveActiveSidebarState();
+        if ($state === null) {
             return $classes;
         }
 
+        $options = $state['settings'];
         $classes[] = 'jlg-sidebar-active';
-        $classes[] = 'jlg-sidebar-position-' . $this->resolveSidebarPosition($options);
+        $classes[] = 'jlg-sidebar-position-' . $state['position'];
         $layoutStyle = $options['layout_style'] ?? 'full';
 
         if ($layoutStyle === 'horizontal-bar') {
@@ -1329,6 +1329,27 @@ class SidebarRenderer
         }
 
         return $classes;
+    }
+
+    private function getActiveProfile(): array
+    {
+        return $this->profileSelector->selectProfile();
+    }
+
+    private function resolveActiveSidebarState(): ?array
+    {
+        $profile = $this->getActiveProfile();
+        $settings = isset($profile['settings']) && is_array($profile['settings']) ? $profile['settings'] : [];
+
+        if (empty($settings['enable_sidebar'])) {
+            return null;
+        }
+
+        return [
+            'profile' => $profile,
+            'settings' => $settings,
+            'position' => $this->resolveSidebarPosition($settings),
+        ];
     }
 
     public function is_sidebar_output_dynamic(?array $options = null): bool
