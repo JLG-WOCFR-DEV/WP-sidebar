@@ -59,6 +59,7 @@ $textTransformLabels = [
 
     <div class="nav-tab-wrapper" role="tablist">
         <a href="#tab-general" class="nav-tab nav-tab-active" id="tab-general-tab" role="tab" aria-controls="tab-general" aria-selected="true" tabindex="0"><?php esc_html_e( 'Général & Comportement', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-profiles" class="nav-tab" id="tab-profiles-tab" role="tab" aria-controls="tab-profiles" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Profils', 'sidebar-jlg' ); ?></a>
         <a href="#tab-presets" class="nav-tab" id="tab-presets-tab" role="tab" aria-controls="tab-presets" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Style & Préréglages', 'sidebar-jlg' ); ?></a>
         <a href="#tab-menu" class="nav-tab" id="tab-menu-tab" role="tab" aria-controls="tab-menu" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Contenu du Menu', 'sidebar-jlg' ); ?></a>
         <a href="#tab-social" class="nav-tab" id="tab-social-tab" role="tab" aria-controls="tab-social" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Réseaux Sociaux', 'sidebar-jlg' ); ?></a>
@@ -111,6 +112,10 @@ $textTransformLabels = [
         foreach ( $dimensionUnits as $dimensionKey => $units ) {
             $dimensionValues[ $dimensionKey ] = sidebar_jlg_prepare_dimension_option( $options, $defaults, $dimensionKey, $units );
         }
+
+        $profilesOption = get_option( 'sidebar_jlg_profiles', [] );
+        $profilesData = is_array( $profilesOption ) ? $profilesOption : [];
+        $activeProfileId = get_option( 'sidebar_jlg_active_profile', '' );
         ?>
 
         <!-- Onglet Général -->
@@ -744,6 +749,97 @@ $textTransformLabels = [
              </table>
         </div>
         
+        <!-- Onglet Profils -->
+        <div id="tab-profiles" class="tab-content" role="tabpanel" aria-labelledby="tab-profiles-tab" aria-hidden="true" hidden>
+            <div
+                id="sidebar-jlg-profiles-app"
+                class="sidebar-jlg-profiles"
+                data-profiles="<?php echo esc_attr( wp_json_encode( $profilesData ) ?: '[]' ); ?>"
+                data-active-profile="<?php echo esc_attr( is_string( $activeProfileId ) ? $activeProfileId : '' ); ?>"
+            >
+                <div class="sidebar-jlg-profiles__columns">
+                    <div class="sidebar-jlg-profiles__list-panel">
+                        <h2><?php esc_html_e( 'Profils enregistrés', 'sidebar-jlg' ); ?></h2>
+                        <p class="description"><?php esc_html_e( 'Créez plusieurs variantes de la sidebar et définissez leurs conditions d’affichage.', 'sidebar-jlg' ); ?></p>
+                        <ul id="sidebar-jlg-profiles-list" class="sidebar-jlg-profiles__list" aria-live="polite"></ul>
+                        <p class="description sidebar-jlg-profiles__hint"><?php esc_html_e( 'Faites glisser les profils pour modifier leur ordre de priorité.', 'sidebar-jlg' ); ?></p>
+                        <button type="button" class="button button-secondary" id="sidebar-jlg-profiles-add"><?php esc_html_e( 'Ajouter un profil', 'sidebar-jlg' ); ?></button>
+                        <button type="button" class="button-link sidebar-jlg-profiles-clear-active" id="sidebar-jlg-profiles-clear-active"><?php esc_html_e( 'Ne sélectionner aucun profil actif', 'sidebar-jlg' ); ?></button>
+                    </div>
+                    <div class="sidebar-jlg-profiles__editor-panel">
+                        <h2><?php esc_html_e( 'Édition du profil', 'sidebar-jlg' ); ?></h2>
+                        <div
+                            id="sidebar-jlg-profile-editor"
+                            class="sidebar-jlg-profile-editor"
+                            data-empty-text="<?php esc_attr_e( 'Sélectionnez un profil pour afficher ses réglages.', 'sidebar-jlg' ); ?>"
+                        >
+                            <div class="sidebar-jlg-profile-editor__fieldset">
+                                <p>
+                                    <label for="sidebar-jlg-profile-title"><?php esc_html_e( 'Nom du profil', 'sidebar-jlg' ); ?></label>
+                                    <input type="text" id="sidebar-jlg-profile-title" class="regular-text" autocomplete="off" />
+                                </p>
+                                <p>
+                                    <label for="sidebar-jlg-profile-slug"><?php esc_html_e( 'Identifiant (slug)', 'sidebar-jlg' ); ?></label>
+                                    <input type="text" id="sidebar-jlg-profile-slug" class="regular-text" autocomplete="off" />
+                                    <span class="description"><?php esc_html_e( 'Utilisé pour référencer ce profil dans le code ou les exports.', 'sidebar-jlg' ); ?></span>
+                                </p>
+                                <p>
+                                    <label for="sidebar-jlg-profile-priority"><?php esc_html_e( 'Priorité', 'sidebar-jlg' ); ?></label>
+                                    <input type="number" id="sidebar-jlg-profile-priority" class="small-text" />
+                                    <span class="description"><?php esc_html_e( 'Plus la valeur est élevée, plus le profil sera évalué tôt.', 'sidebar-jlg' ); ?></span>
+                                </p>
+                                <p>
+                                    <label>
+                                        <input type="checkbox" id="sidebar-jlg-profile-enabled" />
+                                        <?php esc_html_e( 'Activer ce profil', 'sidebar-jlg' ); ?>
+                                    </label>
+                                </p>
+                            </div>
+                            <fieldset class="sidebar-jlg-profile-editor__fieldset">
+                                <legend><?php esc_html_e( 'Conditions d’affichage', 'sidebar-jlg' ); ?></legend>
+                                <p class="description"><?php esc_html_e( 'Choisissez les contextes dans lesquels ce profil doit s’appliquer.', 'sidebar-jlg' ); ?></p>
+                                <p>
+                                    <label for="sidebar-jlg-profile-post-types"><?php esc_html_e( 'Types de contenu', 'sidebar-jlg' ); ?></label>
+                                    <select id="sidebar-jlg-profile-post-types" multiple></select>
+                                </p>
+                                <div class="sidebar-jlg-profile-taxonomies">
+                                    <label><?php esc_html_e( 'Taxonomies & termes', 'sidebar-jlg' ); ?></label>
+                                    <div id="sidebar-jlg-profile-taxonomies"></div>
+                                    <button type="button" class="button button-small" id="sidebar-jlg-profile-add-taxonomy"><?php esc_html_e( 'Ajouter une condition de taxonomie', 'sidebar-jlg' ); ?></button>
+                                </div>
+                                <p>
+                                    <label for="sidebar-jlg-profile-roles"><?php esc_html_e( 'Rôles utilisateurs', 'sidebar-jlg' ); ?></label>
+                                    <select id="sidebar-jlg-profile-roles" multiple></select>
+                                </p>
+                                <p>
+                                    <label for="sidebar-jlg-profile-languages"><?php esc_html_e( 'Langues', 'sidebar-jlg' ); ?></label>
+                                    <select id="sidebar-jlg-profile-languages" multiple></select>
+                                </p>
+                            </fieldset>
+                            <div class="sidebar-jlg-profile-editor__fieldset">
+                                <h3><?php esc_html_e( 'Réglages associés', 'sidebar-jlg' ); ?></h3>
+                                <p id="sidebar-jlg-profile-settings-summary" class="description"></p>
+                                <div class="sidebar-jlg-profile-editor__actions">
+                                    <button type="button" class="button button-primary" id="sidebar-jlg-profile-clone-settings"><?php esc_html_e( 'Utiliser les réglages actuels', 'sidebar-jlg' ); ?></button>
+                                    <button type="button" class="button button-secondary" id="sidebar-jlg-profile-clear-settings"><?php esc_html_e( 'Réinitialiser les réglages du profil', 'sidebar-jlg' ); ?></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php wp_nonce_field( 'sidebar_jlg_profiles', 'sidebar_jlg_profiles_nonce' ); ?>
+            </div>
+            <input type="hidden" id="sidebar-jlg-active-profile-field" name="sidebar_jlg_active_profile" value="<?php echo esc_attr( is_string( $activeProfileId ) ? $activeProfileId : '' ); ?>" />
+            <div id="sidebar-jlg-profiles-hidden" class="sidebar-jlg-hidden-inputs" aria-hidden="true"></div>
+            <template id="sidebar-jlg-profile-taxonomy-template">
+                <div class="sidebar-jlg-profile-taxonomy-row">
+                    <select class="sidebar-jlg-profile-taxonomy-name"></select>
+                    <input type="text" class="sidebar-jlg-profile-taxonomy-terms" placeholder="<?php esc_attr_e( 'Slugs ou IDs séparés par des virgules', 'sidebar-jlg' ); ?>" />
+                    <button type="button" class="button-link sidebar-jlg-profile-remove-taxonomy"><?php esc_html_e( 'Supprimer', 'sidebar-jlg' ); ?></button>
+                </div>
+            </template>
+        </div>
+
         <!-- Onglet Outils & Débogage -->
         <div id="tab-tools" class="tab-content" role="tabpanel" aria-labelledby="tab-tools-tab" aria-hidden="true" hidden>
             <table class="form-table">
