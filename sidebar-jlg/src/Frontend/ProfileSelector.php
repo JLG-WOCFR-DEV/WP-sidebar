@@ -6,6 +6,15 @@ use JLG\Sidebar\Settings\SettingsRepository;
 
 class ProfileSelector
 {
+    private const DISABLED_FLAG_KEYS = [
+        'enabled',
+        'is_enabled',
+        'active',
+        'is_active',
+        'disabled',
+        'is_disabled',
+    ];
+
     private SettingsRepository $settings;
 
     public function __construct(SettingsRepository $settings)
@@ -65,6 +74,10 @@ class ProfileSelector
 
     private function normalizeProfile(array $profile, array $defaults): ?array
     {
+        if ($this->isProfileDisabled($profile)) {
+            return null;
+        }
+
         $profileId = isset($profile['id']) ? (string) $profile['id'] : '';
         $profileId = $this->sanitizeIdentifier($profileId);
 
@@ -104,6 +117,99 @@ class ProfileSelector
             'conditions' => $normalizedConditions,
             'priority' => $priority,
         ];
+    }
+
+    private function isProfileDisabled(array $profile): bool
+    {
+        foreach (self::DISABLED_FLAG_KEYS as $flag) {
+            if (!array_key_exists($flag, $profile)) {
+                continue;
+            }
+
+            $value = $profile[$flag];
+
+            if ($flag === 'disabled' || $flag === 'is_disabled') {
+                if ($this->isTruthy($value)) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($this->isFalsy($value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function isFalsy($value): bool
+    {
+        if ($value === null) {
+            return true;
+        }
+
+        if (is_bool($value)) {
+            return $value === false;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (int) $value === 0;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+
+            return in_array($normalized, ['0', '', 'false', 'no', 'off', 'inactive', 'disabled'], true);
+        }
+
+        if (is_array($value)) {
+            return $value === [];
+        }
+
+        return empty($value);
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function isTruthy($value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        if (is_bool($value)) {
+            return $value === true;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (int) $value !== 0;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+
+            if ($normalized === '') {
+                return false;
+            }
+
+            if (in_array($normalized, ['0', 'false', 'no', 'off', 'inactive', 'disabled'], true)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        if (is_array($value)) {
+            return $value !== [];
+        }
+
+        return (bool) $value;
     }
 
     private function normalizeConditions(array $conditions): array
