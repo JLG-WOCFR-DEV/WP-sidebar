@@ -262,6 +262,38 @@ assertSame('news-category-profile', $localizedData['active_profile_id'] ?? null,
 assertSame(false, $localizedData['is_fallback_profile'] ?? null, 'Taxonomy profile flagged as non-fallback');
 assertSame('zoom', $localizedData['animation_type'] ?? null, 'Taxonomy profile overrides animation type');
 
+// Scenario 6: Taxonomy match also works when profile targets term identifier.
+$idBasedSettings = $baseSettings;
+$idBasedSettings['profiles'][3]['conditions']['taxonomies'][0]['terms'] = ['7'];
+$settingsRepository->saveOptions($idBasedSettings);
+
+$resetContext();
+$GLOBALS['test_current_user'] = (object) ['roles' => ['editor']];
+$GLOBALS['test_post_type'] = 'post';
+$GLOBALS['test_queried_object_id'] = 123;
+$GLOBALS['test_queried_object'] = (object) ['post_type' => 'post', 'ID' => 123];
+$GLOBALS['test_object_taxonomies'] = ['post' => ['category']];
+$GLOBALS['test_post_terms'] = [
+    123 => [
+        'category' => [
+            (object) ['term_id' => 7, 'slug' => 'news'],
+        ],
+    ],
+];
+
+$localizedData = null;
+$GLOBALS['wp_test_function_overrides']['wp_localize_script'] = static function (...$args) use (&$localizedData): void {
+    $localizedData = $args[2] ?? null;
+};
+
+$renderer->enqueueAssets();
+assertTrue(is_array($localizedData), 'Localized data generated when taxonomy profile matches via term ID');
+assertSame('news-category-profile', $localizedData['active_profile_id'] ?? null, 'Taxonomy profile identifier exposed when ID matches');
+assertSame(false, $localizedData['is_fallback_profile'] ?? null, 'Taxonomy profile flagged as non-fallback when matching by ID');
+assertSame('zoom', $localizedData['animation_type'] ?? null, 'Taxonomy profile overrides animation type when matching by ID');
+
+$settingsRepository->saveOptions($baseSettings);
+
 $resetContext();
 $GLOBALS['test_current_user'] = null;
 switch_to_locale('fr_FR');
