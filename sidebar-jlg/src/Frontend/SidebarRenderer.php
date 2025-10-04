@@ -97,8 +97,9 @@ class SidebarRenderer
 
     public function enqueueAssets(): void
     {
-        $profile = $this->getActiveProfile();
-        $options = isset($profile['settings']) && is_array($profile['settings']) ? $profile['settings'] : [];
+        $activeProfile = $this->getActiveProfileData();
+        $profile = $activeProfile['profile'];
+        $options = $activeProfile['settings'];
         if (empty($options['enable_sidebar'])) {
             return;
         }
@@ -501,8 +502,9 @@ class SidebarRenderer
 
     public function render(): void
     {
-        $profile = $this->getActiveProfile();
-        $options = isset($profile['settings']) && is_array($profile['settings']) ? $profile['settings'] : [];
+        $activeProfile = $this->getActiveProfileData();
+        $profile = $activeProfile['profile'];
+        $options = $activeProfile['settings'];
         $profileId = isset($profile['id']) && is_string($profile['id']) && $profile['id'] !== ''
             ? $profile['id']
             : 'default';
@@ -1336,10 +1338,26 @@ class SidebarRenderer
         return $this->profileSelector->selectProfile();
     }
 
-    private function resolveActiveSidebarState(): ?array
+    private function getActiveProfileData(): array
     {
         $profile = $this->getActiveProfile();
-        $settings = isset($profile['settings']) && is_array($profile['settings']) ? $profile['settings'] : [];
+        $settings = [];
+
+        if (isset($profile['settings']) && is_array($profile['settings'])) {
+            $settings = $profile['settings'];
+        }
+
+        return [
+            'profile' => $profile,
+            'settings' => $settings,
+        ];
+    }
+
+    private function resolveActiveSidebarState(): ?array
+    {
+        $activeProfile = $this->getActiveProfileData();
+        $profile = $activeProfile['profile'];
+        $settings = $activeProfile['settings'];
 
         if (empty($settings['enable_sidebar'])) {
             return null;

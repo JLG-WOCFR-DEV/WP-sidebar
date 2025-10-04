@@ -129,6 +129,17 @@ $bodyOpenOutput = (string) ob_get_clean();
 
 assertContains('document.body.dataset.sidebarPosition', $bodyOpenOutput, 'Body data script sets sidebar position dataset');
 assertContains('data-sidebar-position', $bodyOpenOutput, 'Body data script sets data-sidebar-position attribute');
+assertContains('"right"', $bodyOpenOutput, 'Body data script encodes active sidebar position');
+
+ob_start();
+foreach ($bodyOpenCallbacks as $callback) {
+    if (is_callable($callback)) {
+        $callback();
+    }
+}
+$secondBodyOpenOutput = (string) ob_get_clean();
+
+assertTrue($secondBodyOpenOutput === '', 'Body data script only printed once');
 
 if ($testsPassed) {
     echo "Sidebar profile hooks tests passed.\n";
