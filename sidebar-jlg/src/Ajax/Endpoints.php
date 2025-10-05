@@ -4,6 +4,7 @@ namespace JLG\Sidebar\Ajax;
 
 use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Cache\MenuCache;
+use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
 use function __;
@@ -12,10 +13,6 @@ use function gmdate;
 use function home_url;
 use function is_readable;
 use function json_decode;
-use function ob_end_clean;
-use function ob_get_clean;
-use function ob_get_level;
-use function ob_start;
 use function plugin_dir_path;
 use function sanitize_option;
 use function update_option;
@@ -33,13 +30,15 @@ class Endpoints
     private IconLibrary $icons;
     private SettingsSanitizer $sanitizer;
     private string $pluginFile;
+    private SidebarRenderer $renderer;
 
     public function __construct(
         SettingsRepository $settings,
         MenuCache $cache,
         IconLibrary $icons,
         SettingsSanitizer $sanitizer,
-        string $pluginFile
+        string $pluginFile,
+        SidebarRenderer $renderer
     )
     {
         $this->settings = $settings;
@@ -47,6 +46,7 @@ class Endpoints
         $this->icons = $icons;
         $this->sanitizer = $sanitizer;
         $this->pluginFile = $pluginFile;
+        $this->renderer = $renderer;
     }
 
     public function registerHooks(): void
@@ -675,39 +675,16 @@ class Endpoints
 
         $defaults = $this->settings->getDefaultSettings();
         $options = wp_parse_args($sanitized, $defaults);
-        $allIcons = $this->icons->getAllIcons();
-
         $templatePath = plugin_dir_path($this->pluginFile) . 'includes/sidebar-template.php';
-
         if (!is_readable($templatePath)) {
             wp_send_json_error([
                 'message' => __('Le template d’aperçu est introuvable.', 'sidebar-jlg'),
             ]);
         }
 
-        $bufferStarted = ob_start();
-        if ($bufferStarted === false) {
-            wp_send_json_error([
-                'message' => __('Impossible de générer l’aperçu.', 'sidebar-jlg'),
-            ]);
-        }
+        $html = $this->renderer->renderSidebarToHtml($options);
 
-        $bufferLevel = ob_get_level();
-
-        $optionsForTemplate = $options;
-        $allIconsForTemplate = $allIcons;
-        $options = $optionsForTemplate;
-        $allIcons = $allIconsForTemplate;
-
-        require $templatePath;
-
-        $html = ob_get_clean();
-
-        if ($html === false || $html === null) {
-            if (ob_get_level() >= $bufferLevel) {
-                ob_end_clean();
-            }
-
+        if (!is_string($html)) {
             wp_send_json_error([
                 'message' => __('La génération de l’aperçu a échoué.', 'sidebar-jlg'),
             ]);

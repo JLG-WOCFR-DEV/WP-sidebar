@@ -298,7 +298,8 @@ $endpoints = new Endpoints(
     $pluginInstance->getMenuCache(),
     $pluginInstance->getIconLibrary(),
     $pluginInstance->getSanitizer(),
-    $pluginInstance->getPluginFile()
+    $pluginInstance->getPluginFile(),
+    $pluginInstance->getSidebarRenderer()
 );
 
 $testsPassed = true;

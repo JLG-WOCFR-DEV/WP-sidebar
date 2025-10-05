@@ -759,7 +759,47 @@ class SidebarRenderer
         return 'calc(var(--sidebar-width-desktop) + ' . $stringValue . ')';
     }
 
-    public function render(): void
+    public function renderSidebarToHtml(array $options): ?string
+    {
+        $allIcons = $this->icons->getAllIcons();
+        $templatePath = plugin_dir_path($this->pluginFile) . 'includes/sidebar-template.php';
+
+        if (!is_readable($templatePath)) {
+            if (function_exists('error_log')) {
+                error_log('[Sidebar JLG] Sidebar template not found or unreadable at ' . $templatePath);
+            }
+
+            return null;
+        }
+
+        $bufferStarted = ob_start();
+        if ($bufferStarted === false) {
+            $this->logSidebarBufferFailure('ob_start');
+
+            return null;
+        }
+
+        $bufferLevel = ob_get_level();
+        $optionsForTemplate = $options;
+        $allIconsForTemplate = $allIcons;
+        $options = $optionsForTemplate;
+        $allIcons = $allIconsForTemplate;
+
+        require $templatePath;
+
+        $html = ob_get_clean();
+
+        if (!is_string($html)) {
+            $this->cleanSidebarBuffer($bufferLevel);
+            $this->logSidebarBufferFailure('ob_get_clean');
+
+            return null;
+        }
+
+        return $html;
+    }
+
+    public function render(): ?string
     {
         $activeProfile = $this->getActiveProfileData();
         $profile = $activeProfile['profile'];
@@ -768,7 +808,7 @@ class SidebarRenderer
             ? $profile['id']
             : 'default';
         if (empty($options['enable_sidebar'])) {
-            return;
+            return null;
         }
 
         $currentLocale = $this->cache->getLocaleForCache();
@@ -793,37 +833,10 @@ class SidebarRenderer
         }
 
         if (!$cacheEnabled || false === $html) {
-            $allIcons = $this->icons->getAllIcons();
-            $templatePath = plugin_dir_path($this->pluginFile) . 'includes/sidebar-template.php';
-
-            if (!is_readable($templatePath)) {
-                if (function_exists('error_log')) {
-                    error_log('[Sidebar JLG] Sidebar template not found or unreadable at ' . $templatePath);
-                }
-
-                return;
-            }
-
-            $bufferStarted = ob_start();
-            if ($bufferStarted === false) {
-                $this->logSidebarBufferFailure('ob_start');
-
-                return;
-            }
-
-            $bufferLevel = ob_get_level();
-            $optionsForTemplate = $options;
-            $allIconsForTemplate = $allIcons;
-            $options = $optionsForTemplate;
-            $allIcons = $allIconsForTemplate;
-            require $templatePath;
-            $html = ob_get_clean();
+            $html = $this->renderSidebarToHtml($options);
 
             if (!is_string($html)) {
-                $this->cleanSidebarBuffer($bufferLevel);
-                $this->logSidebarBufferFailure('ob_get_clean');
-
-                return;
+                return null;
             }
 
             if ($cacheEnabled) {
@@ -832,6 +845,8 @@ class SidebarRenderer
         }
 
         echo $html;
+
+        return $html;
     }
 
     public function outputBodyDataScript(): void
