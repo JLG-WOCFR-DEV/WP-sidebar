@@ -2346,8 +2346,12 @@ jQuery(document).ready(function($) {
     function normalizeProfileConditions(rawConditions) {
         const conditions = rawConditions && typeof rawConditions === 'object' ? rawConditions : {};
 
+        const postTypes = Array.isArray(conditions.post_types)
+            ? conditions.post_types
+            : (Array.isArray(conditions.content_types) ? conditions.content_types : []);
+
         return {
-            post_types: normalizeStringArray(conditions.post_types),
+            post_types: normalizeStringArray(postTypes),
             roles: normalizeStringArray(conditions.roles),
             languages: normalizeLanguageArray(conditions.languages),
             taxonomies: normalizeTaxonomyCollection(conditions.taxonomies),
@@ -2635,19 +2639,31 @@ jQuery(document).ready(function($) {
 
         const normalized = [];
         rawTaxonomies.forEach((entry) => {
-            if (!entry || typeof entry !== 'object') {
+            if (!entry) {
                 return;
             }
 
-            const taxonomy = sanitizeProfileSlug(entry.taxonomy || entry.name || '');
-            if (!taxonomy) {
+            if (typeof entry === 'string' || typeof entry === 'number') {
+                const taxonomy = sanitizeProfileSlug(String(entry));
+                if (!taxonomy) {
+                    return;
+                }
+
+                normalized.push({ taxonomy, terms: [] });
                 return;
             }
 
-            normalized.push({
-                taxonomy,
-                terms: normalizeTaxonomyTerms(entry.terms),
-            });
+            if (typeof entry === 'object') {
+                const taxonomy = sanitizeProfileSlug(entry.taxonomy || entry.name || '');
+                if (!taxonomy) {
+                    return;
+                }
+
+                normalized.push({
+                    taxonomy,
+                    terms: normalizeTaxonomyTerms(entry.terms),
+                });
+            }
         });
 
         return normalized;
@@ -3460,6 +3476,7 @@ jQuery(document).ready(function($) {
             appendHiddenField(`${base}[enabled]`, profile.enabled ? '1' : '0');
 
             appendArrayFields(`${base}[conditions][post_types]`, profile.conditions.post_types);
+            appendArrayFields(`${base}[conditions][content_types]`, profile.conditions.post_types);
             appendTaxonomyFields(`${base}[conditions][taxonomies]`, profile.conditions.taxonomies);
             appendArrayFields(`${base}[conditions][roles]`, profile.conditions.roles);
             appendArrayFields(`${base}[conditions][languages]`, profile.conditions.languages);
