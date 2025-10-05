@@ -53,6 +53,15 @@ function assertNotContains(string $needle, string $haystack, string $message): v
     assertTrue(strpos($haystack, $needle) === false, $message);
 }
 
+function renderSidebarHtml(): string {
+    global $renderer;
+
+    $html = $renderer->render();
+    assertTrue(is_string($html), 'Sidebar renderer returned HTML during locale cache test');
+
+    return (string) $html;
+}
+
 function cachedLocaleExists(array $entries, string $locale, ?string $suffix): bool {
     foreach ($entries as $entry) {
         if (is_array($entry)) {
@@ -126,9 +135,7 @@ switch_to_locale('fr_FR');
 $GLOBALS['wp_test_inline_styles'] = [];
 $renderer->enqueueAssets();
 $french_inline_styles = wp_test_get_inline_styles('sidebar-jlg-public-css');
-ob_start();
-$renderer->render();
-$french_html = ob_get_clean();
+$french_html = renderSidebarHtml();
 
 assertContains('Ouvrir le menu', $french_html, 'French menu label rendered');
 assertContains('href="http://example.com/post/789"', $french_html, 'Post menu item links to the correct article');
@@ -139,18 +146,14 @@ assertNotContains('Open menu', $french_html, 'English menu label absent in Frenc
 assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR_default']), 'French transient stored');
 
 switch_to_locale('en_US');
-ob_start();
-$renderer->render();
-$english_html = ob_get_clean();
+$english_html = renderSidebarHtml();
 
 assertContains('Open menu', $english_html, 'English menu label rendered after locale switch');
 assertNotContains('Ouvrir le menu', $english_html, 'French label absent in English cache');
 assertTrue(isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US_default']), 'English transient stored');
 
 switch_to_locale('fr_FR');
-ob_start();
-$renderer->render();
-$french_cached_html = ob_get_clean();
+$french_cached_html = renderSidebarHtml();
 
 assertContains('Ouvrir le menu', $french_cached_html, 'French cache reused correctly');
 
@@ -177,17 +180,13 @@ $dynamic_settings['search_shortcode'] = '[dynamic]';
 update_option('sidebar_jlg_settings', $dynamic_settings);
 
 switch_to_locale('en_US');
-ob_start();
-$renderer->render();
-$first_dynamic_html = ob_get_clean();
+$first_dynamic_html = renderSidebarHtml();
 
 $dynamic_transient_key = 'sidebar_jlg_full_html_en_US_default';
 assertTrue(!isset($GLOBALS['wp_test_transients'][$dynamic_transient_key]), 'Dynamic sidebar render skips transient storage');
 assertContains('#1', $first_dynamic_html, 'Dynamic render includes first shortcode marker');
 
-ob_start();
-$renderer->render();
-$second_dynamic_html = ob_get_clean();
+$second_dynamic_html = renderSidebarHtml();
 
 assertContains('#2', $second_dynamic_html, 'Dynamic render increments shortcode marker on subsequent render');
 assertTrue($first_dynamic_html !== $second_dynamic_html, 'Dynamic HTML regenerated for each render when cache disabled');
@@ -208,16 +207,12 @@ $search_disabled_settings['search_shortcode'] = '[disabled]';
 update_option('sidebar_jlg_settings', $search_disabled_settings);
 
 switch_to_locale('en_US');
-ob_start();
-$renderer->render();
-$search_disabled_first_html = ob_get_clean();
+$search_disabled_first_html = renderSidebarHtml();
 
 $search_disabled_transient_key = 'sidebar_jlg_full_html_en_US_default';
 assertTrue(isset($GLOBALS['wp_test_transients'][$search_disabled_transient_key]), 'Sidebar cache stored when search disabled despite shortcode method');
 
-ob_start();
-$renderer->render();
-$search_disabled_second_html = ob_get_clean();
+$search_disabled_second_html = renderSidebarHtml();
 
 assertTrue($search_disabled_first_html === $search_disabled_second_html, 'Cached HTML reused when search disabled despite shortcode method');
 assertTrue(($GLOBALS['wp_test_shortcode_calls'] ?? 0) === 0, 'Shortcode not executed when search disabled');
@@ -246,16 +241,12 @@ update_option('sidebar_jlg_settings', $default_search_settings);
 
 $default_search_transient_key = 'sidebar_jlg_full_html_en_US_default';
 switch_to_locale('en_US');
-ob_start();
-$renderer->render();
-$default_search_first_html = ob_get_clean();
+$default_search_first_html = renderSidebarHtml();
 
 assertContains('DEFAULT_SEARCH #1', $default_search_first_html, 'Default search render outputs first marker');
 assertTrue(!isset($GLOBALS['wp_test_transients'][$default_search_transient_key]), 'Default search render skips transient storage on first render');
 
-ob_start();
-$renderer->render();
-$default_search_second_html = ob_get_clean();
+$default_search_second_html = renderSidebarHtml();
 
 assertContains('DEFAULT_SEARCH #2', $default_search_second_html, 'Default search render outputs second marker');
 

@@ -11,9 +11,7 @@ use function __;
 use function current_time;
 use function gmdate;
 use function home_url;
-use function is_readable;
 use function json_decode;
-use function plugin_dir_path;
 use function sanitize_option;
 use function update_option;
 use function time;
@@ -675,13 +673,6 @@ class Endpoints
 
         $defaults = $this->settings->getDefaultSettings();
         $options = wp_parse_args($sanitized, $defaults);
-        $templatePath = plugin_dir_path($this->pluginFile) . 'includes/sidebar-template.php';
-        if (!is_readable($templatePath)) {
-            wp_send_json_error([
-                'message' => __('Le template d’aperçu est introuvable.', 'sidebar-jlg'),
-            ]);
-        }
-
         $html = $this->renderer->renderSidebarToHtml($options);
 
         if (!is_string($html)) {

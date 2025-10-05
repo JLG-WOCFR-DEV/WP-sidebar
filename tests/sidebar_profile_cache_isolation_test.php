@@ -57,6 +57,16 @@ function assertSame($expected, $actual, string $message): void
     assertTrue($expected === $actual, $message);
 }
 
+function renderSidebarHtml(): string
+{
+    global $renderer;
+
+    $html = $renderer->render();
+    assertTrue(is_string($html), 'Sidebar renderer returned HTML during profile cache isolation test');
+
+    return (string) $html;
+}
+
 $baseSettings = $settingsRepository->getDefaultSettings();
 $baseSettings['enable_sidebar'] = true;
 $baseSettings['social_icons'] = [];
@@ -97,9 +107,7 @@ $setPostContext = static function (string $postType): void {
 };
 
 $setPostContext('post');
-ob_start();
-$renderer->render();
-$postProfileHtml = (string) ob_get_clean();
+$postProfileHtml = renderSidebarHtml();
 
 assertContains('Post Profile Nav', $postProfileHtml, 'Post profile navigation label rendered');
 assertNotContains('Page Profile Nav', $postProfileHtml, 'Page profile label absent from post profile cache');
@@ -109,9 +117,7 @@ assertTrue(
 );
 
 $setPostContext('page');
-ob_start();
-$renderer->render();
-$pageProfileHtml = (string) ob_get_clean();
+$pageProfileHtml = renderSidebarHtml();
 
 assertContains('Page Profile Nav', $pageProfileHtml, 'Page profile navigation label rendered');
 assertNotContains('Post Profile Nav', $pageProfileHtml, 'Page profile render does not reuse post profile cache');
@@ -122,9 +128,7 @@ assertTrue(
 assertTrue($pageProfileHtml !== $postProfileHtml, 'Page profile HTML differs from post profile HTML');
 
 $setPostContext('post');
-ob_start();
-$renderer->render();
-$secondPostHtml = (string) ob_get_clean();
+$secondPostHtml = renderSidebarHtml();
 
 assertSame($postProfileHtml, $secondPostHtml, 'Post profile cache reused on subsequent render');
 assertTrue(

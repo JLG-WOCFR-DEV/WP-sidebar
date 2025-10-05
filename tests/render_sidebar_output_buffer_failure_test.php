@@ -61,9 +61,7 @@ namespace {
         return false;
     };
 
-    ob_start();
-    $renderer->render();
-    $output = ob_get_clean();
+    $result = $renderer->render();
 
     unset($GLOBALS['wp_test_function_overrides']['JLG\\Sidebar\\Frontend\\ob_get_clean']);
     unset($GLOBALS['wp_test_function_overrides']['set_transient']);
@@ -81,7 +79,7 @@ namespace {
         echo "[FAIL] {$message}\n";
     };
 
-    $assertTrue($output === '', 'No sidebar output emitted when buffer capture fails');
+    $assertTrue($result === null, 'No sidebar HTML returned when buffer capture fails');
     $assertTrue($setTransientCalls === [], 'Cache is not written when buffer capture fails');
 
     if ($testsPassed) {

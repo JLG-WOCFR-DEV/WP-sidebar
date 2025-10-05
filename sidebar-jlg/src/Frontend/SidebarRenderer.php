@@ -274,7 +274,7 @@ class SidebarRenderer
     public function registerHooks(): void
     {
         add_action('wp_enqueue_scripts', [$this, 'enqueueAssets']);
-        add_action('wp_footer', [$this, 'render']);
+        add_action('wp_footer', [$this, 'outputSidebar']);
         add_filter('body_class', [$this, 'addBodyClasses']);
         add_action('wp_body_open', [$this, 'outputBodyDataScript']);
         add_action('wp_footer', [$this, 'outputBodyDataScriptFallback'], 5);
@@ -844,9 +844,18 @@ class SidebarRenderer
             }
         }
 
-        echo $html;
-
         return $html;
+    }
+
+    public function outputSidebar(): void
+    {
+        $html = $this->render();
+
+        if (!is_string($html)) {
+            return;
+        }
+
+        echo $html;
     }
 
     public function outputBodyDataScript(): void

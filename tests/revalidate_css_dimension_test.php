@@ -70,9 +70,7 @@ $GLOBALS['wp_test_inline_styles'] = [];
 $renderer->enqueueAssets();
 $inlineStyles = wp_test_get_inline_styles('sidebar-jlg-public-css');
 
-ob_start();
 $renderer->render();
-ob_end_clean();
 
 $defaultContentMarginCss = is_array($defaultContentMargin)
     ? ValueNormalizer::dimensionToCss($defaultContentMargin, '')

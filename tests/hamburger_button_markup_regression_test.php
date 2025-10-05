@@ -20,10 +20,6 @@ update_option('sidebar_jlg_settings', $defaultSettings);
 $menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
 
-ob_start();
-$renderer->render();
-$html = ob_get_clean();
-
 $testsPassed = true;
 
 $assertTrue = static function ($condition, string $message) use (&$testsPassed): void {
@@ -44,6 +40,11 @@ $assertContains = static function (string $needle, string $haystack, string $mes
 $assertNotContains = static function (string $needle, string $haystack, string $message) use ($assertTrue): void {
     $assertTrue(strpos($haystack, $needle) === false, $message);
 };
+
+$html = $renderer->render();
+
+$assertTrue(is_string($html), 'Sidebar renderer returned HTML for hamburger markup test');
+$html = (string) $html;
 
 $assertContains('aria-controls="pro-sidebar"', $html, 'Hamburger button retains aria-controls attribute');
 $assertNotContains('\\" aria-controls', $html, 'Hamburger button markup does not include escaped aria-controls attribute');

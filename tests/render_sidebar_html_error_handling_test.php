@@ -37,9 +37,12 @@ $menuCache->clear();
 $GLOBALS['wp_test_transients'] = [];
 $GLOBALS['test_category_link_return'] = new WP_Error('invalid_term', 'Invalid term');
 
-ob_start();
-$renderer->render();
-$html = ob_get_clean();
+$html = $renderer->render();
+
+if (!is_string($html)) {
+    echo "[FAIL] Sidebar renderer did not return HTML string.\n";
+    exit(1);
+}
 
 $testsPassed = true;
 
@@ -58,7 +61,7 @@ function assertContains(string $needle, string $haystack, string $message): void
     assertTrue(strpos($haystack, $needle) !== false, $message);
 }
 
-assertContains('<nav class="sidebar-navigation"', $html, 'Sidebar markup rendered');
+assertContains('class="sidebar-navigation"', $html, 'Sidebar markup rendered');
 assertContains('href="#"', $html, 'Category link falls back to hash when WP_Error returned');
 
 if ($testsPassed) {
