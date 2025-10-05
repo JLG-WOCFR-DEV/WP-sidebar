@@ -20,6 +20,13 @@ $GLOBALS['wp_test_options']['sidebar_jlg_profiles'] = [
         'conditions' => [
             'roles' => ['editor'],
             'languages' => ['en_US'],
+            'devices' => ['desktop'],
+            'logged_in' => 'logged-out',
+            'schedule' => [
+                'start' => '10:00',
+                'end' => '16:00',
+                'days' => ['wed'],
+            ],
         ],
         'settings' => [
             'layout_style' => 'floating',
@@ -38,6 +45,13 @@ $profiles = [
             'taxonomies' => ['category', 'invalid'],
             'roles' => ['administrator', 'ghost'],
             'languages' => ['fr_FR', 'xx_YY'],
+            'devices' => ['mobile', 'desktop', 'tablet'],
+            'logged_in' => 'logged-in',
+            'schedule' => [
+                'start' => '08:30',
+                'end' => '18:00',
+                'days' => ['mon', 'fri', 'holiday'],
+            ],
         ],
         'settings' => [
             'layout_style' => 'floating',
@@ -93,6 +107,23 @@ if (($primaryConditions['languages'] ?? []) !== ['fr_FR']) {
     echo 'Primary languages were not sanitized as expected.' . "\n";
     exit(1);
 }
+if (($primaryConditions['devices'] ?? []) !== ['mobile', 'desktop']) {
+    echo 'Primary devices were not sanitized as expected.' . "\n";
+    exit(1);
+}
+if (($primaryConditions['logged_in'] ?? '') !== 'logged-in') {
+    echo 'Primary logged_in condition was not sanitized as expected.' . "\n";
+    exit(1);
+}
+$primarySchedule = $primaryConditions['schedule'] ?? [];
+if (($primarySchedule['start'] ?? '') !== '08:30' || ($primarySchedule['end'] ?? '') !== '18:00') {
+    echo 'Primary schedule times were not sanitized as expected.' . "\n";
+    exit(1);
+}
+if (($primarySchedule['days'] ?? []) !== ['mon', 'fri']) {
+    echo 'Primary schedule days were not sanitized as expected.' . "\n";
+    exit(1);
+}
 
 $primarySettings = $primary['settings'] ?? [];
 if (($primarySettings['layout_style'] ?? '') !== 'floating') {
@@ -120,6 +151,23 @@ if (($secondaryConditions['roles'] ?? []) !== ['editor']) {
 }
 if (($secondaryConditions['languages'] ?? []) !== ['en_US']) {
     echo 'Secondary languages should fall back to stored values.' . "\n";
+    exit(1);
+}
+if (($secondaryConditions['devices'] ?? []) !== ['desktop']) {
+    echo 'Secondary devices should fall back to stored values.' . "\n";
+    exit(1);
+}
+if (($secondaryConditions['logged_in'] ?? '') !== 'logged-out') {
+    echo 'Secondary logged_in should fall back to stored values.' . "\n";
+    exit(1);
+}
+$secondarySchedule = $secondaryConditions['schedule'] ?? [];
+if (($secondarySchedule['start'] ?? '') !== '10:00' || ($secondarySchedule['end'] ?? '') !== '16:00') {
+    echo 'Secondary schedule times should fall back to stored values.' . "\n";
+    exit(1);
+}
+if (($secondarySchedule['days'] ?? []) !== ['wed']) {
+    echo 'Secondary schedule days should fall back to stored values.' . "\n";
     exit(1);
 }
 

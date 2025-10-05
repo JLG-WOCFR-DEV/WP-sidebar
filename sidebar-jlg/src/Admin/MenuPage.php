@@ -132,6 +132,9 @@ class MenuPage
             'taxonomies' => $this->getProfileTaxonomyChoices(),
             'roles' => $this->getProfileRoleChoices(),
             'languages' => $this->getProfileLanguageChoices(),
+            'devices' => $this->getProfileDeviceChoices(),
+            'login_states' => $this->getProfileLoginStateChoices(),
+            'schedule_days' => $this->getProfileScheduleDayChoices(),
         ];
 
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
@@ -417,5 +420,44 @@ class MenuPage
         }
 
         return array_values($choices);
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function getProfileDeviceChoices(): array
+    {
+        return [
+            ['value' => 'desktop', 'label' => __('Ordinateur (bureau)', 'sidebar-jlg')],
+            ['value' => 'mobile', 'label' => __('Mobile', 'sidebar-jlg')],
+        ];
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function getProfileLoginStateChoices(): array
+    {
+        return [
+            ['value' => 'any', 'label' => __('Tous les visiteurs', 'sidebar-jlg')],
+            ['value' => 'logged-in', 'label' => __('Utilisateurs connectés', 'sidebar-jlg')],
+            ['value' => 'logged-out', 'label' => __('Visiteurs non connectés', 'sidebar-jlg')],
+        ];
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function getProfileScheduleDayChoices(): array
+    {
+        return [
+            ['value' => 'mon', 'label' => __('Lundi', 'sidebar-jlg')],
+            ['value' => 'tue', 'label' => __('Mardi', 'sidebar-jlg')],
+            ['value' => 'wed', 'label' => __('Mercredi', 'sidebar-jlg')],
+            ['value' => 'thu', 'label' => __('Jeudi', 'sidebar-jlg')],
+            ['value' => 'fri', 'label' => __('Vendredi', 'sidebar-jlg')],
+            ['value' => 'sat', 'label' => __('Samedi', 'sidebar-jlg')],
+            ['value' => 'sun', 'label' => __('Dimanche', 'sidebar-jlg')],
+        ];
     }
 }
