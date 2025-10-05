@@ -62,6 +62,191 @@ class SidebarRenderer
         'sidebar_position' => 'left',
     ];
 
+    private const STYLE_VARIABLE_MAP = [
+        [
+            'option' => 'width_desktop',
+            'variable' => '--sidebar-width-desktop',
+            'transform' => 'formatPixelValue',
+        ],
+        [
+            'option' => 'width_tablet',
+            'variable' => '--sidebar-width-tablet',
+            'transform' => 'formatPixelValue',
+        ],
+        [
+            'option' => 'width_mobile',
+            'variable' => '--sidebar-width-mobile',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'handler' => 'applyBackgroundStyles',
+        ],
+        [
+            'handler' => 'applyAccentStyles',
+        ],
+        [
+            'option' => 'font_size',
+            'variable' => '--sidebar-font-size',
+            'transform' => 'formatPixelValue',
+        ],
+        [
+            'handler' => 'applyFontFamily',
+        ],
+        [
+            'option' => 'font_weight',
+            'variable' => '--sidebar-font-weight',
+            'transform' => 'transformFontWeight',
+        ],
+        [
+            'option' => 'text_transform',
+            'variable' => '--sidebar-text-transform',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'letter_spacing',
+            'variable' => '--sidebar-letter-spacing',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'font_color',
+            'variable' => '--sidebar-text-color',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'font_hover_color',
+            'variable' => '--sidebar-text-hover-color',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'animation_speed',
+            'variable' => '--transition-speed',
+            'transform' => 'formatMillisecondsValue',
+        ],
+        [
+            'option' => 'header_padding_top',
+            'variable' => '--header-padding-top',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'header_alignment_desktop',
+            'variable' => '--header-alignment-desktop',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'header_alignment_mobile',
+            'variable' => '--header-alignment-mobile',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'header_logo_size',
+            'variable' => '--header-logo-size',
+            'transform' => 'formatPixelValue',
+        ],
+        [
+            'option' => 'hamburger_top_position',
+            'variable' => '--hamburger-top-position',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'hamburger_horizontal_offset',
+            'variable' => '--hamburger-inline-offset',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'hamburger_size',
+            'variable' => '--hamburger-size',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'handler' => 'applyHamburgerColor',
+        ],
+        [
+            'handler' => 'applyContentMargin',
+        ],
+        [
+            'option' => 'floating_vertical_margin',
+            'variable' => '--floating-vertical-margin',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'border_radius',
+            'variable' => '--border-radius',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'border_width',
+            'variable' => '--border-width',
+            'transform' => 'formatPixelValue',
+        ],
+        [
+            'option' => 'border_color',
+            'variable' => '--border-color',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'overlay_color',
+            'variable' => '--overlay-color',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'overlay_opacity',
+            'variable' => '--overlay-opacity',
+            'transform' => 'formatOpacityValue',
+        ],
+        [
+            'option' => 'mobile_bg_color',
+            'variable' => '--mobile-bg-color',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'mobile_bg_opacity',
+            'variable' => '--mobile-bg-opacity',
+            'transform' => 'formatOpacityValue',
+        ],
+        [
+            'option' => 'mobile_blur',
+            'variable' => '--mobile-blur',
+            'transform' => 'formatPixelValue',
+        ],
+        [
+            'option' => 'menu_alignment_desktop',
+            'variable' => '--menu-alignment-desktop',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'menu_alignment_mobile',
+            'variable' => '--menu-alignment-mobile',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'search_alignment',
+            'variable' => '--search-alignment',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'horizontal_bar_height',
+            'variable' => '--horizontal-bar-height',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'option' => 'horizontal_bar_alignment',
+            'variable' => '--horizontal-bar-alignment',
+            'transform' => 'sanitizeCssString',
+        ],
+        [
+            'handler' => 'applySocialIconSizeFactor',
+        ],
+        [
+            'handler' => 'applyHoverEffectStyles',
+        ],
+        [
+            'handler' => 'applyAccessibleLabels',
+        ],
+        [
+            'handler' => 'applySafeAreaFallbacks',
+        ],
+    ];
+
     private SettingsRepository $settings;
     private IconLibrary $icons;
     private MenuCache $cache;
@@ -155,138 +340,209 @@ class SidebarRenderer
 
     private function buildDynamicStyles(array $options): string
     {
+        $variables = $this->collectDynamicStyleVariables($options);
+
+        if ($variables === []) {
+            return '';
+        }
+
+        $styles = ':root {';
+        foreach ($variables as $name => $value) {
+            $styles .= $name . ': ' . esc_attr($value) . ';';
+        }
+        $styles .= '}';
+
+        return $styles;
+    }
+
+    private function collectDynamicStyleVariables(array $options): array
+    {
         $variables = [];
 
-        $this->assignVariable($variables, '--sidebar-width-desktop', $this->formatPixelValue($this->resolveOption($options, 'width_desktop')));
-        $this->assignVariable($variables, '--sidebar-width-tablet', $this->formatPixelValue($this->resolveOption($options, 'width_tablet')));
-        $this->assignVariable($variables, '--sidebar-width-mobile', $this->sanitizeCssString($this->resolveOption($options, 'width_mobile')));
+        foreach (self::STYLE_VARIABLE_MAP as $definition) {
+            if (isset($definition['handler'])) {
+                $handler = $definition['handler'];
+                if (method_exists($this, $handler)) {
+                    $this->$handler($variables, $options, $definition);
+                }
 
-        $bgType = $this->sanitizeCssString($this->resolveOption($options, 'bg_color_type')) ?? self::DYNAMIC_STYLE_DEFAULTS['bg_color_type'];
+                continue;
+            }
+
+            $optionKey = $definition['option'] ?? null;
+            $variableName = $definition['variable'] ?? null;
+
+            if ($optionKey === null || $variableName === null) {
+                continue;
+            }
+
+            $value = self::resolveOption($options, $optionKey);
+
+            if (isset($definition['transform'])) {
+                $value = self::applyConfiguredTransform($definition['transform'], $value);
+            }
+
+            if ($value === null && array_key_exists('fallback', $definition)) {
+                $value = $definition['fallback'];
+            }
+
+            $this->assignVariable($variables, $variableName, $value);
+        }
+
+        return $variables;
+    }
+
+    /**
+     * @param mixed $value
+     * @return mixed
+     */
+    private static function applyConfiguredTransform(string $transform, $value)
+    {
+        if ($transform === '' || $transform === 'identity') {
+            return $value;
+        }
+
+        if (!is_callable([self::class, $transform])) {
+            return $value;
+        }
+
+        return call_user_func([self::class, $transform], $value);
+    }
+
+    private function applyBackgroundStyles(array &$variables, array $options, array $definition = []): void
+    {
+        $bgType = self::sanitizeCssString(self::resolveOption($options, 'bg_color_type'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['bg_color_type'];
+
         if ($bgType === 'gradient') {
-            $bgStart = $this->sanitizeCssString($this->resolveOption($options, 'bg_color_start'));
-            $bgEnd = $this->sanitizeCssString($this->resolveOption($options, 'bg_color_end'));
+            $bgStart = self::sanitizeCssString(self::resolveOption($options, 'bg_color_start'));
+            $bgEnd = self::sanitizeCssString(self::resolveOption($options, 'bg_color_end'));
 
             if ($bgStart !== null && $bgEnd !== null) {
-                $this->assignVariable($variables, '--sidebar-bg-image', sprintf('linear-gradient(180deg, %s 0%%, %s 100%%)', $bgStart, $bgEnd));
+                $this->assignVariable(
+                    $variables,
+                    '--sidebar-bg-image',
+                    sprintf('linear-gradient(180deg, %s 0%%, %s 100%%)', $bgStart, $bgEnd)
+                );
                 $this->assignVariable($variables, '--sidebar-bg-color', $bgStart);
-            } else {
-                $solidBg = $this->sanitizeCssString($this->resolveOption($options, 'bg_color')) ?? self::DYNAMIC_STYLE_DEFAULTS['bg_color'];
-                $this->assignVariable($variables, '--sidebar-bg-image', 'none');
-                $this->assignVariable($variables, '--sidebar-bg-color', $solidBg);
+
+                return;
             }
-        } else {
-            $solidBg = $this->sanitizeCssString($this->resolveOption($options, 'bg_color')) ?? self::DYNAMIC_STYLE_DEFAULTS['bg_color'];
-            $this->assignVariable($variables, '--sidebar-bg-image', 'none');
-            $this->assignVariable($variables, '--sidebar-bg-color', $solidBg);
         }
 
-        $accentType = $this->sanitizeCssString($this->resolveOption($options, 'accent_color_type')) ?? self::DYNAMIC_STYLE_DEFAULTS['accent_color_type'];
+        $solidBg = self::sanitizeCssString(self::resolveOption($options, 'bg_color'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['bg_color'];
+        $this->assignVariable($variables, '--sidebar-bg-image', 'none');
+        $this->assignVariable($variables, '--sidebar-bg-color', $solidBg);
+    }
+
+    private function applyAccentStyles(array &$variables, array $options, array $definition = []): void
+    {
+        $accentType = self::sanitizeCssString(self::resolveOption($options, 'accent_color_type'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['accent_color_type'];
+
         if ($accentType === 'gradient') {
-            $accentStart = $this->sanitizeCssString($this->resolveOption($options, 'accent_color_start'));
-            $accentEnd = $this->sanitizeCssString($this->resolveOption($options, 'accent_color_end'));
+            $accentStart = self::sanitizeCssString(self::resolveOption($options, 'accent_color_start'));
+            $accentEnd = self::sanitizeCssString(self::resolveOption($options, 'accent_color_end'));
 
             if ($accentStart !== null && $accentEnd !== null) {
-                $this->assignVariable($variables, '--primary-accent-image', sprintf('linear-gradient(90deg, %s 0%%, %s 100%%)', $accentStart, $accentEnd));
+                $this->assignVariable(
+                    $variables,
+                    '--primary-accent-image',
+                    sprintf('linear-gradient(90deg, %s 0%%, %s 100%%)', $accentStart, $accentEnd)
+                );
                 $this->assignVariable($variables, '--primary-accent-color', $accentStart);
-            } else {
-                $solidAccent = $this->sanitizeCssString($this->resolveOption($options, 'accent_color')) ?? self::DYNAMIC_STYLE_DEFAULTS['accent_color'];
-                $this->assignVariable($variables, '--primary-accent-image', 'none');
-                $this->assignVariable($variables, '--primary-accent-color', $solidAccent);
+
+                return;
             }
-        } else {
-            $solidAccent = $this->sanitizeCssString($this->resolveOption($options, 'accent_color')) ?? self::DYNAMIC_STYLE_DEFAULTS['accent_color'];
-            $this->assignVariable($variables, '--primary-accent-image', 'none');
-            $this->assignVariable($variables, '--primary-accent-color', $solidAccent);
         }
 
-        $this->assignVariable($variables, '--sidebar-font-size', $this->formatPixelValue($this->resolveOption($options, 'font_size')));
-        $fontFamilyKey = $this->resolveOption($options, 'font_family');
+        $solidAccent = self::sanitizeCssString(self::resolveOption($options, 'accent_color'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['accent_color'];
+        $this->assignVariable($variables, '--primary-accent-image', 'none');
+        $this->assignVariable($variables, '--primary-accent-color', $solidAccent);
+    }
+
+    private function applyFontFamily(array &$variables, array $options, array $definition = []): void
+    {
+        $fontFamilyKey = self::resolveOption($options, 'font_family');
         $fontStack = null;
+
         if (is_string($fontFamilyKey) && $fontFamilyKey !== '') {
             $fontStack = TypographyOptions::getFontStack($fontFamilyKey);
         }
+
         if ($fontStack === null) {
             $fontStack = TypographyOptions::getFontStack(self::DYNAMIC_STYLE_DEFAULTS['font_family']);
         }
+
         if ($fontStack !== null) {
             $this->assignVariable($variables, '--sidebar-font-family', $fontStack);
         }
-        $fontWeight = $this->resolveOption($options, 'font_weight');
-        if (is_string($fontWeight) || is_numeric($fontWeight)) {
-            $this->assignVariable($variables, '--sidebar-font-weight', (string) $fontWeight);
-        }
-        $textTransform = $this->sanitizeCssString($this->resolveOption($options, 'text_transform'))
-            ?? self::DYNAMIC_STYLE_DEFAULTS['text_transform'];
-        $this->assignVariable($variables, '--sidebar-text-transform', $textTransform);
-        $letterSpacing = $this->sanitizeCssString($this->resolveOption($options, 'letter_spacing'))
-            ?? self::DYNAMIC_STYLE_DEFAULTS['letter_spacing'];
-        $this->assignVariable($variables, '--sidebar-letter-spacing', $letterSpacing);
-        $this->assignVariable($variables, '--sidebar-text-color', $this->sanitizeCssString($this->resolveOption($options, 'font_color')));
-        $this->assignVariable($variables, '--sidebar-text-hover-color', $this->sanitizeCssString($this->resolveOption($options, 'font_hover_color')));
-        $this->assignVariable($variables, '--transition-speed', $this->formatMillisecondsValue($this->resolveOption($options, 'animation_speed')));
-        $this->assignVariable($variables, '--header-padding-top', $this->sanitizeCssString($this->resolveOption($options, 'header_padding_top')));
-        $this->assignVariable($variables, '--header-alignment-desktop', $this->sanitizeCssString($this->resolveOption($options, 'header_alignment_desktop')));
-        $this->assignVariable($variables, '--header-alignment-mobile', $this->sanitizeCssString($this->resolveOption($options, 'header_alignment_mobile')));
-        $this->assignVariable($variables, '--header-logo-size', $this->formatPixelValue($this->resolveOption($options, 'header_logo_size')));
-        $this->assignVariable($variables, '--hamburger-top-position', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_top_position')));
-        $this->assignVariable($variables, '--hamburger-inline-offset', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_horizontal_offset')));
-        $this->assignVariable($variables, '--hamburger-size', $this->sanitizeCssString($this->resolveOption($options, 'hamburger_size')));
+    }
 
-        $hamburgerColor = $this->sanitizeCssString($options['hamburger_color'] ?? null);
+    private function applyHamburgerColor(array &$variables, array $options, array $definition = []): void
+    {
+        $hamburgerColor = self::sanitizeCssString($options['hamburger_color'] ?? null);
+
         if ($hamburgerColor === null) {
-            $hamburgerColor = $this->sanitizeCssString($this->resolveOption($options, 'font_color'));
+            $hamburgerColor = self::sanitizeCssString(self::resolveOption($options, 'font_color'));
         }
 
         $this->assignVariable($variables, '--hamburger-color', $hamburgerColor);
+    }
 
-        $contentMargin = $this->resolveContentMargin($options);
+    private function applyContentMargin(array &$variables, array $options, array $definition = []): void
+    {
+        $contentMargin = self::resolveContentMargin($options);
+
         if ($contentMargin !== null) {
             $this->assignVariable($variables, '--content-margin', $contentMargin);
         }
+    }
 
-        $this->assignVariable($variables, '--floating-vertical-margin', $this->sanitizeCssString($this->resolveOption($options, 'floating_vertical_margin')));
-        $this->assignVariable($variables, '--border-radius', $this->sanitizeCssString($this->resolveOption($options, 'border_radius')));
-        $this->assignVariable($variables, '--border-width', $this->formatPixelValue($this->resolveOption($options, 'border_width')));
-        $this->assignVariable($variables, '--border-color', $this->sanitizeCssString($this->resolveOption($options, 'border_color')));
-        $this->assignVariable($variables, '--overlay-color', $this->sanitizeCssString($this->resolveOption($options, 'overlay_color')));
-        $this->assignVariable($variables, '--overlay-opacity', $this->formatOpacityValue($this->resolveOption($options, 'overlay_opacity')));
-        $this->assignVariable($variables, '--mobile-bg-color', $this->sanitizeCssString($this->resolveOption($options, 'mobile_bg_color')));
-        $this->assignVariable($variables, '--mobile-bg-opacity', $this->formatOpacityValue($this->resolveOption($options, 'mobile_bg_opacity')));
-        $this->assignVariable($variables, '--mobile-blur', $this->formatPixelValue($this->resolveOption($options, 'mobile_blur')));
-        $this->assignVariable($variables, '--menu-alignment-desktop', $this->sanitizeCssString($this->resolveOption($options, 'menu_alignment_desktop')));
-        $this->assignVariable($variables, '--menu-alignment-mobile', $this->sanitizeCssString($this->resolveOption($options, 'menu_alignment_mobile')));
-        $this->assignVariable($variables, '--search-alignment', $this->sanitizeCssString($this->resolveOption($options, 'search_alignment')));
+    private function applySocialIconSizeFactor(array &$variables, array $options, array $definition = []): void
+    {
+        $rawSocialIconSize = self::resolveOption($options, 'social_icon_size');
 
-        $horizontalHeight = $this->sanitizeCssString($this->resolveOption($options, 'horizontal_bar_height'))
-            ?? self::DYNAMIC_STYLE_DEFAULTS['horizontal_bar_height'];
-        $this->assignVariable($variables, '--horizontal-bar-height', $horizontalHeight);
-
-        $horizontalAlignment = $this->sanitizeCssString($this->resolveOption($options, 'horizontal_bar_alignment'))
-            ?? self::DYNAMIC_STYLE_DEFAULTS['horizontal_bar_alignment'];
-        $this->assignVariable($variables, '--horizontal-bar-alignment', $horizontalAlignment);
-
-        $rawSocialIconSize = $this->resolveOption($options, 'social_icon_size');
         if (!is_numeric($rawSocialIconSize)) {
             $rawSocialIconSize = self::DYNAMIC_STYLE_DEFAULTS['social_icon_size'];
         }
-        $socialIconSizeFactor = ((float) $rawSocialIconSize) / 100;
-        $this->assignVariable($variables, '--social-icon-size-factor', $this->normalizeNumericValue($socialIconSizeFactor));
 
-        $hoverEffectDesktop = $this->sanitizeCssString($this->resolveOption($options, 'hover_effect_desktop')) ?? self::DYNAMIC_STYLE_DEFAULTS['hover_effect_desktop'];
-        $hoverEffectMobile = $this->sanitizeCssString($this->resolveOption($options, 'hover_effect_mobile')) ?? self::DYNAMIC_STYLE_DEFAULTS['hover_effect_mobile'];
-        if ($hoverEffectDesktop === 'neon' || $hoverEffectMobile === 'neon') {
-            $this->assignVariable($variables, '--neon-blur', $this->formatPixelValue($this->resolveOption($options, 'neon_blur')));
-            $this->assignVariable($variables, '--neon-spread', $this->formatPixelValue($this->resolveOption($options, 'neon_spread')));
+        $socialIconSizeFactor = ((float) $rawSocialIconSize) / 100;
+        $normalized = self::normalizeNumericValue($socialIconSizeFactor);
+
+        $this->assignVariable($variables, '--social-icon-size-factor', $normalized);
+    }
+
+    private function applyHoverEffectStyles(array &$variables, array $options, array $definition = []): void
+    {
+        $hoverEffectDesktop = self::sanitizeCssString(self::resolveOption($options, 'hover_effect_desktop'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['hover_effect_desktop'];
+        $hoverEffectMobile = self::sanitizeCssString(self::resolveOption($options, 'hover_effect_mobile'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['hover_effect_mobile'];
+
+        if ($hoverEffectDesktop !== 'neon' && $hoverEffectMobile !== 'neon') {
+            return;
         }
 
-        $navAriaLabel = $this->resolveAccessibleLabelOption($options, 'nav_aria_label', __('Navigation principale', 'sidebar-jlg'));
-        $toggleExpandLabel = $this->resolveAccessibleLabelOption($options, 'toggle_open_label', __('Afficher le sous-menu', 'sidebar-jlg'));
-        $toggleCollapseLabel = $this->resolveAccessibleLabelOption($options, 'toggle_close_label', __('Masquer le sous-menu', 'sidebar-jlg'));
+        $this->assignVariable($variables, '--neon-blur', self::formatPixelValue(self::resolveOption($options, 'neon_blur')));
+        $this->assignVariable($variables, '--neon-spread', self::formatPixelValue(self::resolveOption($options, 'neon_spread')));
+    }
 
-        $this->assignVariable($variables, '--sidebar-nav-label', $this->formatCssStringValue($navAriaLabel));
-        $this->assignVariable($variables, '--sidebar-toggle-open-label', $this->formatCssStringValue($toggleExpandLabel));
-        $this->assignVariable($variables, '--sidebar-toggle-close-label', $this->formatCssStringValue($toggleCollapseLabel));
+    private function applyAccessibleLabels(array &$variables, array $options, array $definition = []): void
+    {
+        $navAriaLabel = self::resolveAccessibleLabelOption($options, 'nav_aria_label', __('Navigation principale', 'sidebar-jlg'));
+        $toggleExpandLabel = self::resolveAccessibleLabelOption($options, 'toggle_open_label', __('Afficher le sous-menu', 'sidebar-jlg'));
+        $toggleCollapseLabel = self::resolveAccessibleLabelOption($options, 'toggle_close_label', __('Masquer le sous-menu', 'sidebar-jlg'));
 
+        $this->assignVariable($variables, '--sidebar-nav-label', self::formatCssStringValue($navAriaLabel));
+        $this->assignVariable($variables, '--sidebar-toggle-open-label', self::formatCssStringValue($toggleExpandLabel));
+        $this->assignVariable($variables, '--sidebar-toggle-close-label', self::formatCssStringValue($toggleCollapseLabel));
+    }
+
+    private function applySafeAreaFallbacks(array &$variables, array $options, array $definition = []): void
+    {
         $safeAreaFallbackDefaults = [
             'block_start' => '0px',
             'block_end' => '0px',
@@ -295,6 +551,7 @@ class SidebarRenderer
         ];
 
         $safeAreaFallbacks = apply_filters('sidebar_jlg_safe_area_fallbacks', $safeAreaFallbackDefaults, $options);
+
         if (!is_array($safeAreaFallbacks)) {
             $safeAreaFallbacks = $safeAreaFallbackDefaults;
         } else {
@@ -310,21 +567,23 @@ class SidebarRenderer
 
         foreach ($safeAreaVariables as $key => $variableName) {
             $fallbackValue = $safeAreaFallbacks[$key] ?? $safeAreaFallbackDefaults[$key];
-            $sanitizedValue = $this->sanitizeCssString($fallbackValue) ?? $safeAreaFallbackDefaults[$key];
+            $sanitizedValue = self::sanitizeCssString($fallbackValue) ?? $safeAreaFallbackDefaults[$key];
             $this->assignVariable($variables, $variableName, $sanitizedValue);
         }
+    }
 
-        if ($variables === []) {
-            return '';
+    /**
+     * @param mixed $value
+     */
+    private static function transformFontWeight($value): ?string
+    {
+        if (is_string($value) || is_numeric($value)) {
+            $trimmed = trim((string) $value);
+
+            return $trimmed === '' ? null : $trimmed;
         }
 
-        $styles = ':root {';
-        foreach ($variables as $name => $value) {
-            $styles .= $name . ': ' . esc_attr($value) . ';';
-        }
-        $styles .= '}';
-
-        return $styles;
+        return null;
     }
 
     private function maybeEnqueueGoogleFont(array $options): void
@@ -370,7 +629,7 @@ class SidebarRenderer
         $variables[$name] = $value;
     }
 
-    private function resolveOption(array $options, string $key)
+    private static function resolveOption(array $options, string $key)
     {
         $value = $options[$key] ?? null;
 
@@ -393,7 +652,7 @@ class SidebarRenderer
         return $value;
     }
 
-    private function sanitizeCssString($value): ?string
+    private static function sanitizeCssString($value): ?string
     {
         if (is_string($value) || is_numeric($value)) {
             $string = trim((string) $value);
@@ -404,26 +663,26 @@ class SidebarRenderer
         return null;
     }
 
-    private function formatPixelValue($value): ?string
+    private static function formatPixelValue($value): ?string
     {
-        $normalized = $this->normalizeNumericValue($value);
+        $normalized = self::normalizeNumericValue($value);
 
         return $normalized === null ? null : $normalized . 'px';
     }
 
-    private function formatMillisecondsValue($value): ?string
+    private static function formatMillisecondsValue($value): ?string
     {
-        $normalized = $this->normalizeNumericValue($value);
+        $normalized = self::normalizeNumericValue($value);
 
         return $normalized === null ? null : $normalized . 'ms';
     }
 
-    private function formatOpacityValue($value): ?string
+    private static function formatOpacityValue($value): ?string
     {
-        return $this->normalizeNumericValue($value);
+        return self::normalizeNumericValue($value);
     }
 
-    private function normalizeNumericValue($value): ?string
+    private static function normalizeNumericValue($value): ?string
     {
         if (is_string($value)) {
             $value = trim($value);
@@ -444,7 +703,7 @@ class SidebarRenderer
         return rtrim(rtrim(sprintf('%.4f', $floatValue), '0'), '.');
     }
 
-    private function resolveAccessibleLabelOption(array $options, string $key, string $fallback): string
+    private static function resolveAccessibleLabelOption(array $options, string $key, string $fallback): string
     {
         $rawValue = $options[$key] ?? null;
 
@@ -461,7 +720,7 @@ class SidebarRenderer
         return sanitize_text_field($trimmed);
     }
 
-    private function formatCssStringValue(?string $value): ?string
+    private static function formatCssStringValue(?string $value): ?string
     {
         if (!is_string($value)) {
             return null;
@@ -475,9 +734,9 @@ class SidebarRenderer
         return $trimmed;
     }
 
-    private function resolveContentMargin(array $options): ?string
+    private static function resolveContentMargin(array $options): ?string
     {
-        $rawValue = $this->resolveOption($options, 'content_margin');
+        $rawValue = self::resolveOption($options, 'content_margin');
         if ($rawValue === null) {
             return null;
         }
