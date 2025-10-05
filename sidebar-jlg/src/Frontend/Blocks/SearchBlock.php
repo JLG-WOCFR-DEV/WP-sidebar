@@ -97,7 +97,32 @@ class SearchBlock
             $this->maybeSynchronizeOptions($normalized, $options);
         }
 
-        return $this->renderSearchMarkup($normalized);
+        $searchMarkup = $this->renderSearchMarkup($normalized);
+
+        if ($searchMarkup === '') {
+            return '';
+        }
+
+        if (function_exists('get_block_wrapper_attributes')) {
+            $wrapperAttributes = get_block_wrapper_attributes([
+                'class' => 'sidebar-jlg-search-block',
+                'data-sidebar-search-block-name' => self::BLOCK_NAME,
+            ]);
+
+            return sprintf('<div %1$s>%2$s</div>', $wrapperAttributes, $searchMarkup);
+        }
+
+        $fallbackClasses = implode(' ', [
+            'sidebar-jlg-search-block',
+            'wp-block-' . str_replace('/', '-', self::BLOCK_NAME),
+        ]);
+
+        return sprintf(
+            '<div class="%1$s" data-sidebar-search-block-name="%2$s">%3$s</div>',
+            esc_attr($fallbackClasses),
+            esc_attr(self::BLOCK_NAME),
+            $searchMarkup
+        );
     }
 
     /**

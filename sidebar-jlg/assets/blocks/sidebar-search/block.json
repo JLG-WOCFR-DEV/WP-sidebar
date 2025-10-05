@@ -50,8 +50,51 @@
   },
   "supports": {
     "html": false,
-    "customClassName": false
+    "customClassName": false,
+    "color": {
+      "background": true,
+      "text": true,
+      "gradients": true,
+      "link": true
+    },
+    "spacing": {
+      "margin": true,
+      "padding": true,
+      "blockGap": true
+    },
+    "typography": {
+      "fontSize": true,
+      "lineHeight": true,
+      "letterSpacing": true,
+      "textTransform": true,
+      "fontStyle": true,
+      "fontWeight": true,
+      "textDecoration": true
+    }
   },
+  "styles": [
+    {
+      "name": "default",
+      "label": "Défaut",
+      "isDefault": true
+    },
+    {
+      "name": "moderne-dark",
+      "label": "Critique Moderne (Sombre)"
+    },
+    {
+      "name": "minimal-light",
+      "label": "Minimal Clair"
+    },
+    {
+      "name": "retro-warm",
+      "label": "Retro & Chaleur"
+    },
+    {
+      "name": "glass-neon",
+      "label": "Verre Néon"
+    }
+  ],
   "editorScript": "file:../../build/sidebar-search.js",
   "viewScript": "file:../../build/sidebar-search-view.js",
   "style": "sidebar-jlg-sidebar-search",
