@@ -514,11 +514,11 @@ class SettingsSanitizer
                     continue;
                 }
 
-                $allowedItemTypes = ['custom', 'post', 'page', 'category', 'nav_menu'];
+                $allowedItemTypes = ['custom', 'post', 'page', 'category', 'nav_menu', 'cta'];
                 $itemType = sanitize_key($item['type'] ?? '');
-                if (!in_array($itemType, $allowedItemTypes, true)) {
-                    $itemType = 'custom';
-                }
+                $normalizedItemType = in_array($itemType, $allowedItemTypes, true)
+                    ? $itemType
+                    : 'custom';
                 $iconType = sanitize_key($item['icon_type'] ?? '');
                 $iconType = ($iconType === 'svg_url') ? 'svg_url' : 'svg_inline';
 
@@ -561,7 +561,7 @@ class SettingsSanitizer
                     $existingItem = $existingMenuItems[$index];
                 }
 
-                switch ($itemType) {
+                switch ($normalizedItemType) {
                     case 'custom':
                         $rawValue = array_key_exists('value', $item) ? $item['value'] : ($existingItem['value'] ?? '');
                         $sanitizedItem['value'] = esc_url_raw($rawValue);
@@ -586,6 +586,29 @@ class SettingsSanitizer
 
                         $sanitizedItem['nav_menu_max_depth'] = $this->sanitizeNavMenuDepth($depthSource);
                         $sanitizedItem['nav_menu_filter'] = $this->sanitizeNavMenuFilter($filterSource);
+                        break;
+                    case 'cta':
+                        $ctaTitleSource = array_key_exists('cta_title', $item)
+                            ? $item['cta_title']
+                            : ($existingItem['cta_title'] ?? '');
+                        $ctaDescriptionSource = array_key_exists('cta_description', $item)
+                            ? $item['cta_description']
+                            : ($existingItem['cta_description'] ?? '');
+                        $ctaShortcodeSource = array_key_exists('cta_shortcode', $item)
+                            ? $item['cta_shortcode']
+                            : ($existingItem['cta_shortcode'] ?? '');
+                        $ctaButtonLabelSource = array_key_exists('cta_button_label', $item)
+                            ? $item['cta_button_label']
+                            : ($existingItem['cta_button_label'] ?? '');
+                        $ctaButtonUrlSource = array_key_exists('cta_button_url', $item)
+                            ? $item['cta_button_url']
+                            : ($existingItem['cta_button_url'] ?? '');
+
+                        $sanitizedItem['cta_title'] = sanitize_text_field($ctaTitleSource);
+                        $sanitizedItem['cta_description'] = wp_kses_post($ctaDescriptionSource);
+                        $sanitizedItem['cta_shortcode'] = wp_kses_post($ctaShortcodeSource);
+                        $sanitizedItem['cta_button_label'] = sanitize_text_field($ctaButtonLabelSource);
+                        $sanitizedItem['cta_button_url'] = esc_url_raw($ctaButtonUrlSource);
                         break;
                     case 'post':
                     case 'page':
