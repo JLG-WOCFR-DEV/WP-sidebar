@@ -55,7 +55,14 @@ class Plugin
             $pluginFile,
             $version
         );
-        $this->ajax = new Endpoints($this->settings, $this->cache, $this->icons, $this->sanitizer, $pluginFile);
+        $this->ajax = new Endpoints(
+            $this->settings,
+            $this->cache,
+            $this->icons,
+            $this->sanitizer,
+            $pluginFile,
+            $this->renderer
+        );
         $this->searchBlock = new SearchBlock($this->settings, $pluginFile, $version);
     }
 
