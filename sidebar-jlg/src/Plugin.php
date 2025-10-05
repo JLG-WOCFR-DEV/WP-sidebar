@@ -76,7 +76,7 @@ class Plugin
 
         add_filter('sanitize_option_sidebar_jlg_profiles', [$this->sanitizer, 'sanitize_profiles'], 10, 2);
         add_filter('sanitize_option_sidebar_jlg_active_profile', [$this->sanitizer, 'sanitize_active_profile'], 10, 2);
-        add_action('plugins_loaded', [$this, 'loadTextdomain']);
+        add_action('init', [$this, 'loadTextdomain']);
         add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
         add_action('update_option_sidebar_jlg_settings', [$this, 'handleSettingsUpdated'], 10, 3);
         add_action('add_option_sidebar_jlg_profiles', [$this, 'handleProfilesOptionChanged'], 10, 2);
