@@ -2255,6 +2255,11 @@ jQuery(document).ready(function($) {
     const $profilePostTypes = $('#sidebar-jlg-profile-post-types');
     const $profileRoles = $('#sidebar-jlg-profile-roles');
     const $profileLanguages = $('#sidebar-jlg-profile-languages');
+    const $profileDevices = $('#sidebar-jlg-profile-devices');
+    const $profileLoginState = $('#sidebar-jlg-profile-login-state');
+    const $profileScheduleStart = $('#sidebar-jlg-profile-schedule-start');
+    const $profileScheduleEnd = $('#sidebar-jlg-profile-schedule-end');
+    const $profileScheduleDays = $('#sidebar-jlg-profile-schedule-days');
     const $profileTaxonomiesContainer = $('#sidebar-jlg-profile-taxonomies');
     const $profileAddTaxonomy = $('#sidebar-jlg-profile-add-taxonomy');
     const $profileSettingsSummary = $('#sidebar-jlg-profile-settings-summary');
@@ -2346,6 +2351,9 @@ jQuery(document).ready(function($) {
             roles: normalizeStringArray(conditions.roles),
             languages: normalizeLanguageArray(conditions.languages),
             taxonomies: normalizeTaxonomyCollection(conditions.taxonomies),
+            devices: normalizeDeviceArray(conditions.devices),
+            logged_in: normalizeLoginState(conditions.logged_in),
+            schedule: normalizeScheduleObject(conditions.schedule),
         };
     }
 
@@ -2363,7 +2371,15 @@ jQuery(document).ready(function($) {
     }
 
     function normalizeProfileChoices(choices) {
-        const fallback = { post_types: [], taxonomies: [], roles: [], languages: [] };
+        const fallback = {
+            post_types: [],
+            taxonomies: [],
+            roles: [],
+            languages: [],
+            devices: [],
+            login_states: [],
+            schedule_days: [],
+        };
         if (!choices || typeof choices !== 'object') {
             return fallback;
         }
@@ -2397,6 +2413,9 @@ jQuery(document).ready(function($) {
             taxonomies: normalizeGroup(choices.taxonomies),
             roles: normalizeGroup(choices.roles),
             languages: normalizeGroup(choices.languages),
+            devices: normalizeGroup(choices.devices),
+            login_states: normalizeGroup(choices.login_states),
+            schedule_days: normalizeGroup(choices.schedule_days),
         };
     }
 
@@ -2434,6 +2453,176 @@ jQuery(document).ready(function($) {
             if (stringValue !== '' && !normalized.includes(stringValue)) {
                 normalized.push(stringValue);
             }
+        });
+
+        return normalized;
+    }
+
+    function normalizeDeviceArray(values) {
+        const allowed = ['desktop', 'mobile'];
+        const list = Array.isArray(values) ? values : [];
+        const normalized = [];
+
+        list.forEach((value) => {
+            if (typeof value !== 'string' && typeof value !== 'number') {
+                return;
+            }
+
+            const slug = sanitizeProfileSlug(String(value));
+            if (slug && allowed.includes(slug) && !normalized.includes(slug)) {
+                normalized.push(slug);
+            }
+        });
+
+        return normalized;
+    }
+
+    function normalizeLoginState(value) {
+        if (Array.isArray(value)) {
+            return normalizeLoginState(value[0]);
+        }
+
+        if (value === null || value === undefined) {
+            return 'any';
+        }
+
+        if (typeof value === 'boolean') {
+            return value ? 'logged-in' : 'logged-out';
+        }
+
+        if (typeof value === 'number') {
+            return value !== 0 ? 'logged-in' : 'logged-out';
+        }
+
+        if (typeof value !== 'string') {
+            return 'any';
+        }
+
+        const normalized = value.trim().toLowerCase();
+        if (normalized === '' || normalized === 'any') {
+            return 'any';
+        }
+
+        if (['1', 'true', 'yes', 'on', 'logged-in', 'logged_in'].includes(normalized)) {
+            return 'logged-in';
+        }
+
+        if (['0', 'false', 'no', 'off', 'logged-out', 'logged_out'].includes(normalized)) {
+            return 'logged-out';
+        }
+
+        return 'any';
+    }
+
+    function normalizeScheduleObject(rawValue) {
+        const value = rawValue && typeof rawValue === 'object' ? rawValue : {};
+
+        return {
+            start: normalizeScheduleTime(value.start ?? value.from),
+            end: normalizeScheduleTime(value.end ?? value.to),
+            days: normalizeScheduleDays(value.days),
+        };
+    }
+
+    function normalizeScheduleTime(value) {
+        if (value === null || value === undefined || value === '') {
+            return '';
+        }
+
+        const stringValue = String(value).trim();
+        if (stringValue === '') {
+            return '';
+        }
+
+        const match = stringValue.match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) {
+            return '';
+        }
+
+        const hour = parseInt(match[1], 10);
+        const minute = parseInt(match[2], 10);
+
+        if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+            return '';
+        }
+
+        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    }
+
+    function normalizeScheduleDays(value) {
+        const allowed = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+        let values = [];
+
+        if (Array.isArray(value)) {
+            values = value;
+        } else if (typeof value === 'string' || typeof value === 'number') {
+            values = String(value).split(/[\s,]+/);
+        }
+
+        const normalized = [];
+
+        values.forEach((entry) => {
+            if (typeof entry !== 'string' && typeof entry !== 'number') {
+                return;
+            }
+
+            let candidate = String(entry).trim().toLowerCase();
+            if (candidate === '') {
+                return;
+            }
+
+            switch (candidate) {
+                case '1':
+                case '01':
+                case 'monday':
+                case 'mon':
+                    candidate = 'mon';
+                    break;
+                case '2':
+                case '02':
+                case 'tuesday':
+                case 'tue':
+                    candidate = 'tue';
+                    break;
+                case '3':
+                case '03':
+                case 'wednesday':
+                case 'wed':
+                    candidate = 'wed';
+                    break;
+                case '4':
+                case '04':
+                case 'thursday':
+                case 'thu':
+                    candidate = 'thu';
+                    break;
+                case '5':
+                case '05':
+                case 'friday':
+                case 'fri':
+                    candidate = 'fri';
+                    break;
+                case '6':
+                case '06':
+                case 'saturday':
+                case 'sat':
+                    candidate = 'sat';
+                    break;
+                case '0':
+                case '00':
+                case '7':
+                case '07':
+                case 'sunday':
+                case 'sun':
+                    candidate = 'sun';
+                    break;
+            }
+
+            if (!allowed.includes(candidate) || normalized.includes(candidate)) {
+                return;
+            }
+
+            normalized.push(candidate);
         });
 
         return normalized;
@@ -2703,6 +2892,23 @@ jQuery(document).ready(function($) {
         renderSelectOptions($profilePostTypes, profileChoices.post_types, profile.conditions.post_types);
         renderSelectOptions($profileRoles, profileChoices.roles, profile.conditions.roles);
         renderSelectOptions($profileLanguages, profileChoices.languages, profile.conditions.languages);
+        renderSelectOptions($profileDevices, profileChoices.devices, profile.conditions.devices);
+        renderSelectOptions(
+            $profileLoginState,
+            profileChoices.login_states,
+            profile.conditions.logged_in && profile.conditions.logged_in !== 'any'
+                ? [profile.conditions.logged_in]
+                : ['any']
+        );
+        renderSelectOptions($profileScheduleDays, profileChoices.schedule_days, profile.conditions.schedule.days);
+
+        if ($profileScheduleStart.length) {
+            $profileScheduleStart.val(profile.conditions.schedule.start || '');
+        }
+
+        if ($profileScheduleEnd.length) {
+            $profileScheduleEnd.val(profile.conditions.schedule.end || '');
+        }
 
         renderTaxonomyRows(profile);
         updateSettingsSummary(profile);
@@ -2937,6 +3143,70 @@ jQuery(document).ready(function($) {
             syncProfilesToInputs();
         });
 
+        $profileDevices.on('change', function() {
+            const profile = getSelectedProfile();
+            if (!profile) {
+                return;
+            }
+
+            const values = Array.isArray($(this).val()) ? $(this).val() : [];
+            profile.conditions.devices = normalizeDeviceArray(values);
+            syncProfilesToInputs();
+        });
+
+        $profileLoginState.on('change', function() {
+            const profile = getSelectedProfile();
+            if (!profile) {
+                return;
+            }
+
+            const value = $(this).val();
+            profile.conditions.logged_in = normalizeLoginState(value);
+            renderSelectOptions(
+                $profileLoginState,
+                profileChoices.login_states,
+                profile.conditions.logged_in && profile.conditions.logged_in !== 'any'
+                    ? [profile.conditions.logged_in]
+                    : ['any']
+            );
+            syncProfilesToInputs();
+        });
+
+        $profileScheduleDays.on('change', function() {
+            const profile = getSelectedProfile();
+            if (!profile) {
+                return;
+            }
+
+            const values = Array.isArray($(this).val()) ? $(this).val() : [];
+            profile.conditions.schedule.days = normalizeScheduleDays(values);
+            syncProfilesToInputs();
+        });
+
+        $profileScheduleStart.on('change input', function() {
+            const profile = getSelectedProfile();
+            if (!profile) {
+                return;
+            }
+
+            const normalized = normalizeScheduleTime($(this).val());
+            profile.conditions.schedule.start = normalized;
+            $(this).val(normalized);
+            syncProfilesToInputs();
+        });
+
+        $profileScheduleEnd.on('change input', function() {
+            const profile = getSelectedProfile();
+            if (!profile) {
+                return;
+            }
+
+            const normalized = normalizeScheduleTime($(this).val());
+            profile.conditions.schedule.end = normalized;
+            $(this).val(normalized);
+            syncProfilesToInputs();
+        });
+
         $profileAddTaxonomy.on('click', function(e) {
             e.preventDefault();
             const profile = getSelectedProfile();
@@ -3081,6 +3351,13 @@ jQuery(document).ready(function($) {
                 roles: [],
                 languages: [],
                 taxonomies: [],
+                devices: [],
+                logged_in: 'any',
+                schedule: {
+                    start: '',
+                    end: '',
+                    days: [],
+                },
             },
             settings: {},
         };
@@ -3186,9 +3463,29 @@ jQuery(document).ready(function($) {
             appendTaxonomyFields(`${base}[conditions][taxonomies]`, profile.conditions.taxonomies);
             appendArrayFields(`${base}[conditions][roles]`, profile.conditions.roles);
             appendArrayFields(`${base}[conditions][languages]`, profile.conditions.languages);
+            appendArrayFields(`${base}[conditions][devices]`, profile.conditions.devices);
+
+            const loginValue = profile.conditions.logged_in === 'logged-in'
+                ? 'logged-in'
+                : profile.conditions.logged_in === 'logged-out'
+                    ? 'logged-out'
+                    : '';
+            appendHiddenField(`${base}[conditions][logged_in]`, loginValue);
+
+            appendScheduleFields(`${base}[conditions][schedule]`, profile.conditions.schedule);
 
             appendNestedValue(`${base}[settings]`, profile.settings);
         });
+    }
+
+    function appendScheduleFields(baseName, schedule) {
+        const normalized = schedule && typeof schedule === 'object'
+            ? schedule
+            : { start: '', end: '', days: [] };
+
+        appendHiddenField(`${baseName}[start]`, normalized.start || '');
+        appendHiddenField(`${baseName}[end]`, normalized.end || '');
+        appendArrayFields(`${baseName}[days]`, Array.isArray(normalized.days) ? normalized.days : []);
     }
 
     function appendHiddenField(name, value) {

@@ -815,6 +815,31 @@ $textTransformLabels = [
                                     <label for="sidebar-jlg-profile-languages"><?php esc_html_e( 'Langues', 'sidebar-jlg' ); ?></label>
                                     <select id="sidebar-jlg-profile-languages" multiple></select>
                                 </p>
+                                <p>
+                                    <label for="sidebar-jlg-profile-devices"><?php esc_html_e( 'Appareils ciblés', 'sidebar-jlg' ); ?></label>
+                                    <select id="sidebar-jlg-profile-devices" multiple></select>
+                                    <span class="description"><?php esc_html_e( 'Laisser vide pour tous les appareils.', 'sidebar-jlg' ); ?></span>
+                                </p>
+                                <p>
+                                    <label for="sidebar-jlg-profile-login-state"><?php esc_html_e( 'Statut de connexion', 'sidebar-jlg' ); ?></label>
+                                    <select id="sidebar-jlg-profile-login-state"></select>
+                                </p>
+                                <fieldset class="sidebar-jlg-profile-schedule">
+                                    <legend><?php esc_html_e( 'Créneau horaire (heure locale)', 'sidebar-jlg' ); ?></legend>
+                                    <p class="description"><?php esc_html_e( 'Limitez l’affichage du profil à certaines heures ou journées.', 'sidebar-jlg' ); ?></p>
+                                    <div class="sidebar-jlg-profile-schedule__row">
+                                        <label for="sidebar-jlg-profile-schedule-start"><?php esc_html_e( 'Début', 'sidebar-jlg' ); ?></label>
+                                        <input type="time" id="sidebar-jlg-profile-schedule-start" />
+                                    </div>
+                                    <div class="sidebar-jlg-profile-schedule__row">
+                                        <label for="sidebar-jlg-profile-schedule-end"><?php esc_html_e( 'Fin', 'sidebar-jlg' ); ?></label>
+                                        <input type="time" id="sidebar-jlg-profile-schedule-end" />
+                                    </div>
+                                    <p>
+                                        <label for="sidebar-jlg-profile-schedule-days"><?php esc_html_e( 'Jours concernés', 'sidebar-jlg' ); ?></label>
+                                        <select id="sidebar-jlg-profile-schedule-days" multiple></select>
+                                    </p>
+                                </fieldset>
                             </fieldset>
                             <div class="sidebar-jlg-profile-editor__fieldset">
                                 <h3><?php esc_html_e( 'Réglages associés', 'sidebar-jlg' ); ?></h3>

@@ -1059,7 +1059,15 @@ class SettingsSanitizer
      * @param array<string, mixed> $conditions
      * @param array<string, mixed> $existing
      *
-     * @return array{content_types: array<int, string>, taxonomies: array<int, string>, roles: array<int, string>, languages: array<int, string>}
+     * @return array{
+     *     content_types: array<int, string>,
+     *     taxonomies: array<int, string>,
+     *     roles: array<int, string>,
+     *     languages: array<int, string>,
+     *     devices: array<int, string>,
+     *     logged_in: string,
+     *     schedule: array{start: string, end: string, days: array<int, string>}
+     * }
      */
     private function sanitizeProfileConditions(array $conditions, array $existing = []): array
     {
@@ -1090,12 +1098,239 @@ class SettingsSanitizer
             true
         );
 
+        $devices = $this->sanitizeConditionValues(
+            $conditions['devices'] ?? [],
+            $this->getAllowedDevices(),
+            isset($existing['devices']) && is_array($existing['devices']) ? $existing['devices'] : []
+        );
+
+        $loggedIn = $this->sanitizeLoggedInCondition(
+            $conditions['logged_in'] ?? null,
+            $existing['logged_in'] ?? null
+        );
+
+        $schedule = $this->sanitizeScheduleCondition(
+            isset($conditions['schedule']) && is_array($conditions['schedule']) ? $conditions['schedule'] : [],
+            isset($existing['schedule']) && is_array($existing['schedule']) ? $existing['schedule'] : []
+        );
+
         return [
             'content_types' => $contentTypes,
             'taxonomies' => $taxonomies,
             'roles' => $roles,
             'languages' => $languages,
+            'devices' => $devices,
+            'logged_in' => $loggedIn,
+            'schedule' => $schedule,
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getAllowedDevices(): array
+    {
+        return ['desktop', 'mobile'];
+    }
+
+    /**
+     * @param mixed $value
+     * @param mixed $existing
+     */
+    private function sanitizeLoggedInCondition($value, $existing): string
+    {
+        $normalized = $this->normalizeLoggedInValue($value);
+
+        if ($normalized !== '') {
+            return $normalized;
+        }
+
+        $fallback = $this->normalizeLoggedInValue($existing);
+        if ($fallback !== '') {
+            return $fallback;
+        }
+
+        return '';
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function normalizeLoggedInValue($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'logged-in' : 'logged-out';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (int) $value !== 0 ? 'logged-in' : 'logged-out';
+        }
+
+        if (!is_string($value)) {
+            return '';
+        }
+
+        $normalized = strtolower(trim($value));
+
+        if ($normalized === '' || $normalized === 'any') {
+            return '';
+        }
+
+        if (in_array($normalized, ['1', 'true', 'yes', 'on', 'logged-in', 'logged_in'], true)) {
+            return 'logged-in';
+        }
+
+        if (in_array($normalized, ['0', 'false', 'no', 'off', 'logged-out', 'logged_out'], true)) {
+            return 'logged-out';
+        }
+
+        return '';
+    }
+
+    /**
+     * @param array<string, mixed> $raw
+     * @param array<string, mixed> $existing
+     *
+     * @return array{start: string, end: string, days: array<int, string>}
+     */
+    private function sanitizeScheduleCondition(array $raw, array $existing): array
+    {
+        $sanitized = [
+            'start' => $this->sanitizeScheduleTime($raw['start'] ?? ($raw['from'] ?? null)),
+            'end' => $this->sanitizeScheduleTime($raw['end'] ?? ($raw['to'] ?? null)),
+            'days' => $this->sanitizeScheduleDays($raw['days'] ?? []),
+        ];
+
+        if ($sanitized['start'] === '' && isset($existing['start'])) {
+            $sanitized['start'] = $this->sanitizeScheduleTime($existing['start']);
+        }
+
+        if ($sanitized['end'] === '' && isset($existing['end'])) {
+            $sanitized['end'] = $this->sanitizeScheduleTime($existing['end']);
+        }
+
+        if ($sanitized['days'] === [] && isset($existing['days'])) {
+            $sanitized['days'] = $this->sanitizeScheduleDays($existing['days']);
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeScheduleTime($value): string
+    {
+        if (!is_string($value) && !is_numeric($value)) {
+            return '';
+        }
+
+        $stringValue = trim((string) $value);
+        if ($stringValue === '') {
+            return '';
+        }
+
+        if (preg_match('/^(\d{1,2}):(\d{2})$/', $stringValue, $matches) !== 1) {
+            return '';
+        }
+
+        $hour = (int) $matches[1];
+        $minute = (int) $matches[2];
+
+        if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59) {
+            return '';
+        }
+
+        return sprintf('%02d:%02d', $hour, $minute);
+    }
+
+    /**
+     * @param mixed $value
+     *
+     * @return array<int, string>
+     */
+    private function sanitizeScheduleDays($value): array
+    {
+        $allowed = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+        $values = [];
+
+        if (is_array($value)) {
+            $values = $value;
+        } elseif (is_string($value) || is_numeric($value)) {
+            $values = preg_split('/[\s,]+/', (string) $value) ?: [];
+        }
+
+        $normalized = [];
+
+        foreach ($values as $day) {
+            if (!is_string($day) && !is_numeric($day)) {
+                continue;
+            }
+
+            $candidate = strtolower(trim((string) $day));
+            if ($candidate === '') {
+                continue;
+            }
+
+            switch ($candidate) {
+                case '1':
+                case '01':
+                case 'monday':
+                case 'mon':
+                    $candidate = 'mon';
+                    break;
+                case '2':
+                case '02':
+                case 'tuesday':
+                case 'tue':
+                    $candidate = 'tue';
+                    break;
+                case '3':
+                case '03':
+                case 'wednesday':
+                case 'wed':
+                    $candidate = 'wed';
+                    break;
+                case '4':
+                case '04':
+                case 'thursday':
+                case 'thu':
+                    $candidate = 'thu';
+                    break;
+                case '5':
+                case '05':
+                case 'friday':
+                case 'fri':
+                    $candidate = 'fri';
+                    break;
+                case '6':
+                case '06':
+                case 'saturday':
+                case 'sat':
+                    $candidate = 'sat';
+                    break;
+                case '0':
+                case '00':
+                case '7':
+                case '07':
+                case 'sunday':
+                case 'sun':
+                    $candidate = 'sun';
+                    break;
+            }
+
+            if (!in_array($candidate, $allowed, true)) {
+                continue;
+            }
+
+            $normalized[$candidate] = true;
+        }
+
+        return array_keys($normalized);
     }
 
     /**

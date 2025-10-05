@@ -223,10 +223,27 @@ class ProfileSelector
             'taxonomies' => [],
             'roles' => [],
             'languages' => [],
+            'devices' => [],
+            'logged_in' => null,
+            'schedule' => [
+                'start' => null,
+                'end' => null,
+                'days' => [],
+            ],
         ];
 
+        $postTypeSources = [];
+
         if (isset($conditions['post_types']) && is_array($conditions['post_types'])) {
-            foreach ($conditions['post_types'] as $postType) {
+            $postTypeSources[] = $conditions['post_types'];
+        }
+
+        if (isset($conditions['content_types']) && is_array($conditions['content_types'])) {
+            $postTypeSources[] = $conditions['content_types'];
+        }
+
+        foreach ($postTypeSources as $postTypes) {
+            foreach ($postTypes as $postType) {
                 if (!is_string($postType) && !is_numeric($postType)) {
                     continue;
                 }
@@ -243,6 +260,16 @@ class ProfileSelector
         if (isset($conditions['taxonomies']) && is_array($conditions['taxonomies'])) {
             foreach ($conditions['taxonomies'] as $taxonomyCondition) {
                 if (!is_array($taxonomyCondition)) {
+                    if (is_string($taxonomyCondition) || is_numeric($taxonomyCondition)) {
+                        $taxonomyName = $this->sanitizeIdentifier((string) $taxonomyCondition);
+                        if ($taxonomyName !== '') {
+                            $normalized['taxonomies'][] = [
+                                'taxonomy' => $taxonomyName,
+                                'terms' => [],
+                            ];
+                        }
+                    }
+
                     continue;
                 }
 
@@ -294,11 +321,213 @@ class ProfileSelector
             }
         }
 
+        if (isset($conditions['devices'])) {
+            $normalized['devices'] = $this->normalizeDeviceConditions($conditions['devices']);
+        }
+
+        if (array_key_exists('logged_in', $conditions)) {
+            $normalized['logged_in'] = $this->normalizeLoggedInCondition($conditions['logged_in']);
+        }
+
+        if (isset($conditions['schedule']) && is_array($conditions['schedule'])) {
+            $normalized['schedule'] = $this->normalizeScheduleCondition($conditions['schedule']);
+        }
+
         $normalized['post_types'] = array_keys($normalized['post_types']);
         $normalized['roles'] = array_keys($normalized['roles']);
         $normalized['languages'] = array_keys($normalized['languages']);
 
         return $normalized;
+    }
+
+    private function normalizeDeviceConditions($devices): array
+    {
+        $allowedDevices = ['mobile', 'desktop'];
+        $normalized = [];
+
+        $values = [];
+        if (is_array($devices)) {
+            $values = $devices;
+        } elseif (is_string($devices) || is_numeric($devices)) {
+            $values = [(string) $devices];
+        }
+
+        foreach ($values as $device) {
+            if (!is_string($device) && !is_numeric($device)) {
+                continue;
+            }
+
+            $sanitized = $this->sanitizeIdentifier((string) $device);
+            if ($sanitized === '') {
+                continue;
+            }
+
+            if (!in_array($sanitized, $allowedDevices, true)) {
+                continue;
+            }
+
+            $normalized[$sanitized] = true;
+        }
+
+        return array_keys($normalized);
+    }
+
+    private function normalizeLoggedInCondition($value): ?bool
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+
+            if ($normalized === '' || $normalized === 'any') {
+                return null;
+            }
+
+            if (in_array($normalized, ['1', 'true', 'yes', 'on', 'logged-in', 'logged_in'], true)) {
+                return true;
+            }
+
+            if (in_array($normalized, ['0', 'false', 'no', 'off', 'logged-out', 'logged_out'], true)) {
+                return false;
+            }
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (int) $value !== 0;
+        }
+
+        return null;
+    }
+
+    private function normalizeScheduleCondition(array $schedule): array
+    {
+        $normalized = [
+            'start' => null,
+            'end' => null,
+            'days' => [],
+        ];
+
+        $start = $schedule['start'] ?? ($schedule['from'] ?? null);
+        $end = $schedule['end'] ?? ($schedule['to'] ?? null);
+        $days = $schedule['days'] ?? [];
+
+        $normalized['start'] = $this->normalizeScheduleTime($start);
+        $normalized['end'] = $this->normalizeScheduleTime($end);
+        $normalized['days'] = $this->normalizeScheduleDays($days);
+
+        return $normalized;
+    }
+
+    private function normalizeScheduleTime($time): ?string
+    {
+        if (!is_string($time) && !is_numeric($time)) {
+            return null;
+        }
+
+        $stringTime = trim((string) $time);
+        if ($stringTime === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\d{1,2}):(\d{2})$/', $stringTime, $matches) !== 1) {
+            return null;
+        }
+
+        $hour = (int) $matches[1];
+        $minute = (int) $matches[2];
+
+        if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59) {
+            return null;
+        }
+
+        return sprintf('%02d:%02d', $hour, $minute);
+    }
+
+    private function normalizeScheduleDays($days): array
+    {
+        $allowedDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+        $normalized = [];
+
+        if (is_array($days)) {
+            $values = $days;
+        } elseif (is_string($days) || is_numeric($days)) {
+            $values = preg_split('/[\s,]+/', (string) $days) ?: [];
+        } else {
+            $values = [];
+        }
+
+        foreach ($values as $day) {
+            if (!is_string($day) && !is_numeric($day)) {
+                continue;
+            }
+
+            $candidate = strtolower(trim((string) $day));
+
+            if ($candidate === '') {
+                continue;
+            }
+
+            switch ($candidate) {
+                case 'monday':
+                case 'mon':
+                case '1':
+                case '01':
+                    $candidate = 'mon';
+                    break;
+                case 'tuesday':
+                case 'tue':
+                case '2':
+                case '02':
+                    $candidate = 'tue';
+                    break;
+                case 'wednesday':
+                case 'wed':
+                case '3':
+                case '03':
+                    $candidate = 'wed';
+                    break;
+                case 'thursday':
+                case 'thu':
+                case '4':
+                case '04':
+                    $candidate = 'thu';
+                    break;
+                case 'friday':
+                case 'fri':
+                case '5':
+                case '05':
+                    $candidate = 'fri';
+                    break;
+                case 'saturday':
+                case 'sat':
+                case '6':
+                case '06':
+                    $candidate = 'sat';
+                    break;
+                case 'sunday':
+                case 'sun':
+                case '0':
+                case '00':
+                case '7':
+                case '07':
+                    $candidate = 'sun';
+                    break;
+            }
+
+            if (!in_array($candidate, $allowedDays, true)) {
+                continue;
+            }
+
+            $normalized[$candidate] = true;
+        }
+
+        return array_keys($normalized);
     }
 
     private function normalizeTerms($terms): array
@@ -373,7 +602,115 @@ class ProfileSelector
             }
         }
 
+        if ($conditions['devices'] !== []) {
+            $device = $context['device'] ?? '';
+            if (!is_string($device) || !in_array($device, $conditions['devices'], true)) {
+                return false;
+            }
+        }
+
+        if ($conditions['logged_in'] !== null) {
+            $isLoggedIn = $context['is_logged_in'] ?? null;
+            if (!is_bool($isLoggedIn) || $isLoggedIn !== $conditions['logged_in']) {
+                return false;
+            }
+        }
+
+        if (!$this->matchesScheduleCondition($conditions['schedule'], $context)) {
+            return false;
+        }
+
         return true;
+    }
+
+    private function matchesScheduleCondition(array $schedule, array $context): bool
+    {
+        $hasTimeRestriction = ($schedule['start'] ?? null) !== null || ($schedule['end'] ?? null) !== null;
+        $hasDayRestriction = isset($schedule['days']) && $schedule['days'] !== [];
+
+        if (!$hasTimeRestriction && !$hasDayRestriction) {
+            return true;
+        }
+
+        $timestamp = $context['timestamp'] ?? null;
+        $timeOfDay = $context['time_of_day_minutes'] ?? null;
+        $dayOfWeek = $context['day_of_week'] ?? '';
+
+        if (!is_int($timestamp) || $timestamp <= 0) {
+            $timestamp = null;
+        }
+
+        if (!is_int($timeOfDay)) {
+            if ($timestamp !== null) {
+                $timeOfDay = (int) date('G', $timestamp) * 60 + (int) date('i', $timestamp);
+            }
+        }
+
+        if ($hasDayRestriction) {
+            if (!is_string($dayOfWeek) || $dayOfWeek === '') {
+                if ($timestamp === null) {
+                    return false;
+                }
+
+                $dayOfWeek = strtolower(date('D', $timestamp));
+            }
+
+            $dayNormalized = $this->normalizeScheduleDays([$dayOfWeek]);
+            if ($dayNormalized === []) {
+                return false;
+            }
+
+            $currentDay = $dayNormalized[0];
+
+            if (!in_array($currentDay, $schedule['days'], true)) {
+                return false;
+            }
+        }
+
+        if (!$hasTimeRestriction) {
+            return true;
+        }
+
+        if (!is_int($timeOfDay)) {
+            return false;
+        }
+
+        $start = $this->convertScheduleTimeToMinutes($schedule['start'] ?? null);
+        $end = $this->convertScheduleTimeToMinutes($schedule['end'] ?? null);
+
+        if ($start === null && $end === null) {
+            return true;
+        }
+
+        if ($start === null) {
+            $start = 0;
+        }
+
+        if ($end === null) {
+            $end = 24 * 60 - 1;
+        }
+
+        if ($start <= $end) {
+            return $timeOfDay >= $start && $timeOfDay <= $end;
+        }
+
+        return $timeOfDay >= $start || $timeOfDay <= $end;
+    }
+
+    private function convertScheduleTimeToMinutes(?string $time): ?int
+    {
+        if ($time === null) {
+            return null;
+        }
+
+        if (preg_match('/^(\d{2}):(\d{2})$/', $time, $matches) !== 1) {
+            return null;
+        }
+
+        $hour = (int) $matches[1];
+        $minute = (int) $matches[2];
+
+        return $hour * 60 + $minute;
     }
 
     private function matchesTaxonomyCondition(array $taxonomyCondition, array $contextTaxonomies): bool
@@ -413,10 +750,23 @@ class ProfileSelector
         $score += count($conditions['post_types']);
         $score += count($conditions['roles']);
         $score += count($conditions['languages']);
+        $score += count($conditions['devices']);
+
+        if ($conditions['logged_in'] !== null) {
+            $score += 1;
+        }
 
         foreach ($conditions['taxonomies'] as $taxonomyCondition) {
             $score += 1;
             $score += count($taxonomyCondition['terms']);
+        }
+
+        if (($conditions['schedule']['start'] ?? null) !== null || ($conditions['schedule']['end'] ?? null) !== null) {
+            $score += 1;
+        }
+
+        if (($conditions['schedule']['days'] ?? []) !== []) {
+            $score += count($conditions['schedule']['days']);
         }
 
         return $score;
@@ -631,11 +981,47 @@ class ProfileSelector
             $language = $this->sanitizeIdentifier($locale);
         }
 
+        $device = 'desktop';
+        if (function_exists('wp_is_mobile')) {
+            $isMobile = wp_is_mobile();
+            if (is_bool($isMobile) && $isMobile) {
+                $device = 'mobile';
+            }
+        }
+
+        $isLoggedIn = null;
+        if (function_exists('is_user_logged_in')) {
+            $loggedIn = is_user_logged_in();
+            if (is_bool($loggedIn)) {
+                $isLoggedIn = $loggedIn;
+            }
+        }
+
+        $timestamp = null;
+        if (function_exists('current_time')) {
+            $maybeTimestamp = current_time('timestamp');
+            if (is_int($maybeTimestamp) || (is_string($maybeTimestamp) && preg_match('/^-?\d+$/', $maybeTimestamp) === 1)) {
+                $timestamp = (int) $maybeTimestamp;
+            }
+        }
+
+        if ($timestamp === null) {
+            $timestamp = time();
+        }
+
+        $dayOfWeek = strtolower(date('D', $timestamp));
+        $timeOfDayMinutes = (int) date('G', $timestamp) * 60 + (int) date('i', $timestamp);
+
         return [
             'post_types' => array_keys($postTypes),
             'taxonomies' => $taxonomies,
             'roles' => array_keys($roles),
             'language' => $language,
+            'device' => $device,
+            'is_logged_in' => $isLoggedIn,
+            'timestamp' => $timestamp,
+            'day_of_week' => $this->normalizeScheduleDays([$dayOfWeek])[0] ?? $dayOfWeek,
+            'time_of_day_minutes' => $timeOfDayMinutes,
         ];
     }
 
