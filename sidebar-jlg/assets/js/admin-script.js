@@ -962,6 +962,10 @@ class SidebarPreviewModule {
 
         this.captureFontStacksFromDom();
 
+        this.bindField('sidebar_jlg_settings[style_preset]', (value) => {
+            this.currentOptions.style_preset = value || 'custom';
+        });
+
         this.bindField('sidebar_jlg_settings[layout_style]', (value) => {
             this.currentOptions.layout_style = value || 'full';
         });
@@ -1830,8 +1834,516 @@ jQuery(document).ready(function($) {
     initializeUnitControls();
     initializeRangeControls();
 
+    const compareControls = setupPreviewCompare(previewModule);
+    initializeStylePresets(compareControls);
+
     if (typeof window !== 'undefined') {
         window.SidebarJLGPreview = previewModule;
+    }
+
+    function setupPreviewCompare(previewModuleInstance) {
+        const button = document.getElementById('sidebar-jlg-preview-compare');
+        const formElement = document.getElementById('sidebar-jlg-form');
+
+        if (!button || !previewModuleInstance) {
+            return {
+                exit: () => Promise.resolve(),
+                isActive: () => false,
+            };
+        }
+
+        const labelSpan = button.querySelector('.sidebar-jlg-preview__toolbar-button-label');
+        const defaultLabelFallback = labelSpan && labelSpan.textContent
+            ? labelSpan.textContent.trim()
+            : (button.textContent || '').trim();
+        const defaultLabel = getI18nString('stylePresetCompareButton', defaultLabelFallback || 'Comparer avant/après');
+        const exitLabel = getI18nString('stylePresetCompareExit', 'Revenir à l’après');
+        const beforeMessage = getI18nString('stylePresetCompareBefore', '');
+        const afterMessage = getI18nString('stylePresetCompareAfter', '');
+
+        if (labelSpan) {
+            labelSpan.textContent = defaultLabel;
+        } else {
+            button.textContent = defaultLabel;
+        }
+
+        button.setAttribute('aria-label', defaultLabel);
+        button.setAttribute('aria-pressed', 'false');
+
+        const state = {
+            active: false,
+            disabledFields: [],
+            afterOptions: null,
+            busy: false,
+        };
+
+        const setButtonState = (active) => {
+            const label = active ? exitLabel : defaultLabel;
+            if (labelSpan) {
+                labelSpan.textContent = label;
+            } else {
+                button.textContent = label;
+            }
+            button.classList.toggle('is-active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+            button.setAttribute('aria-label', label);
+        };
+
+        const toggleButtonBusy = (busy) => {
+            state.busy = busy;
+            button.disabled = busy;
+            button.classList.toggle('is-busy', busy);
+        };
+
+        const disableFormControls = (disabled) => {
+            if (!formElement) {
+                return;
+            }
+
+            if (disabled) {
+                state.disabledFields = [];
+                const elements = Array.from(formElement.querySelectorAll('input, select, textarea, button'));
+                elements.forEach((element) => {
+                    if (element === button) {
+                        return;
+                    }
+                    if (element.disabled) {
+                        return;
+                    }
+                    element.disabled = true;
+                    state.disabledFields.push(element);
+                });
+                formElement.setAttribute('aria-disabled', 'true');
+            } else {
+                state.disabledFields.forEach((element) => {
+                    element.disabled = false;
+                });
+                state.disabledFields = [];
+                formElement.removeAttribute('aria-disabled');
+            }
+        };
+
+        const enterCompare = () => {
+            if (state.active || state.busy) {
+                return Promise.resolve();
+            }
+
+            state.afterOptions = SidebarPreviewModule.cloneObject(previewModuleInstance.currentOptions || {});
+            setButtonState(true);
+            disableFormControls(true);
+            toggleButtonBusy(true);
+            state.active = true;
+
+            previewModuleInstance.currentOptions = SidebarPreviewModule.cloneObject(previewModuleInstance.initialOptions || {});
+
+            return previewModuleInstance.loadPreview()
+                .then(() => {
+                    previewModuleInstance.applyOptions();
+                    if (beforeMessage) {
+                        previewModuleInstance.setStatus(beforeMessage, false);
+                    }
+                })
+                .catch(() => {
+                    state.active = false;
+                    disableFormControls(false);
+                    setButtonState(false);
+                })
+                .finally(() => {
+                    toggleButtonBusy(false);
+                });
+        };
+
+        const exitCompare = () => {
+            if (!state.active || state.busy) {
+                return Promise.resolve();
+            }
+
+            const afterOptions = SidebarPreviewModule.cloneObject(state.afterOptions || previewModuleInstance.currentOptions || {});
+            setButtonState(false);
+            disableFormControls(false);
+            toggleButtonBusy(true);
+            state.active = false;
+            previewModuleInstance.currentOptions = afterOptions;
+
+            return previewModuleInstance.loadPreview()
+                .then(() => {
+                    previewModuleInstance.applyOptions();
+                    if (afterMessage) {
+                        previewModuleInstance.setStatus(afterMessage, false);
+                    } else {
+                        previewModuleInstance.clearStatus();
+                    }
+                })
+                .catch(() => {
+                    previewModuleInstance.clearStatus();
+                })
+                .finally(() => {
+                    state.afterOptions = null;
+                    toggleButtonBusy(false);
+                });
+        };
+
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (state.active) {
+                exitCompare();
+            } else {
+                enterCompare();
+            }
+        });
+
+        return {
+            exit: exitCompare,
+            isActive: () => state.active,
+        };
+    }
+
+    function initializeStylePresets(compareControls) {
+        const hiddenInput = document.getElementById('sidebar-jlg-style-preset');
+        const container = document.getElementById('sidebar-jlg-style-presets');
+        if (!hiddenInput || !container) {
+            return;
+        }
+
+        const grid = container.querySelector('[data-style-preset-grid]');
+        if (!grid) {
+            hiddenInput.disabled = false;
+            return;
+        }
+
+        hiddenInput.disabled = false;
+
+        const emptyMessage = container.querySelector('[data-style-preset-empty]');
+        const applyLabel = getI18nString('stylePresetApplyLabel', 'Utiliser ce préréglage');
+        const customLabel = getI18nString('stylePresetCustomLabel', 'Personnalisé');
+        const customDescription = getI18nString('stylePresetCustomDescription', 'Utilisez vos propres combinaisons de couleurs, typographies et effets.');
+        const emptyText = getI18nString('stylePresetEmpty', 'Aucun préréglage n’est disponible pour le moment.');
+
+        if (emptyMessage) {
+            emptyMessage.textContent = emptyText;
+        }
+
+        const rawPresets = (typeof sidebarJLG.style_presets === 'object' && sidebarJLG.style_presets !== null)
+            ? sidebarJLG.style_presets
+            : {};
+
+        const normalizedPresets = Object.keys(rawPresets).map((key) => {
+            const raw = rawPresets[key] || {};
+            const previewData = raw.preview && typeof raw.preview === 'object' ? raw.preview : {};
+            return {
+                key,
+                label: typeof raw.label === 'string' && raw.label.trim() !== '' ? raw.label : key,
+                description: typeof raw.description === 'string' ? raw.description : '',
+                settings: raw.settings && typeof raw.settings === 'object' ? raw.settings : null,
+                preview: {
+                    background: typeof previewData.background === 'string' ? previewData.background : '',
+                    accent: typeof previewData.accent === 'string' ? previewData.accent : '',
+                    text: typeof previewData.text === 'string' ? previewData.text : '',
+                },
+            };
+        });
+
+        grid.innerHTML = '';
+
+        const ensureCompareInactive = () => {
+            if (!compareControls || typeof compareControls.isActive !== 'function') {
+                return Promise.resolve();
+            }
+
+            try {
+                if (compareControls.isActive() && typeof compareControls.exit === 'function') {
+                    return Promise.resolve(compareControls.exit());
+                }
+            } catch (error) {
+                return Promise.resolve();
+            }
+
+            return Promise.resolve();
+        };
+
+        let isApplyingPreset = false;
+        let customCardElement = null;
+
+        const markActiveCard = (key) => {
+            const cards = grid.querySelectorAll('.sidebar-jlg-style-preset-card');
+            cards.forEach((card) => {
+                const isActive = card.dataset.presetKey === key;
+                card.classList.toggle('is-active', isActive);
+                card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+            container.setAttribute('data-selected-preset', key);
+        };
+
+        const updateHiddenInput = (key) => {
+            hiddenInput.value = key;
+            triggerFieldUpdate(hiddenInput);
+        };
+
+        const computeCurrentPreview = () => {
+            const source = (previewModule && previewModule.currentOptions) ? previewModule.currentOptions : options;
+            const result = {
+                background: '#1f2937',
+                accent: '#0ea5e9',
+                text: '#f8fafc',
+            };
+
+            const bgType = typeof source.bg_color_type === 'string' ? source.bg_color_type.toLowerCase() : 'solid';
+            if (bgType === 'gradient') {
+                const start = source.bg_color_start || source.bg_color || result.background;
+                const end = source.bg_color_end || start;
+                result.background = `linear-gradient(180deg, ${start} 0%, ${end} 100%)`;
+            } else if (source.bg_color) {
+                result.background = source.bg_color;
+            }
+
+            const accentType = typeof source.accent_color_type === 'string' ? source.accent_color_type.toLowerCase() : 'solid';
+            if (accentType === 'gradient') {
+                const start = source.accent_color_start || source.accent_color || result.accent;
+                const end = source.accent_color_end || start;
+                result.accent = `linear-gradient(135deg, ${start} 0%, ${end} 100%)`;
+            } else if (source.accent_color) {
+                result.accent = source.accent_color;
+            }
+
+            if (source.font_color) {
+                result.text = source.font_color;
+            }
+
+            return result;
+        };
+
+        const updateCustomCardPreview = () => {
+            if (!customCardElement) {
+                return;
+            }
+
+            const previewElement = customCardElement.querySelector('.sidebar-jlg-style-preset-card__preview');
+            const accentElement = customCardElement.querySelector('.sidebar-jlg-style-preset-card__accent');
+            const sampleElement = customCardElement.querySelector('.sidebar-jlg-style-preset-card__sample');
+
+            if (!previewElement || !accentElement || !sampleElement) {
+                return;
+            }
+
+            const currentPreview = computeCurrentPreview();
+            previewElement.style.background = currentPreview.background;
+            accentElement.style.background = currentPreview.accent;
+            sampleElement.style.color = currentPreview.text;
+        };
+
+        const applyPresetSettings = (settings) => {
+            if (!settings || typeof settings !== 'object') {
+                return;
+            }
+
+            Object.keys(settings).forEach((optionKey) => {
+                const optionValue = settings[optionKey];
+
+                if (optionValue && typeof optionValue === 'object' && Object.prototype.hasOwnProperty.call(optionValue, 'value') && Object.prototype.hasOwnProperty.call(optionValue, 'unit')) {
+                    const valueInput = document.querySelector(`[name="sidebar_jlg_settings[${optionKey}][value]"]`);
+                    const unitInput = document.querySelector(`[name="sidebar_jlg_settings[${optionKey}][unit]"]`);
+
+                    if (valueInput) {
+                        valueInput.value = optionValue.value;
+                        triggerFieldUpdate(valueInput);
+                    }
+                    if (unitInput) {
+                        unitInput.value = optionValue.unit;
+                        triggerFieldUpdate(unitInput);
+                    }
+
+                    return;
+                }
+
+                const radioElements = document.querySelectorAll(`input[type="radio"][name="sidebar_jlg_settings[${optionKey}]"]`);
+                if (radioElements.length) {
+                    let matched = null;
+                    radioElements.forEach((radio) => {
+                        const isMatch = radio.value === String(optionValue);
+                        radio.checked = isMatch;
+                        if (isMatch) {
+                            matched = radio;
+                        }
+                    });
+                    if (matched) {
+                        triggerFieldUpdate(matched);
+                    } else if (radioElements[0]) {
+                        triggerFieldUpdate(radioElements[0]);
+                    }
+                    return;
+                }
+
+                const checkbox = document.querySelector(`input[type="checkbox"][name="sidebar_jlg_settings[${optionKey}]"]`);
+                if (checkbox) {
+                    const isChecked = optionValue === true || optionValue === '1' || optionValue === 1 || optionValue === 'on';
+                    checkbox.checked = isChecked;
+                    triggerFieldUpdate(checkbox);
+                    return;
+                }
+
+                const field = document.querySelector(`[name="sidebar_jlg_settings[${optionKey}]"]`);
+                if (!field) {
+                    return;
+                }
+
+                field.value = optionValue;
+                triggerFieldUpdate(field);
+
+                if (window.jQuery) {
+                    const $field = window.jQuery(field);
+                    if (typeof $field.wpColorPicker === 'function' && $field.data('wpColorPicker')) {
+                        $field.wpColorPicker('color', optionValue);
+                    } else if ($field.hasClass('color-picker-rgba')) {
+                        $field.trigger('change');
+                    }
+                }
+            });
+        };
+
+        const refreshPreview = () => {
+            if (!previewModule || typeof previewModule.loadPreview !== 'function') {
+                updateCustomCardPreview();
+                return Promise.resolve();
+            }
+
+            return previewModule.loadPreview()
+                .then(() => {
+                    previewModule.applyOptions();
+                    updateCustomCardPreview();
+                })
+                .catch(() => {
+                    updateCustomCardPreview();
+                });
+        };
+
+        const handlePresetSelection = (preset) => {
+            isApplyingPreset = true;
+
+            ensureCompareInactive()
+                .then(() => {
+                    if (preset.key !== 'custom' && preset.settings) {
+                        applyPresetSettings(preset.settings);
+                    }
+
+                    updateHiddenInput(preset.key);
+                    markActiveCard(preset.key);
+
+                    return refreshPreview();
+                })
+                .catch(() => {
+                    // Silently ignore compare exit failures.
+                })
+                .finally(() => {
+                    isApplyingPreset = false;
+                });
+        };
+
+        const createCardElement = (preset) => {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'sidebar-jlg-style-preset-card';
+            card.dataset.presetKey = preset.key;
+            card.setAttribute('aria-pressed', 'false');
+
+            const previewElement = document.createElement('span');
+            previewElement.className = 'sidebar-jlg-style-preset-card__preview';
+            if (preset.preview.background) {
+                previewElement.style.background = preset.preview.background;
+            }
+
+            const accentElement = document.createElement('span');
+            accentElement.className = 'sidebar-jlg-style-preset-card__accent';
+            if (preset.preview.accent) {
+                accentElement.style.background = preset.preview.accent;
+            }
+            previewElement.appendChild(accentElement);
+
+            const sampleElement = document.createElement('span');
+            sampleElement.className = 'sidebar-jlg-style-preset-card__sample';
+            sampleElement.textContent = 'Aa';
+            if (preset.preview.text) {
+                sampleElement.style.color = preset.preview.text;
+            }
+            previewElement.appendChild(sampleElement);
+
+            const titleElement = document.createElement('h4');
+            titleElement.className = 'sidebar-jlg-style-preset-card__title';
+            titleElement.textContent = preset.label;
+
+            card.appendChild(previewElement);
+            card.appendChild(titleElement);
+
+            if (preset.description) {
+                const descriptionElement = document.createElement('p');
+                descriptionElement.className = 'sidebar-jlg-style-preset-card__description';
+                descriptionElement.textContent = preset.description;
+                card.appendChild(descriptionElement);
+            }
+
+            const ctaElement = document.createElement('span');
+            ctaElement.className = 'sidebar-jlg-style-preset-card__cta';
+            ctaElement.textContent = applyLabel;
+            card.appendChild(ctaElement);
+
+            card.addEventListener('click', () => {
+                handlePresetSelection(preset);
+            });
+
+            return card;
+        };
+
+        const presetsToRender = [
+            {
+                key: 'custom',
+                label: customLabel,
+                description: customDescription,
+                settings: null,
+                preview: computeCurrentPreview(),
+            },
+            ...normalizedPresets,
+        ];
+
+        presetsToRender.forEach((preset) => {
+            const card = createCardElement(preset);
+            if (preset.key === 'custom') {
+                customCardElement = card;
+            }
+            grid.appendChild(card);
+        });
+
+        const initialKey = hiddenInput.value && hiddenInput.value !== '' ? hiddenInput.value : 'custom';
+        markActiveCard(initialKey);
+        updateCustomCardPreview();
+
+        const styleTab = document.getElementById('tab-presets');
+        if (styleTab) {
+            const manualChangeHandler = (event) => {
+                if (isApplyingPreset) {
+                    return;
+                }
+
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (!container.contains(target)) {
+                    return;
+                }
+
+                if (hiddenInput.value !== 'custom') {
+                    updateHiddenInput('custom');
+                    markActiveCard('custom');
+                }
+
+                window.requestAnimationFrame(() => {
+                    updateCustomCardPreview();
+                });
+            };
+
+            styleTab.addEventListener('input', manualChangeHandler);
+            styleTab.addEventListener('change', manualChangeHandler);
+        }
     }
 
     function rebuildIconLookups(manifest) {
@@ -3674,29 +4186,6 @@ jQuery(document).ready(function($) {
             $('.logo-preview img').attr('src', attachment.url).show();
         });
         mediaFrame.open();
-    });
-
-    // --- Préréglages de style ---
-    $('#style-preset-select').on('change', function() {
-        const preset = $(this).val();
-        if (preset === 'custom') return;
-
-        const presets = {
-            moderne_dark: {
-                bg_color: '#1a1d24',
-                accent_color: '#0d6efd',
-                font_color: '#e0e0e0',
-                font_hover_color: '#ffffff'
-            }
-        };
-
-        if (presets[preset]) {
-            const p = presets[preset];
-            $('input[name="sidebar_jlg_settings[bg_color]"]').val(p.bg_color).trigger('change');
-            $('input[name="sidebar_jlg_settings[accent_color]"]').val(p.accent_color).trigger('change');
-            $('input[name="sidebar_jlg_settings[font_color]"]').val(p.font_color).trigger('change');
-            $('input[name="sidebar_jlg_settings[font_hover_color]"]').val(p.font_hover_color).trigger('change');
-        }
     });
 
     // --- Modale Icônes ---

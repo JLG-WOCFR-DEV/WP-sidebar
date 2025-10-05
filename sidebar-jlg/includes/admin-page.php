@@ -85,6 +85,10 @@ $textTransformLabels = [
                 <span class="screen-reader-text"><?php esc_html_e( 'Prévisualiser en mode bureau', 'sidebar-jlg' ); ?></span>
                 <span aria-hidden="true"><?php esc_html_e( 'Desktop', 'sidebar-jlg' ); ?></span>
             </button>
+            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button" id="sidebar-jlg-preview-compare" aria-pressed="false">
+                <span class="screen-reader-text"><?php esc_html_e( 'Basculer entre l’aperçu initial et l’aperçu actuel', 'sidebar-jlg' ); ?></span>
+                <span class="sidebar-jlg-preview__toolbar-button-label" aria-hidden="true"><?php esc_html_e( 'Comparer', 'sidebar-jlg' ); ?></span>
+            </button>
         </div>
         <div class="sidebar-jlg-preview__status" role="status" aria-live="polite"></div>
         <div class="sidebar-jlg-preview__viewport" aria-label="<?php esc_attr_e( 'Aperçu de la sidebar', 'sidebar-jlg' ); ?>"></div>
@@ -434,11 +438,32 @@ $textTransformLabels = [
                 <tr>
                     <th scope="row"><?php esc_html_e( 'Préréglage de style', 'sidebar-jlg' ); ?></th>
                     <td>
-                        <select name="sidebar_jlg_settings[style_preset]" id="style-preset-select">
-                            <option value="custom" <?php selected($options['style_preset'], 'custom'); ?>><?php esc_html_e('Personnalisé', 'sidebar-jlg'); ?></option>
-                            <option value="moderne_dark" <?php selected($options['style_preset'], 'moderne_dark'); ?>><?php esc_html_e('Critique Moderne (Dark)', 'sidebar-jlg'); ?></option>
-                        </select>
-                        <p class="description"><?php esc_html_e('Choisir un préréglage mettra à jour automatiquement les options de couleur ci-dessous.', 'sidebar-jlg'); ?></p>
+                        <input type="hidden" name="sidebar_jlg_settings[style_preset]" id="sidebar-jlg-style-preset" value="<?php echo esc_attr( $options['style_preset'] ?? 'custom' ); ?>" disabled>
+                        <div id="sidebar-jlg-style-presets" class="sidebar-jlg-style-presets" data-selected-preset="<?php echo esc_attr( $options['style_preset'] ?? 'custom' ); ?>">
+                            <p class="description"><?php esc_html_e( 'Choisissez un préréglage pour remplir automatiquement les couleurs, la typographie et les effets.', 'sidebar-jlg' ); ?></p>
+                            <div class="sidebar-jlg-style-presets__grid" data-style-preset-grid>
+                                <p class="sidebar-jlg-style-presets__placeholder"><?php esc_html_e( 'Chargement des préréglages…', 'sidebar-jlg' ); ?></p>
+                            </div>
+                            <p class="sidebar-jlg-style-presets__empty" data-style-preset-empty hidden><?php esc_html_e( 'Aucun préréglage n’est disponible pour le moment.', 'sidebar-jlg' ); ?></p>
+                            <noscript>
+                                <p><?php esc_html_e( 'JavaScript est nécessaire pour parcourir les préréglages interactifs. Utilisez la liste déroulante ci-dessous.', 'sidebar-jlg' ); ?></p>
+                                <select name="sidebar_jlg_settings[style_preset]" id="style-preset-select-fallback">
+                                    <option value="custom" <?php selected($options['style_preset'], 'custom'); ?>><?php esc_html_e('Personnalisé', 'sidebar-jlg'); ?></option>
+                                    <?php if ( ! empty( $stylePresets ) && is_array( $stylePresets ) ) : ?>
+                                        <?php foreach ( $stylePresets as $presetKey => $presetData ) : ?>
+                                            <?php
+                                            $presetLabel = '';
+                                            if ( is_array( $presetData ) && isset( $presetData['label'] ) && is_string( $presetData['label'] ) ) {
+                                                $presetLabel = __($presetData['label'], 'sidebar-jlg');
+                                            }
+                                            ?>
+                                            <option value="<?php echo esc_attr( $presetKey ); ?>" <?php selected( $options['style_preset'], $presetKey ); ?>><?php echo esc_html( $presetLabel !== '' ? $presetLabel : $presetKey ); ?></option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                            </noscript>
+                        </div>
+                        <p class="description"><?php esc_html_e( 'Les réglages appliqués peuvent ensuite être ajustés individuellement ci-dessous.', 'sidebar-jlg' ); ?></p>
                     </td>
                 </tr>
                 <tr>

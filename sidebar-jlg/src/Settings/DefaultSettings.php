@@ -4,6 +4,145 @@ namespace JLG\Sidebar\Settings;
 
 class DefaultSettings
 {
+    public const STYLE_PRESETS = [
+        'moderne_dark' => [
+            'label' => 'Critique Moderne (Sombre)',
+            'description' => 'Contraste marqué, typographie audacieuse et accent électrique.',
+            'preview' => [
+                'background' => 'linear-gradient(180deg, #1f2937 0%, #111827 100%)',
+                'accent' => '#0d6efd',
+                'text' => '#f8fafc',
+            ],
+            'settings' => [
+                'bg_color_type' => 'gradient',
+                'bg_color' => 'rgba(31, 41, 55, 1)',
+                'bg_color_start' => '#1f2937',
+                'bg_color_end' => '#111827',
+                'accent_color_type' => 'solid',
+                'accent_color' => 'rgba(13, 110, 253, 1)',
+                'font_color_type' => 'solid',
+                'font_color' => 'rgba(248, 250, 252, 1)',
+                'font_hover_color_type' => 'solid',
+                'font_hover_color' => 'rgba(255, 255, 255, 1)',
+                'font_family' => 'google-montserrat',
+                'font_weight' => '600',
+                'text_transform' => 'uppercase',
+                'letter_spacing' => ['value' => '0.08', 'unit' => 'em'],
+                'hover_effect_desktop' => 'underline-center',
+                'hover_effect_mobile' => 'underline-center',
+                'animation_type' => 'slide-left',
+                'mobile_bg_color' => 'rgba(15, 23, 42, 0.85)',
+                'mobile_bg_opacity' => 0.85,
+                'mobile_blur' => 12,
+                'border_radius' => ['value' => '18', 'unit' => 'px'],
+                'border_width' => 1,
+                'border_color' => 'rgba(148, 163, 184, 0.35)',
+            ],
+        ],
+        'minimal_light' => [
+            'label' => 'Minimal Clair',
+            'description' => 'Palette douce, lisibilité maximale et transitions discrètes.',
+            'preview' => [
+                'background' => '#f8fafc',
+                'accent' => '#2563eb',
+                'text' => '#1f2937',
+            ],
+            'settings' => [
+                'bg_color_type' => 'solid',
+                'bg_color' => 'rgba(248, 250, 252, 1)',
+                'accent_color_type' => 'solid',
+                'accent_color' => 'rgba(37, 99, 235, 1)',
+                'font_color_type' => 'solid',
+                'font_color' => 'rgba(30, 41, 59, 1)',
+                'font_hover_color_type' => 'solid',
+                'font_hover_color' => 'rgba(15, 118, 110, 1)',
+                'font_family' => 'google-open-sans',
+                'font_weight' => '400',
+                'text_transform' => 'none',
+                'letter_spacing' => ['value' => '0', 'unit' => 'em'],
+                'hover_effect_desktop' => 'none',
+                'hover_effect_mobile' => 'none',
+                'animation_type' => 'fade',
+                'mobile_bg_color' => 'rgba(255, 255, 255, 0.95)',
+                'mobile_bg_opacity' => 0.95,
+                'mobile_blur' => 4,
+                'border_radius' => ['value' => '14', 'unit' => 'px'],
+                'border_width' => 1,
+                'border_color' => 'rgba(148, 163, 184, 0.2)',
+            ],
+        ],
+        'retro_warm' => [
+            'label' => 'Retro & Chaleur',
+            'description' => 'Dégradé chaleureux, touches vintage et boutons arrondis.',
+            'preview' => [
+                'background' => 'linear-gradient(180deg, #f97316 0%, #db2777 100%)',
+                'accent' => '#fb923c',
+                'text' => '#fff7ed',
+            ],
+            'settings' => [
+                'bg_color_type' => 'gradient',
+                'bg_color' => 'rgba(249, 115, 22, 1)',
+                'bg_color_start' => '#f97316',
+                'bg_color_end' => '#db2777',
+                'accent_color_type' => 'gradient',
+                'accent_color' => 'rgba(251, 191, 36, 1)',
+                'accent_color_start' => '#fde68a',
+                'accent_color_end' => '#f97316',
+                'font_color_type' => 'solid',
+                'font_color' => 'rgba(255, 247, 237, 1)',
+                'font_hover_color_type' => 'solid',
+                'font_hover_color' => 'rgba(255, 255, 255, 1)',
+                'font_family' => 'georgia',
+                'font_weight' => '600',
+                'text_transform' => 'capitalize',
+                'letter_spacing' => ['value' => '0.05', 'unit' => 'em'],
+                'hover_effect_desktop' => 'pill-center',
+                'hover_effect_mobile' => 'pill-center',
+                'animation_type' => 'scale',
+                'mobile_bg_color' => 'rgba(251, 191, 36, 0.92)',
+                'mobile_bg_opacity' => 0.92,
+                'mobile_blur' => 6,
+                'border_radius' => ['value' => '24', 'unit' => 'px'],
+                'border_width' => 2,
+                'border_color' => 'rgba(251, 146, 60, 0.35)',
+            ],
+        ],
+        'glass_neon' => [
+            'label' => 'Verre Néon',
+            'description' => 'Effet glassmorphism, néons vibrants et ambiance futuriste.',
+            'preview' => [
+                'background' => 'linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.65) 100%)',
+                'accent' => 'linear-gradient(135deg, #38bdf8 0%, #f472b6 100%)',
+                'text' => '#e2e8f0',
+            ],
+            'settings' => [
+                'bg_color_type' => 'solid',
+                'bg_color' => 'rgba(15, 23, 42, 0.75)',
+                'accent_color_type' => 'gradient',
+                'accent_color' => 'rgba(56, 189, 248, 1)',
+                'accent_color_start' => '#38bdf8',
+                'accent_color_end' => '#f472b6',
+                'font_color_type' => 'solid',
+                'font_color' => 'rgba(226, 232, 240, 1)',
+                'font_hover_color_type' => 'solid',
+                'font_hover_color' => 'rgba(255, 255, 255, 1)',
+                'font_family' => 'google-roboto',
+                'font_weight' => '500',
+                'text_transform' => 'uppercase',
+                'letter_spacing' => ['value' => '0.12', 'unit' => 'em'],
+                'hover_effect_desktop' => 'glow',
+                'hover_effect_mobile' => 'glow',
+                'animation_type' => 'fade',
+                'mobile_bg_color' => 'rgba(15, 23, 42, 0.9)',
+                'mobile_bg_opacity' => 0.9,
+                'mobile_blur' => 18,
+                'border_radius' => ['value' => '32', 'unit' => 'px'],
+                'border_width' => 1,
+                'border_color' => 'rgba(148, 163, 184, 0.6)',
+            ],
+        ],
+    ];
+
     /**
      * Returns the default plugin settings.
      */
@@ -93,6 +232,12 @@ class DefaultSettings
             'social_orientation'=> 'horizontal',
             'social_position'   => 'footer',
             'social_icon_size'  => 100,
+            'style_presets'     => self::STYLE_PRESETS,
         ];
+    }
+
+    public function getStylePresets(): array
+    {
+        return self::STYLE_PRESETS;
     }
 }
