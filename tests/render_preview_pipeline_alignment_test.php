@@ -98,12 +98,11 @@ if (!is_array($previewPayload) || !isset($previewPayload['html'])) {
 
 $previewHtml = (string) $previewPayload['html'];
 
-ob_start();
-$renderReturn = $renderer->render();
-$renderedHtml = ob_get_clean();
+$renderedHtml = $renderer->render();
 
-if (!is_string($renderedHtml) || $renderedHtml === '') {
-    $renderedHtml = is_string($renderReturn) ? $renderReturn : '';
+if (!is_string($renderedHtml)) {
+    echo "[FAIL] Frontend renderer did not return HTML string.\n";
+    exit(1);
 }
 
 $testsPassed = true;

@@ -140,9 +140,7 @@ $GLOBALS['wp_test_inline_styles'] = [];
 $renderer->enqueueAssets();
 $inlineStyles = wp_test_get_inline_styles('sidebar-jlg-public-css');
 
-ob_start();
 $renderer->render();
-ob_end_clean();
 
 assertContains('--sidebar-bg-color: ' . $expectedBgColorStart . ';', $inlineStyles, 'Rendered CSS uses default background gradient start color after revalidation');
 assertContains('linear-gradient(180deg, ' . $expectedBgColorStart . ' 0%, ' . $expectedBgColorEnd . ' 100%)', $inlineStyles, 'Rendered CSS uses default background gradient colors after revalidation');

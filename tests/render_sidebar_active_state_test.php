@@ -80,9 +80,9 @@ function runSidebarScenario(array $menuItem, callable $configureContext): array
     $menuCache->clear();
     $GLOBALS['wp_test_transients'] = [];
 
-    ob_start();
-    $renderer->render();
-    $html = (string) ob_get_clean();
+    $html = $renderer->render();
+    assertTrue(is_string($html), 'Sidebar renderer returned HTML for active state scenario');
+    $html = (string) $html;
 
     return ['html' => $html, 'settings' => $settings];
 }

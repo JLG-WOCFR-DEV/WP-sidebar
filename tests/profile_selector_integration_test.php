@@ -178,10 +178,8 @@ $GLOBALS['wp_test_function_overrides']['wp_localize_script'] = static function (
 $renderer->enqueueAssets();
 assertSame('not-called', $localizedData, 'Assets skipped when subscriber profile disables sidebar');
 
-ob_start();
-$renderer->render();
-$subscriberHtml = (string) ob_get_clean();
-assertSame('', $subscriberHtml, 'Render output empty when subscriber profile disables sidebar');
+$subscriberHtml = $renderer->render();
+assertSame(null, $subscriberHtml, 'Render output empty when subscriber profile disables sidebar');
 
 // Scenario 2: Editor on a page receives the page-specific profile.
 $resetContext();

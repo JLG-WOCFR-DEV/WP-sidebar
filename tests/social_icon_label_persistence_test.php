@@ -96,9 +96,9 @@ $GLOBALS['wp_test_function_overrides']['esc_attr'] = static function ($value) {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 };
 
-ob_start();
-$renderer->render();
-$html = ob_get_clean();
+$html = $renderer->render();
+assertSame(true, is_string($html), 'Sidebar renderer returned HTML for social icons scenario');
+$html = (string) $html;
 
 unset($GLOBALS['wp_test_function_overrides']['esc_attr']);
 
