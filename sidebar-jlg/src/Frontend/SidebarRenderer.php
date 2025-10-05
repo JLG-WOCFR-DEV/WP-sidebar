@@ -830,6 +830,86 @@ class SidebarRenderer
     private static function buildStaticMenuNode(array $item, array $allIcons, array $context): ?array
     {
         $type = isset($item['type']) ? (string) $item['type'] : '';
+
+        if ($type === 'cta') {
+            $title = '';
+            if (isset($item['cta_title']) && is_string($item['cta_title'])) {
+                $title = sanitize_text_field($item['cta_title']);
+            }
+
+            $description = '';
+            if (isset($item['cta_description']) && is_string($item['cta_description'])) {
+                $description = wp_kses_post($item['cta_description']);
+            }
+
+            $buttonLabel = '';
+            if (isset($item['cta_button_label']) && is_string($item['cta_button_label'])) {
+                $buttonLabel = sanitize_text_field($item['cta_button_label']);
+            }
+
+            $rawButtonUrl = '';
+            if (isset($item['cta_button_url']) && is_string($item['cta_button_url'])) {
+                $rawButtonUrl = $item['cta_button_url'];
+            } elseif (isset($item['value']) && is_string($item['value'])) {
+                $rawButtonUrl = $item['value'];
+            }
+
+            $buttonUrl = esc_url($rawButtonUrl);
+            $buttonHref = $buttonUrl !== '' ? $buttonUrl : '#';
+
+            $shortcodeMarkup = '';
+            if (isset($item['cta_shortcode']) && is_string($item['cta_shortcode'])) {
+                $rawShortcode = $item['cta_shortcode'];
+                if ($rawShortcode !== '') {
+                    $processed = function_exists('do_shortcode') ? do_shortcode($rawShortcode) : $rawShortcode;
+                    $shortcodeMarkup = wp_kses_post($processed);
+                }
+            }
+
+            $fallbackLabel = '';
+            if (isset($item['label']) && is_string($item['label'])) {
+                $fallbackLabel = sanitize_text_field($item['label']);
+            }
+
+            $trackingSource = $title !== '' ? $title : ($buttonLabel !== '' ? $buttonLabel : $fallbackLabel);
+            $trackingId = $trackingSource !== '' ? sanitize_title($trackingSource) : '';
+            if ($trackingId === '') {
+                $trackingId = 'cta-' . substr(md5($trackingSource . $buttonUrl), 0, 8);
+            }
+
+            $classes = self::normalizeMenuClasses(['menu-item', 'menu-item-static', 'menu-item-cta']);
+
+            return [
+                'type' => 'cta',
+                'label' => $title !== '' ? $title : $fallbackLabel,
+                'url' => '',
+                'classes' => $classes,
+                'is_current' => false,
+                'is_current_ancestor' => false,
+                'children' => [],
+                'icon' => [
+                    'type' => '',
+                    'markup' => '',
+                    'url' => '',
+                    'is_custom' => false,
+                ],
+                'origin' => 'static',
+                'cta' => [
+                    'title' => $title,
+                    'description' => $description,
+                    'button_label' => $buttonLabel,
+                    'button_url' => $buttonHref,
+                    'shortcode' => $shortcodeMarkup,
+                ],
+                'data_attributes' => $trackingId !== ''
+                    ? [
+                        'data-cta-id' => $trackingId,
+                        'data-cta-label' => $trackingSource,
+                    ]
+                    : [],
+            ];
+        }
+
         $url = '#';
         $rawUrl = '';
         $isValid = true;

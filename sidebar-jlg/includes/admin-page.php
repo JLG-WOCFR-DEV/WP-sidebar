@@ -911,6 +911,7 @@ $textTransformLabels = [
                     <option value="page" <# if (data.type === 'page') { #>selected<# } #>><?php echo esc_html__( 'Page', 'sidebar-jlg' ); ?></option>
                     <option value="category" <# if (data.type === 'category') { #>selected<# } #>><?php echo esc_html__( 'Catégorie', 'sidebar-jlg' ); ?></option>
                     <option value="nav_menu" <# if (data.type === 'nav_menu') { #>selected<# } #>><?php echo esc_html__( 'Menu WordPress', 'sidebar-jlg' ); ?></option>
+                    <option value="cta" <# if (data.type === 'cta') { #>selected<# } #>><?php echo esc_html__( 'Bloc CTA', 'sidebar-jlg' ); ?></option>
                 </select>
             </p>
             <div class="menu-item-value-wrapper">

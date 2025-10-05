@@ -4349,6 +4349,114 @@ jQuery(document).ready(function($) {
             searchInput.val('');
             statusElement.empty();
             searchContainer.css('display', 'none');
+        } else if (type === 'cta') {
+            const titleLabel = getI18nString('ctaTitleLabel', 'Titre du bloc');
+            const descriptionLabel = getI18nString('ctaDescriptionLabel', 'Description');
+            const buttonLabelLabel = getI18nString('ctaButtonLabel', 'Texte du bouton');
+            const buttonUrlLabel = getI18nString('ctaButtonUrlLabel', 'Lien du bouton');
+            const shortcodeLabel = getI18nString('ctaShortcodeLabel', 'Shortcode (optionnel)');
+            const buttonUrlPlaceholder = getI18nString('ctaButtonUrlPlaceholder', 'https://...');
+
+            const ctaTitle = typeof itemData.cta_title === 'string' ? itemData.cta_title : '';
+            const ctaDescription = typeof itemData.cta_description === 'string' ? itemData.cta_description : '';
+            const ctaButtonLabel = typeof itemData.cta_button_label === 'string' ? itemData.cta_button_label : '';
+            const ctaButtonUrl = typeof itemData.cta_button_url === 'string' && itemData.cta_button_url.trim() !== ''
+                ? itemData.cta_button_url
+                : value;
+            const ctaShortcode = typeof itemData.cta_shortcode === 'string' ? itemData.cta_shortcode : '';
+
+            const $fields = $('<div>', {
+                class: 'menu-item-cta-fields',
+                'data-menu-item-cta-fields': '1'
+            });
+
+            const $titleWrapper = $('<p>');
+            $titleWrapper.append($('<label>').text(titleLabel));
+            const $titleInput = $('<input>', {
+                type: 'text',
+                class: 'widefat menu-item-cta-title',
+                name: `sidebar_jlg_settings[menu_items][${index}][cta_title]`
+            }).val(ctaTitle);
+            $titleWrapper.append($titleInput);
+
+            const $descriptionWrapper = $('<p>');
+            $descriptionWrapper.append($('<label>').text(descriptionLabel));
+            const $descriptionTextarea = $('<textarea>', {
+                class: 'widefat menu-item-cta-description',
+                rows: 3,
+                name: `sidebar_jlg_settings[menu_items][${index}][cta_description]`
+            }).val(ctaDescription);
+            $descriptionWrapper.append($descriptionTextarea);
+
+            const $buttonLabelWrapper = $('<p>');
+            $buttonLabelWrapper.append($('<label>').text(buttonLabelLabel));
+            const $buttonLabelInput = $('<input>', {
+                type: 'text',
+                class: 'widefat menu-item-cta-button-label',
+                name: `sidebar_jlg_settings[menu_items][${index}][cta_button_label]`
+            }).val(ctaButtonLabel);
+            $buttonLabelWrapper.append($buttonLabelInput);
+
+            const $buttonUrlWrapper = $('<p>');
+            $buttonUrlWrapper.append($('<label>').text(buttonUrlLabel));
+            const $buttonUrlInput = $('<input>', {
+                type: 'url',
+                class: 'widefat menu-item-cta-button-url',
+                placeholder: buttonUrlPlaceholder,
+                name: `sidebar_jlg_settings[menu_items][${index}][cta_button_url]`
+            }).val(ctaButtonUrl || '');
+            $buttonUrlWrapper.append($buttonUrlInput);
+
+            const $hiddenValueInput = $('<input>', {
+                type: 'hidden',
+                name: `sidebar_jlg_settings[menu_items][${index}][value]`
+            }).val(ctaButtonUrl || '');
+            $buttonUrlWrapper.append($hiddenValueInput);
+
+            const $shortcodeWrapper = $('<p>');
+            $shortcodeWrapper.append($('<label>').text(shortcodeLabel));
+            const $shortcodeTextarea = $('<textarea>', {
+                class: 'widefat menu-item-cta-shortcode',
+                rows: 2,
+                name: `sidebar_jlg_settings[menu_items][${index}][cta_shortcode]`
+            }).val(ctaShortcode);
+            $shortcodeWrapper.append($shortcodeTextarea);
+
+            $fields
+                .append($titleWrapper)
+                .append($descriptionWrapper)
+                .append($buttonLabelWrapper)
+                .append($buttonUrlWrapper)
+                .append($shortcodeWrapper);
+
+            fieldContainer.append($fields);
+
+            const defaultFallback = getI18nString('menuItemDefaultTitle', 'Nouvel élément');
+            const updateFallbackTitle = (nextTitle) => {
+                const trimmed = typeof nextTitle === 'string' ? nextTitle.trim() : '';
+                const fallback = trimmed || defaultFallback;
+                $itemBox.data('fallbackTitle', fallback);
+                const $labelField = $itemBox.find('.item-label');
+                const labelValue = $labelField.length && typeof $labelField.val() === 'string'
+                    ? $labelField.val().trim()
+                    : '';
+                $itemBox.find('.item-title').text(labelValue || fallback);
+            };
+
+            updateFallbackTitle(ctaTitle);
+            $titleInput.on('input', function() {
+                updateFallbackTitle(this.value || '');
+            });
+
+            $buttonUrlInput.on('input', function() {
+                const currentValue = typeof this.value === 'string' ? this.value.trim() : '';
+                $hiddenValueInput.val(currentValue);
+                triggerFieldUpdate($hiddenValueInput[0]);
+            });
+
+            searchInput.val('');
+            statusElement.empty();
+            searchContainer.css('display', 'none');
         } else if (type === 'post' || type === 'page' || type === 'category') {
             const isContentType = type === 'post' || type === 'page';
             const action = isContentType ? 'jlg_get_posts' : 'jlg_get_categories';
@@ -4620,7 +4728,12 @@ jQuery(document).ready(function($) {
             icon_type: 'svg_inline',
             icon: '',
             nav_menu_max_depth: 0,
-            nav_menu_filter: 'all'
+            nav_menu_filter: 'all',
+            cta_title: '',
+            cta_description: '',
+            cta_button_label: '',
+            cta_button_url: '',
+            cta_shortcode: ''
         }),
         onAppend: ($itemBox, itemData) => {
             updateValueField($itemBox, itemData);
