@@ -121,6 +121,9 @@ class MenuPage
         );
 
         $defaults = $this->settings->getDefaultSettings();
+        $stylePresets = isset($defaults['style_presets']) && is_array($defaults['style_presets'])
+            ? $this->formatStylePresetsForScript($defaults['style_presets'])
+            : [];
         $options = $this->settings->getOptionsWithRevalidation();
         $rawProfiles = get_option('sidebar_jlg_profiles', []);
         $profiles = $this->sanitizer->sanitize_profiles_collection($rawProfiles);
@@ -151,6 +154,7 @@ class MenuPage
             'icon_upload_max_size' => IconLibrary::MAX_CUSTOM_ICON_FILESIZE,
             'preview_action' => 'jlg_render_preview',
             'svg_url_restrictions' => $this->sanitizer->getSvgUrlRestrictions(),
+            'style_presets' => $stylePresets,
             'i18n' => [
                 'menuItemDefaultTitle' => __('Nouvel élément', 'sidebar-jlg'),
                 'socialIconDefaultTitle' => __('Nouvelle icône', 'sidebar-jlg'),
@@ -203,6 +207,15 @@ class MenuPage
                 'profilesClearActive' => __('Ne sélectionner aucun profil actif', 'sidebar-jlg'),
                 'profilesDefaultActiveLabel' => __('Réglages globaux', 'sidebar-jlg'),
                 'profilesDeleteLabel' => __('Supprimer', 'sidebar-jlg'),
+                'stylePresetCustomLabel' => __('Personnalisé', 'sidebar-jlg'),
+                'stylePresetCustomDescription' => __('Utilisez vos propres combinaisons de couleurs, typographies et effets.', 'sidebar-jlg'),
+                'stylePresetApplyLabel' => __('Utiliser ce préréglage', 'sidebar-jlg'),
+                'stylePresetLoading' => __('Chargement des préréglages…', 'sidebar-jlg'),
+                'stylePresetEmpty' => __('Aucun préréglage n’est disponible pour le moment.', 'sidebar-jlg'),
+                'stylePresetCompareButton' => __('Comparer avant/après', 'sidebar-jlg'),
+                'stylePresetCompareExit' => __('Revenir à l’après', 'sidebar-jlg'),
+                'stylePresetCompareBefore' => __('Affichage : avant', 'sidebar-jlg'),
+                'stylePresetCompareAfter' => __('Affichage : après', 'sidebar-jlg'),
             ],
             'preview_messages' => [
                 'loading' => __('Chargement de l’aperçu…', 'sidebar-jlg'),
@@ -218,6 +231,7 @@ class MenuPage
     {
         $colorPicker = $this->colorPicker;
         $defaults = $this->settings->getDefaultSettings();
+        $stylePresets = $defaults['style_presets'] ?? [];
         $options = $this->settings->getOptionsWithRevalidation();
         $allIcons = $this->icons->getAllIcons();
 
@@ -245,6 +259,58 @@ class MenuPage
             '<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
             esc_html($message)
         );
+    }
+
+    /**
+     * @param array<string, mixed> $presets
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function formatStylePresetsForScript(array $presets): array
+    {
+        $formatted = [];
+
+        foreach ($presets as $key => $preset) {
+            if (!is_array($preset)) {
+                continue;
+            }
+
+            $normalizedKey = sanitize_key((string) $key);
+            if ($normalizedKey === '') {
+                continue;
+            }
+
+            $preview = isset($preset['preview']) && is_array($preset['preview'])
+                ? $preset['preview']
+                : [];
+
+            $settings = isset($preset['settings']) && is_array($preset['settings'])
+                ? $preset['settings']
+                : [];
+
+            $formatted[$normalizedKey] = [
+                'label' => isset($preset['label']) && is_string($preset['label']) && $preset['label'] !== ''
+                    ? __($preset['label'], 'sidebar-jlg')
+                    : $normalizedKey,
+                'description' => isset($preset['description']) && is_string($preset['description'])
+                    ? __($preset['description'], 'sidebar-jlg')
+                    : '',
+                'preview' => [
+                    'background' => isset($preview['background']) && is_string($preview['background'])
+                        ? $preview['background']
+                        : '',
+                    'accent' => isset($preview['accent']) && is_string($preview['accent'])
+                        ? $preview['accent']
+                        : '',
+                    'text' => isset($preview['text']) && is_string($preview['text'])
+                        ? $preview['text']
+                        : '',
+                ],
+                'settings' => $settings,
+            ];
+        }
+
+        return $formatted;
     }
 
     /**
