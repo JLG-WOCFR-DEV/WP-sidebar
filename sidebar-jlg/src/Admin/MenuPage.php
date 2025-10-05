@@ -141,7 +141,7 @@ class MenuPage
         ];
 
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
-            'ajax_url' => admin_url('admin-ajax.php'),
+            'ajax_url' => admin_url('admin-ajax.php', 'relative'),
             'nonce' => wp_create_nonce('jlg_ajax_nonce'),
             'reset_nonce' => wp_create_nonce('jlg_reset_nonce'),
             'tools_nonce' => wp_create_nonce('jlg_tools_nonce'),
