@@ -514,17 +514,26 @@ class SettingsSanitizer
                     continue;
                 }
 
-                $allowedItemTypes = ['custom', 'post', 'page', 'category', 'nav_menu'];
-                $itemType = sanitize_key($item['type'] ?? '');
-                if (!in_array($itemType, $allowedItemTypes, true)) {
-                    $itemType = 'custom';
+                $existingItem = [];
+                if (isset($existingMenuItems[$index]) && is_array($existingMenuItems[$index])) {
+                    $existingItem = $existingMenuItems[$index];
                 }
+
+                $allowedItemTypes = ['custom', 'post', 'page', 'category', 'nav_menu', 'cta'];
+                $rawItemType = $item['type'] ?? ($existingItem['type'] ?? '');
+                $itemType = sanitize_key($rawItemType);
+                if ($itemType === '' && isset($existingItem['type'])) {
+                    $itemType = sanitize_key($existingItem['type']);
+                }
+                $effectiveItemType = in_array($itemType, $allowedItemTypes, true)
+                    ? $itemType
+                    : 'custom';
                 $iconType = sanitize_key($item['icon_type'] ?? '');
                 $iconType = ($iconType === 'svg_url') ? 'svg_url' : 'svg_inline';
 
                 $sanitizedItem = [
                     'label' => sanitize_text_field($item['label'] ?? ''),
-                    'type' => $itemType,
+                    'type' => $itemType !== '' ? $itemType : $effectiveItemType,
                     'icon_type' => $iconType,
                 ];
 
@@ -556,12 +565,7 @@ class SettingsSanitizer
                     }
                 }
 
-                $existingItem = [];
-                if (isset($existingMenuItems[$index]) && is_array($existingMenuItems[$index])) {
-                    $existingItem = $existingMenuItems[$index];
-                }
-
-                switch ($itemType) {
+                switch ($effectiveItemType) {
                     case 'custom':
                         $rawValue = array_key_exists('value', $item) ? $item['value'] : ($existingItem['value'] ?? '');
                         $sanitizedItem['value'] = esc_url_raw($rawValue);
@@ -586,6 +590,29 @@ class SettingsSanitizer
 
                         $sanitizedItem['nav_menu_max_depth'] = $this->sanitizeNavMenuDepth($depthSource);
                         $sanitizedItem['nav_menu_filter'] = $this->sanitizeNavMenuFilter($filterSource);
+                        break;
+                    case 'cta':
+                        $ctaTitle = array_key_exists('cta_title', $item)
+                            ? $item['cta_title']
+                            : ($existingItem['cta_title'] ?? '');
+                        $ctaDescription = array_key_exists('cta_description', $item)
+                            ? $item['cta_description']
+                            : ($existingItem['cta_description'] ?? '');
+                        $ctaShortcode = array_key_exists('cta_shortcode', $item)
+                            ? $item['cta_shortcode']
+                            : ($existingItem['cta_shortcode'] ?? '');
+                        $ctaButtonLabel = array_key_exists('cta_button_label', $item)
+                            ? $item['cta_button_label']
+                            : ($existingItem['cta_button_label'] ?? '');
+                        $ctaButtonUrl = array_key_exists('cta_button_url', $item)
+                            ? $item['cta_button_url']
+                            : ($existingItem['cta_button_url'] ?? '');
+
+                        $sanitizedItem['cta_title'] = sanitize_text_field($ctaTitle);
+                        $sanitizedItem['cta_description'] = wp_kses_post($ctaDescription);
+                        $sanitizedItem['cta_shortcode'] = wp_kses_post($ctaShortcode);
+                        $sanitizedItem['cta_button_label'] = sanitize_text_field($ctaButtonLabel);
+                        $sanitizedItem['cta_button_url'] = esc_url_raw($ctaButtonUrl);
                         break;
                     case 'post':
                     case 'page':
