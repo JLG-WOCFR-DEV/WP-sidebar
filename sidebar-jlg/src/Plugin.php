@@ -9,6 +9,7 @@ use JLG\Sidebar\Ajax\Endpoints;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\Blocks\SearchBlock;
 use JLG\Sidebar\Frontend\ProfileSelector;
+use JLG\Sidebar\Frontend\RequestContextResolver;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
@@ -25,6 +26,7 @@ class Plugin
     private SettingsSanitizer $sanitizer;
     private MenuPage $menuPage;
     private ProfileSelector $profileSelector;
+    private RequestContextResolver $requestContextResolver;
     private SidebarRenderer $renderer;
     private Endpoints $ajax;
     private SearchBlock $searchBlock;
@@ -38,7 +40,8 @@ class Plugin
         $this->settings = new SettingsRepository($this->defaults, $this->icons);
         $this->cache = new MenuCache();
         $this->sanitizer = new SettingsSanitizer($this->defaults, $this->icons);
-        $this->profileSelector = new ProfileSelector($this->settings);
+        $this->requestContextResolver = new RequestContextResolver();
+        $this->profileSelector = new ProfileSelector($this->settings, $this->requestContextResolver);
         $this->menuPage = new MenuPage(
             $this->settings,
             $this->sanitizer,
@@ -52,6 +55,7 @@ class Plugin
             $this->icons,
             $this->cache,
             $this->profileSelector,
+            $this->requestContextResolver,
             $pluginFile,
             $version
         );

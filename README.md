@@ -75,6 +75,17 @@ npm install
 npm run test:js
 ```
 
+### Service `RequestContextResolver`
+
+Le service `JLG\Sidebar\Frontend\RequestContextResolver` centralise toutes les informations de contexte utilisées par le rendu de la sidebar et par la sélection de profil (URL normalisée, contenus consultés, taxonomies, rôles, langue, appareil, horaires, etc.). Il est injecté dans `SidebarRenderer` et `ProfileSelector` afin de garantir que les deux composants s’appuient sur la même source de vérité.
+
+Pour ajouter un nouveau signal de contexte :
+
+1. **Compléter le service** : étendre la méthode `resolve()` (et, si nécessaire, les méthodes privées associées) pour collecter et exposer la nouvelle donnée. Conservez un format simple (types scalaires ou tableaux) et documentez toute transformation appliquée.
+2. **Mettre à jour les consommateurs** : adaptez `ProfileSelector` et/ou `SidebarRenderer` uniquement si un traitement supplémentaire est nécessaire pour exploiter le nouveau signal. Le contexte partagé doit rester la source unique de lecture.
+3. **Renforcer les tests** : ajoutez une assertion explicite dans `tests/request_context_resolver_test.php` pour couvrir le nouveau signal et mettez à jour, le cas échéant, les scénarios des tests `profile_selector_*` ou `render_sidebar_*` qui reposent sur ces données.
+4. **Synchroniser la documentation** : si le signal influence le comportement public du plugin, complétez ce README ou les notes d’implémentation pertinentes pour faciliter les futurs ajouts.
+
 ## Licence
 
 Distribué sous licence [GPL v2 ou ultérieure](https://www.gnu.org/licenses/gpl-2.0.html).

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use JLG\Sidebar\Frontend\ProfileSelector;
+use JLG\Sidebar\Frontend\RequestContextResolver;
 use function JLG\Sidebar\plugin;
 
 require __DIR__ . '/bootstrap.php';
@@ -112,7 +113,8 @@ $settings = $baseSettings;
 $settings['profiles'] = $profiles;
 $settingsRepository->saveOptions($settings);
 
-$selector = new ProfileSelector($settingsRepository);
+$resolver = new RequestContextResolver();
+$selector = new ProfileSelector($settingsRepository, $resolver);
 
 $selection = $selector->selectProfile();
 if (($selection['is_fallback'] ?? null) !== true || ($selection['id'] ?? '') !== 'default') {

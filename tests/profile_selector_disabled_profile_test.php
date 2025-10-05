@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use JLG\Sidebar\Frontend\ProfileSelector;
+use JLG\Sidebar\Frontend\RequestContextResolver;
 use function JLG\Sidebar\plugin;
 
 require __DIR__ . '/bootstrap.php';
@@ -43,6 +44,8 @@ $baseSettings['enable_sidebar'] = true;
 $GLOBALS['test_post_type'] = 'post';
 $GLOBALS['test_queried_object'] = (object) ['post_type' => 'post'];
 $GLOBALS['test_current_user'] = (object) ['roles' => ['editor']];
+
+$resolver = new RequestContextResolver();
 
 $disabledFlagVariants = [
     ['label' => 'enabled empty string', 'flags' => ['enabled' => '']],
@@ -91,7 +94,7 @@ foreach ($disabledFlagVariants as $variant) {
 
     $settingsRepository->saveOptions($settings);
 
-    $selector = new ProfileSelector($settingsRepository);
+    $selector = new ProfileSelector($settingsRepository, $resolver);
     $selection = $selector->selectProfile();
 
     if (($selection['id'] ?? '') !== 'active-profile') {
