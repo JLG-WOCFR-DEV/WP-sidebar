@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\ProfileSelector;
+use JLG\Sidebar\Frontend\RequestContextResolver;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
@@ -19,7 +20,8 @@ function sidebar_jlg_create_test_sidebar_renderer(): SidebarRenderer
     $icons = new IconLibrary($pluginFile);
     $settings = new SettingsRepository($defaults, $icons);
     $cache = new MenuCache();
-    $profileSelector = new ProfileSelector($settings);
+    $requestContextResolver = new RequestContextResolver();
+    $profileSelector = new ProfileSelector($settings, $requestContextResolver);
 
-    return new SidebarRenderer($settings, $icons, $cache, $profileSelector, $pluginFile, $version);
+    return new SidebarRenderer($settings, $icons, $cache, $profileSelector, $requestContextResolver, $pluginFile, $version);
 }
