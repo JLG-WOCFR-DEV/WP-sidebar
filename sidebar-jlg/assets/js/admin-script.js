@@ -2572,6 +2572,8 @@ jQuery(document).ready(function($) {
                     max: safeMax,
                     step: safeStep,
                     help: feedback || helpText,
+                    __next40pxDefaultSize: true,
+                    __nextHasNoMarginBottom: true,
                 });
             };
 
