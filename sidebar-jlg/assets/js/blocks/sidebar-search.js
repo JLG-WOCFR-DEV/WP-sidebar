@@ -7,7 +7,6 @@ import {
     SelectControl,
     TextareaControl,
     ToggleControl,
-    TextControl,
     __experimentalVStack as VStack,
     Notice,
     Spinner,
@@ -38,6 +37,48 @@ const HEADING_LEVEL_OPTIONS = [
 
 const localizedDefaults = window.SidebarJlgSearchBlock?.defaults ?? {};
 const blockName = window.SidebarJlgSearchBlock?.blockName ?? metadata.name;
+
+const parseServerPreviewMarkup = (markup) => {
+    if (typeof markup !== 'string') {
+        return { markup: '', hasContent: false };
+    }
+
+    const trimmed = markup.trim();
+
+    if (trimmed === '') {
+        return { markup: '', hasContent: false };
+    }
+
+    if (typeof window === 'undefined' || !window.document?.createElement) {
+        return { markup: trimmed, hasContent: true };
+    }
+
+    try {
+        const wrapper = window.document.createElement('div');
+        wrapper.innerHTML = trimmed;
+        const container = wrapper.querySelector('.sidebar-search');
+        const target = container ?? wrapper;
+
+        if (typeof target.querySelectorAll === 'function') {
+            target.querySelectorAll('.sidebar-search__heading, .sidebar-search__description').forEach((node) => {
+                node.parentNode?.removeChild(node);
+            });
+        }
+
+        const innerMarkup = container ? container.innerHTML.trim() : target.innerHTML.trim();
+        const hasElementChildren = 'children' in target && target.children.length > 0;
+        const textContent = 'textContent' in target && typeof target.textContent === 'string'
+            ? target.textContent.trim()
+            : '';
+
+        return {
+            markup: innerMarkup,
+            hasContent: innerMarkup !== '' || textContent !== '' || hasElementChildren,
+        };
+    } catch (error) {
+        return { markup: trimmed, hasContent: true };
+    }
+};
 
 registerBlockType(metadata, {
     edit({ attributes, setAttributes }) {
@@ -108,6 +149,11 @@ registerBlockType(metadata, {
                     return 'sidebar-search--align-start';
             }
         }, [normalizedAttributes.search_alignment]);
+
+        const parsedServerPreview = useMemo(
+            () => parseServerPreviewMarkup(renderState.rendered),
+            [renderState.rendered]
+        );
 
         useEffect(() => {
             if (!normalizedAttributes.enable_search) {
@@ -194,30 +240,7 @@ registerBlockType(metadata, {
                 style: { '--sidebar-search-alignment': normalizedAttributes.search_alignment },
             };
 
-            if (!normalizedAttributes.enable_search) {
-                return (
-                    <div { ...containerProps }>
-                        <Notice status="info" isDismissible={ false }>
-                            { __('La recherche est désactivée pour cette instance.', 'sidebar-jlg') }
-                        </Notice>
-                    </div>
-                );
-            }
-
-            const serverMarkup = renderState.rendered?.trim?.() ?? '';
             const isLoading = renderState.status === 'loading';
-            const hasServerMarkup = serverMarkup !== '';
-            let hasServerContent = hasServerMarkup;
-
-            if (hasServerMarkup && typeof window !== 'undefined' && window.document) {
-                const wrapper = window.document.createElement('div');
-                wrapper.innerHTML = serverMarkup;
-                const serverContainer = wrapper.querySelector('.sidebar-search');
-                const target = serverContainer ?? wrapper;
-                const hasElementChildren = target.children.length > 0;
-                const textContent = target.textContent ? target.textContent.trim() : '';
-                hasServerContent = hasElementChildren || textContent !== '';
-            }
 
             const loadingContent = (
                 <div className="sidebar-search__loading">
@@ -229,30 +252,35 @@ registerBlockType(metadata, {
                 ({ value }) => value === normalizedAttributes.heading_level
             );
             const headingTagName = headingLevelOption?.value ?? 'h2';
-            const hasHeading = normalizedAttributes.heading?.trim?.();
-            const hasDescription = normalizedAttributes.description?.trim?.();
-
-            const previewHeading = hasHeading ? (
-                <RichText.Content
-                    tagName={ headingTagName }
-                    className="sidebar-search__heading"
-                    value={ normalizedAttributes.heading }
-                />
-            ) : null;
-
-            const previewDescription = hasDescription ? (
-                <RichText.Content
-                    tagName="div"
-                    className="sidebar-search__description"
-                    value={ normalizedAttributes.description }
-                />
-            ) : null;
 
             const emptyMessage = (
                 <div className="sidebar-search__placeholder">
                     { __('Aucun contenu n’a été retourné par le serveur pour cette configuration.', 'sidebar-jlg') }
                 </div>
             );
+
+            const disabledNotice = !normalizedAttributes.enable_search ? (
+                <Notice status="info" isDismissible={ false }>
+                    { __('La recherche est désactivée pour cette instance.', 'sidebar-jlg') }
+                </Notice>
+            ) : null;
+
+            let bodyContent;
+
+            if (disabledNotice) {
+                bodyContent = disabledNotice;
+            } else if (parsedServerPreview.hasContent) {
+                bodyContent = (
+                    <div className="sidebar-search__render" aria-live="polite">
+                        <RawHTML>{ parsedServerPreview.markup }</RawHTML>
+                        { isLoading && loadingContent }
+                    </div>
+                );
+            } else if (isLoading) {
+                bodyContent = loadingContent;
+            } else {
+                bodyContent = emptyMessage;
+            }
 
             return (
                 <>
@@ -261,18 +289,26 @@ registerBlockType(metadata, {
                             { renderState.errorMessage }
                         </Notice>
                     ) }
-                    { hasServerMarkup && hasServerContent ? (
-                        <div className="sidebar-search__render" aria-live="polite">
-                            <RawHTML>{ serverMarkup }</RawHTML>
-                            { isLoading && loadingContent }
-                        </div>
-                    ) : (
-                        <div { ...containerProps } aria-live="polite">
-                            { previewHeading }
-                            { previewDescription }
-                            { isLoading ? loadingContent : emptyMessage }
-                        </div>
-                    ) }
+                    <div { ...containerProps } aria-live="polite">
+                        <RichText
+                            tagName={ headingTagName }
+                            className="sidebar-search__heading"
+                            value={ normalizedAttributes.heading }
+                            placeholder={ __('Ajouter un titre…', 'sidebar-jlg') }
+                            allowedFormats={ [ 'core/bold', 'core/italic', 'core/link', 'core/strikethrough' ] }
+                            onChange={(value) => setAttributes({ heading: value }) }
+                        />
+                        <RichText
+                            tagName="div"
+                            className="sidebar-search__description"
+                            value={ normalizedAttributes.description }
+                            placeholder={ __('Ajouter une description…', 'sidebar-jlg') }
+                            onChange={(value) => setAttributes({ description: value }) }
+                            allowedFormats={ [ 'core/bold', 'core/italic', 'core/link', 'core/strikethrough', 'core/underline' ] }
+                            multiline="p"
+                        />
+                        { bodyContent }
+                    </div>
                 </>
             );
         };
@@ -299,21 +335,11 @@ registerBlockType(metadata, {
                                 options={ ALIGNMENT_OPTIONS }
                                 onChange={(value) => setAttributes({ search_alignment: value }) }
                             />
-                            <TextControl
-                                label={ __('Titre', 'sidebar-jlg') }
-                                value={ normalizedAttributes.heading }
-                                onChange={(value) => setAttributes({ heading: value }) }
-                            />
                             <SelectControl
                                 label={ __('Niveau de titre', 'sidebar-jlg') }
                                 value={ normalizedAttributes.heading_level }
                                 options={ HEADING_LEVEL_OPTIONS }
                                 onChange={(value) => setAttributes({ heading_level: value }) }
-                            />
-                            <TextareaControl
-                                label={ __('Description', 'sidebar-jlg') }
-                                value={ normalizedAttributes.description }
-                                onChange={(value) => setAttributes({ description: value }) }
                             />
                             { normalizedAttributes.search_method === 'shortcode' && (
                                 <TextareaControl
