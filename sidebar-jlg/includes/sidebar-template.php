@@ -107,6 +107,63 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
             $classAttr = ' class="' . esc_attr(implode(' ', $classes)) . '"';
         }
 
+        $dataAttributes = '';
+        if (!empty($node['data_attributes']) && is_array($node['data_attributes'])) {
+            foreach ($node['data_attributes'] as $attrName => $attrValue) {
+                if (!is_string($attrName) || strpos($attrName, 'data-') !== 0) {
+                    continue;
+                }
+
+                if (!preg_match('/^data-[a-z0-9_-]+$/i', $attrName)) {
+                    continue;
+                }
+
+                if (!is_scalar($attrValue)) {
+                    continue;
+                }
+
+                $dataAttributes .= sprintf(' %s="%s"', esc_attr($attrName), esc_attr((string) $attrValue));
+            }
+        }
+
+        $nodeType = isset($node['type']) ? (string) $node['type'] : '';
+
+        if ($nodeType === 'cta') {
+            $ctaData = is_array($node['cta'] ?? null) ? $node['cta'] : [];
+            $ctaTitle = isset($ctaData['title']) && is_string($ctaData['title']) ? $ctaData['title'] : '';
+            $ctaDescription = isset($ctaData['description']) && is_string($ctaData['description']) ? $ctaData['description'] : '';
+            $ctaButtonLabel = isset($ctaData['button_label']) && is_string($ctaData['button_label']) ? $ctaData['button_label'] : '';
+            $ctaButtonUrl = isset($ctaData['button_url']) && is_string($ctaData['button_url']) ? $ctaData['button_url'] : '#';
+            $ctaShortcode = isset($ctaData['shortcode']) && is_string($ctaData['shortcode']) ? $ctaData['shortcode'] : '';
+
+            ob_start();
+            ?>
+            <li<?php echo $classAttr; ?><?php echo $dataAttributes; ?>>
+                <div class="menu-cta" data-cta-analytics="entry">
+                    <?php if ($ctaTitle !== '') : ?>
+                        <h3 class="menu-cta__title"><?php echo esc_html($ctaTitle); ?></h3>
+                    <?php endif; ?>
+
+                    <?php if ($ctaDescription !== '') : ?>
+                        <div class="menu-cta__description"><?php echo $ctaDescription; ?></div>
+                    <?php endif; ?>
+
+                    <?php if ($ctaShortcode !== '') : ?>
+                        <div class="menu-cta__shortcode"><?php echo $ctaShortcode; ?></div>
+                    <?php endif; ?>
+
+                    <?php if ($ctaButtonLabel !== '') : ?>
+                        <a class="menu-cta__button" href="<?php echo esc_url($ctaButtonUrl); ?>" data-cta-action="button">
+                            <span><?php echo esc_html($ctaButtonLabel); ?></span>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </li>
+            <?php
+            $html .= ob_get_clean();
+            continue;
+        }
+
         $url = isset($node['url']) && is_string($node['url']) && $node['url'] !== '' ? $node['url'] : '#';
         $ariaCurrent = !empty($node['is_current']) ? ' aria-current="page"' : '';
 
@@ -118,7 +175,7 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
 
         ob_start();
         ?>
-        <li<?php echo $classAttr; ?>>
+        <li<?php echo $classAttr; ?><?php echo $dataAttributes; ?>>
             <a href="<?php echo esc_url($url); ?>"<?php echo $ariaCurrent; ?>>
                 <?php
                 $icon = $node['icon'] ?? null;
