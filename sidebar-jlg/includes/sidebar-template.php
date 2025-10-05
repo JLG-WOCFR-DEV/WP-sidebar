@@ -27,7 +27,7 @@ if ($layoutStyle === 'horizontal-bar') {
 }
 $menuClassAttr = implode(' ', array_map('sanitize_html_class', $menuClasses));
 
-$currentRequestContext = SidebarRenderer::getCurrentRequestContext();
+$currentRequestContext = SidebarRenderer::getCurrentRequestContext($requestContextResolver ?? null);
 $menuNodes = SidebarRenderer::buildMenuTree($options, $allIcons, $currentRequestContext);
 
 $socialOrientation = '';

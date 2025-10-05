@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use JLG\Sidebar\Frontend\ProfileSelector;
+use JLG\Sidebar\Frontend\RequestContextResolver;
 use function JLG\Sidebar\plugin;
 
 require __DIR__ . '/bootstrap.php';
@@ -82,6 +83,8 @@ $activeProfile = [
     ],
 ];
 
+$resolver = new RequestContextResolver();
+
 foreach ($disabledFlagVariants as $variant) {
     $settings = $baseSettings;
     $settings['profiles'] = [
@@ -91,7 +94,7 @@ foreach ($disabledFlagVariants as $variant) {
 
     $settingsRepository->saveOptions($settings);
 
-    $selector = new ProfileSelector($settingsRepository);
+    $selector = new ProfileSelector($settingsRepository, $resolver);
     $selection = $selector->selectProfile();
 
     if (($selection['id'] ?? '') !== 'active-profile') {

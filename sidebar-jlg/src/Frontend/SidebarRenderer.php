@@ -251,6 +251,7 @@ class SidebarRenderer
     private IconLibrary $icons;
     private MenuCache $cache;
     private ProfileSelector $profileSelector;
+    private RequestContextResolver $contextResolver;
     private string $pluginFile;
     private string $version;
     private bool $bodyDataPrinted = false;
@@ -260,6 +261,7 @@ class SidebarRenderer
         IconLibrary $icons,
         MenuCache $cache,
         ProfileSelector $profileSelector,
+        RequestContextResolver $contextResolver,
         string $pluginFile,
         string $version
     ) {
@@ -267,6 +269,7 @@ class SidebarRenderer
         $this->icons = $icons;
         $this->cache = $cache;
         $this->profileSelector = $profileSelector;
+        $this->contextResolver = $contextResolver;
         $this->pluginFile = $pluginFile;
         $this->version = $version;
     }
@@ -816,6 +819,7 @@ class SidebarRenderer
             $allIconsForTemplate = $allIcons;
             $options = $optionsForTemplate;
             $allIcons = $allIconsForTemplate;
+            $requestContextResolver = $this->contextResolver;
             require $templatePath;
             $html = ob_get_clean();
 
@@ -885,58 +889,11 @@ class SidebarRenderer
         error_log(sprintf('[Sidebar JLG] Failed to capture sidebar output buffer using %s.', $operation));
     }
 
-    public static function getCurrentRequestContext(): array
+    public static function getCurrentRequestContext(?RequestContextResolver $resolver = null): array
     {
-        $context = [
-            'current_post_ids'      => [],
-            'current_post_types'    => [],
-            'current_category_ids'  => [],
-            'current_url'           => null,
-        ];
+        $resolver = $resolver ?? new RequestContextResolver();
 
-        $queriedObject = null;
-        if (function_exists('get_queried_object')) {
-            $queriedObject = get_queried_object();
-        }
-
-        if (function_exists('get_queried_object_id')) {
-            $queriedId = absint(get_queried_object_id());
-            if ($queriedId > 0) {
-                $context['current_post_ids'][] = $queriedId;
-            }
-        }
-
-        if (is_object($queriedObject)) {
-            if (isset($queriedObject->ID)) {
-                $objectId = absint($queriedObject->ID);
-                if ($objectId > 0 && !in_array($objectId, $context['current_post_ids'], true)) {
-                    $context['current_post_ids'][] = $objectId;
-                }
-            }
-
-            if (isset($queriedObject->post_type)) {
-                $postType = (string) $queriedObject->post_type;
-                if ($postType !== '' && !in_array($postType, $context['current_post_types'], true)) {
-                    $context['current_post_types'][] = $postType;
-                }
-            }
-
-            if (isset($queriedObject->taxonomy) && isset($queriedObject->term_id)) {
-                $taxonomy = (string) $queriedObject->taxonomy;
-                $termId = absint($queriedObject->term_id);
-
-                if ($taxonomy === 'category' && $termId > 0) {
-                    $context['current_category_ids'][] = $termId;
-                }
-            }
-        }
-
-        $currentUrl = self::buildCurrentUrl();
-        if ($currentUrl !== null) {
-            $context['current_url'] = self::normalizeUrlForComparison($currentUrl);
-        }
-
-        return $context;
+        return $resolver->resolve();
     }
 
     public static function isMenuItemCurrent(array $item, array $context): bool
@@ -1042,6 +999,18 @@ class SidebarRenderer
         }
 
         return false;
+    }
+
+    private static function urlsMatch(string $first, string $second): bool
+    {
+        $normalizedFirst = RequestContextResolver::normalizeUrlForComparison($first);
+        $normalizedSecond = RequestContextResolver::normalizeUrlForComparison($second);
+
+        if ($normalizedFirst === '' || $normalizedSecond === '') {
+            return false;
+        }
+
+        return $normalizedFirst === $normalizedSecond;
     }
 
     public static function buildMenuTree(array $options, array $allIcons, array $context): array
@@ -1474,159 +1443,6 @@ class SidebarRenderer
         return $pruned;
     }
 
-    private static function buildCurrentUrl(): ?string
-    {
-        $host = isset($_SERVER['HTTP_HOST']) ? trim((string) $_SERVER['HTTP_HOST']) : '';
-        if ($host === '') {
-            return null;
-        }
-
-        $scheme = 'http';
-        if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
-            $scheme = 'https';
-        }
-
-        $requestUri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
-        if ($requestUri === '') {
-            $requestUri = '/';
-        }
-
-        return $scheme . '://' . $host . $requestUri;
-    }
-
-    private static function urlsMatch(string $first, string $second): bool
-    {
-        $normalizedFirst = self::normalizeUrlForComparison($first);
-        $normalizedSecond = self::normalizeUrlForComparison($second);
-
-        if ($normalizedFirst === '' || $normalizedSecond === '') {
-            return false;
-        }
-
-        return $normalizedFirst === $normalizedSecond;
-    }
-
-    private static function normalizeUrlForComparison(?string $url): string
-    {
-        if (!is_string($url)) {
-            return '';
-        }
-
-        $url = trim($url);
-        if ($url === '') {
-            return '';
-        }
-
-        $parts = @parse_url($url);
-        if ($parts === false) {
-            return self::trimPath($url);
-        }
-
-        if (!isset($parts['scheme']) || !isset($parts['host'])) {
-            $absoluteUrl = self::convertRelativeUrlToAbsolute($url);
-            if ($absoluteUrl !== null) {
-                $parts = @parse_url($absoluteUrl);
-                if ($parts === false) {
-                    return self::trimPath($absoluteUrl);
-                }
-
-                $url = $absoluteUrl;
-            }
-        }
-
-        $path = isset($parts['path']) ? (string) $parts['path'] : '';
-        if ($path === '') {
-            $path = '/';
-        }
-        $path = '/' . ltrim($path, '/');
-        $path = self::trimPath($path);
-
-        $query = isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '';
-
-        if (isset($parts['scheme']) && isset($parts['host'])) {
-            $scheme = strtolower((string) $parts['scheme']);
-            $host = strtolower((string) $parts['host']);
-            $normalized = $scheme . '://' . $host;
-
-            if (isset($parts['port']) && $parts['port'] !== null) {
-                $port = (int) $parts['port'];
-                if (!self::isDefaultPortForScheme($port, $scheme)) {
-                    $normalized .= ':' . $port;
-                }
-            }
-
-            return $normalized . $path . $query;
-        }
-
-        return $path . $query;
-    }
-
-    private static function convertRelativeUrlToAbsolute(string $url): ?string
-    {
-        $homeUrl = self::getHomeUrlForNormalization();
-        if ($homeUrl === null) {
-            return null;
-        }
-
-        $homeUrl = rtrim($homeUrl, '/');
-        if ($homeUrl === '') {
-            return null;
-        }
-
-        if ($url === '' || $url === '/') {
-            return $homeUrl . '/';
-        }
-
-        $firstChar = $url[0];
-        if ($firstChar === '/') {
-            return $homeUrl . $url;
-        }
-
-        if ($firstChar === '?' || $firstChar === '#') {
-            return $homeUrl . '/' . $url;
-        }
-
-        return $homeUrl . '/' . $url;
-    }
-
-    private static function getHomeUrlForNormalization(): ?string
-    {
-        if (!function_exists('home_url')) {
-            return null;
-        }
-
-        $homeUrl = home_url('/');
-        if (!is_string($homeUrl)) {
-            return null;
-        }
-
-        $homeUrl = trim($homeUrl);
-        if ($homeUrl === '') {
-            return null;
-        }
-
-        return $homeUrl;
-    }
-
-    private static function trimPath(string $path): string
-    {
-        if ($path === '/') {
-            return '/';
-        }
-
-        $trimmed = rtrim($path, '/');
-
-        return $trimmed === '' ? '/' : $trimmed;
-    }
-
-    private static function isDefaultPortForScheme(int $port, string $scheme): bool
-    {
-        $scheme = strtolower($scheme);
-
-        if ($scheme === 'http') {
-            return $port === 80;
-        }
-
         if ($scheme === 'https') {
             return $port === 443;
         }
@@ -1718,7 +1534,7 @@ class SidebarRenderer
         $isDynamic = !empty($options['enable_search']);
 
         if (!$isDynamic && !empty($options['menu_items']) && is_array($options['menu_items'])) {
-            $context = self::getCurrentRequestContext();
+            $context = $this->contextResolver->resolve();
 
             foreach ($options['menu_items'] as $item) {
                 if (!is_array($item)) {
