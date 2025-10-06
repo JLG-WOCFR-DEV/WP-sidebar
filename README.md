@@ -137,6 +137,11 @@ Pour atteindre (voire dépasser) le niveau de finition des meilleures suites pro
 5. **Automatisation qualité** : fournir des commandes de tests E2E (Playwright/Cypress), un pipeline CI (GitHub Actions) et des préconfigurations de linting (PHP_CodeSniffer, ESLint, Stylelint) pour sécuriser les contributions open source.
 6. **Accessibilité renforcée** : ajouter une grille d'audit automatique (axe DevTools Lighthouse, tests pa11y) et documenter les cas d'usage pour les lecteurs d'écran afin de se placer au niveau des offres labellisées ADA/WCAG.
 7. **Monétisation et support** : proposer un canal de support communautaire, une feuille de route publique et, à terme, des plans premium (icônes exclusives, intégrations marketing) pour rassurer les équipes qui comparent avec des éditeurs établis.
+8. **Onboarding guidé** : intégrer un assistant de configuration pas-à-pas (checklist ou tours interactifs) qui aide les nouveaux utilisateurs à activer chaque fonctionnalité clé et à comprendre la hiérarchie profils > contenus > styles.
+9. **Compatibilité thèmes & builders** : documenter et distribuer des presets dédiés aux principaux thèmes/page builders (Blocksy, Astra, Divi, Bricks) en anticipant leurs particularités CSS et en fournissant des snippets prêts à l'emploi.
+10. **Observabilité produit** : exposer des webhooks ou une API REST pour recevoir des événements (ouverture, clic, profil déclenché) et permettre l'intégration avec des outils comme Zapier, Make ou des dashboards internes.
+11. **Expérience mobile améliorée** : proposer une vue éditeur mobile-first avec prévisualisation tactile simulée, des breakpoints configurables et un mode "split view" pour comparer facilement les rendus desktop/tablette/mobile.
+12. **Marketplace d'extensions** : ouvrir un système d'extensions légères (hooks documentés, manifest JSON) pour que la communauté puisse ajouter des connecteurs (CRM, analytics, marketing automation) et partager leurs composants.
 
 ## Désinstallation
 
