@@ -145,11 +145,11 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
                     <?php endif; ?>
 
                     <?php if ($ctaDescription !== '') : ?>
-                        <div class="menu-cta__description"><?php echo $ctaDescription; ?></div>
+                        <div class="menu-cta__description"><?php echo wp_kses_post($ctaDescription); ?></div>
                     <?php endif; ?>
 
                     <?php if ($ctaShortcode !== '') : ?>
-                        <div class="menu-cta__shortcode"><?php echo $ctaShortcode; ?></div>
+                        <div class="menu-cta__shortcode"><?php echo wp_kses_post($ctaShortcode); ?></div>
                     <?php endif; ?>
 
                     <?php if ($ctaButtonLabel !== '') : ?>
@@ -182,7 +182,7 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
                 if (is_array($icon)) {
                     if (($icon['type'] ?? '') === 'svg_url' && !empty($icon['url'])) {
                         ?>
-                        <span class="menu-icon svg-icon"><img src="<?php echo esc_url($icon['url']); ?>" alt=""></span>
+                        <span class="menu-icon svg-icon"><img src="<?php echo esc_url($icon['url']); ?>" alt="" loading="lazy" decoding="async"></span>
                         <?php
                     } elseif (($icon['type'] ?? '') === 'svg_inline' && !empty($icon['markup'])) {
                         $iconClass = ($icon['is_custom'] ?? false) ? 'menu-icon svg-icon' : 'menu-icon';
@@ -269,7 +269,7 @@ if ($options['social_position'] === 'footer' && !empty($options['social_icons'])
 
 $sidebar_content_html = ob_get_clean();
 ?>
-<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true" tabindex="-1"></div>
 
 <?php
     $hamburger_open_label  = esc_attr__( 'Ouvrir le menu', 'sidebar-jlg' );
@@ -311,7 +311,7 @@ $horizontalAlignment = $options['horizontal_bar_alignment'] ?? 'space-between';
     <div class="sidebar-inner">
         <div class="sidebar-header">
         <?php if ($options['header_logo_type'] === 'image' && !empty($options['header_logo_image'])): ?>
-            <img src="<?php echo esc_url($options['header_logo_image']); ?>" alt="<?php echo esc_attr(get_bloginfo('name')); ?>" class="sidebar-logo-image">
+            <img src="<?php echo esc_url($options['header_logo_image']); ?>" alt="<?php echo esc_attr(get_bloginfo('name')); ?>" class="sidebar-logo-image" loading="lazy" decoding="async">
         <?php else: ?>
             <span class="logo-text"><?php echo esc_html($options['app_name']); ?></span>
         <?php endif; ?>

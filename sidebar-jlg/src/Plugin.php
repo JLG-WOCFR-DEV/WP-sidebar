@@ -93,6 +93,7 @@ class Plugin
         $this->renderer->registerHooks();
         $this->ajax->registerHooks();
         $this->searchBlock->registerHooks();
+        $this->registerContextInvalidationHooks();
 
         $contentChangeHooks = [
             'save_post',
@@ -180,6 +181,24 @@ class Plugin
     {
         $this->cache->clear();
         $this->cache->forgetLocaleIndex();
+    }
+
+    private function registerContextInvalidationHooks(): void
+    {
+        $hooks = [
+            'set_current_user',
+            'wp_set_current_user',
+            'switch_blog',
+            'switch_locale',
+            'restore_previous_locale',
+            'clean_post_cache',
+            'clean_object_term_cache',
+            'clean_term_cache',
+        ];
+
+        foreach ($hooks as $hook) {
+            add_action($hook, [$this->requestContextResolver, 'resetCachedContext'], 10, 0);
+        }
     }
 
     public function getDefaultSettings(): array
