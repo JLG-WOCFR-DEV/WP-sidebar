@@ -767,11 +767,12 @@ class SidebarRenderer
     public function renderSidebarToHtml(array $options): ?string
     {
         $allIcons = $this->icons->getAllIcons();
-        $templatePath = plugin_dir_path($this->pluginFile) . 'includes/sidebar-template.php';
+        $templatePath = $this->resolveSidebarTemplatePath($options);
 
-        if (!is_readable($templatePath)) {
+        if ($templatePath === null || !is_readable($templatePath)) {
             if (function_exists('error_log')) {
-                error_log('[Sidebar JLG] Sidebar template not found or unreadable at ' . $templatePath);
+                $path = is_string($templatePath) ? $templatePath : '(none)';
+                error_log('[Sidebar JLG] Sidebar template not found or unreadable at ' . $path);
             }
 
             return null;
@@ -790,7 +791,15 @@ class SidebarRenderer
         $options = $optionsForTemplate;
         $allIcons = $allIconsForTemplate;
 
-        require $templatePath;
+        try {
+            /** @psalm-suppress UnresolvableInclude */
+            require $templatePath;
+        } catch (\Throwable $exception) {
+            $this->cleanSidebarBuffer($bufferLevel);
+            $this->logSidebarTemplateFailure($templatePath, $exception);
+
+            return null;
+        }
 
         $html = ob_get_clean();
 
@@ -905,6 +914,56 @@ class SidebarRenderer
         }
     }
 
+    private function resolveSidebarTemplatePath(array $options): ?string
+    {
+        $defaultTemplatePath = plugin_dir_path($this->pluginFile) . 'includes/sidebar-template.php';
+        $templatePath = $defaultTemplatePath;
+
+        if (function_exists('locate_template')) {
+            $locatedTemplate = locate_template(['sidebar-jlg/sidebar-template.php', 'sidebar-jlg.php'], false, false);
+            if (is_string($locatedTemplate) && $locatedTemplate !== '') {
+                $templatePath = $locatedTemplate;
+            }
+        }
+
+        if (function_exists('apply_filters')) {
+            $filteredTemplate = apply_filters('sidebar_jlg_template_path', $templatePath, $options, $defaultTemplatePath);
+            if (is_string($filteredTemplate) && $filteredTemplate !== '') {
+                if (!self::isAbsolutePath($filteredTemplate) && function_exists('locate_template')) {
+                    $maybeLocated = locate_template([$filteredTemplate], false, false);
+                    if (is_string($maybeLocated) && $maybeLocated !== '') {
+                        $filteredTemplate = $maybeLocated;
+                    }
+                }
+
+                $templatePath = $filteredTemplate;
+            }
+        }
+
+        if (!is_string($templatePath) || $templatePath === '') {
+            return null;
+        }
+
+        return $templatePath;
+    }
+
+    private static function isAbsolutePath(string $path): bool
+    {
+        if ($path === '') {
+            return false;
+        }
+
+        if ($path[0] === '/' || $path[0] === '\\') {
+            return true;
+        }
+
+        if (strlen($path) > 1 && $path[1] === ':' && (($path[2] ?? null) === '\\' || ($path[2] ?? null) === '/')) {
+            return true;
+        }
+
+        return false;
+    }
+
     private function logSidebarBufferFailure(string $operation): void
     {
         if (!function_exists('error_log')) {
@@ -912,6 +971,21 @@ class SidebarRenderer
         }
 
         error_log(sprintf('[Sidebar JLG] Failed to capture sidebar output buffer using %s.', $operation));
+    }
+
+    private function logSidebarTemplateFailure(string $templatePath, \Throwable $exception): void
+    {
+        if (!function_exists('error_log')) {
+            return;
+        }
+
+        $message = sprintf(
+            '[Sidebar JLG] Failed to render sidebar template %s: %s',
+            $templatePath,
+            $exception->getMessage()
+        );
+
+        error_log($message);
     }
 
     public static function getCurrentRequestContext(): array
