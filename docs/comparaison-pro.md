@@ -92,6 +92,21 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 - Les hooks exposés restent cantonnés à `wp_ajax_*` côté authentifié : aucune déclinaison REST ou `wp_ajax_nopriv_*` ne permet d'intégrer la sidebar dans des architectures headless ou des parcours personnalisés. Fournir une API REST (ou GraphQL) avec schéma documenté et permissions granulaires élargirait l'écosystème (connecteurs CRM, automatisations marketing).【F:sidebar-jlg/src/Ajax/Endpoints.php†L50-L159】
 - Aucun SDK ni documentation de Webhooks n'est proposé pour relier des suites analytiques ou des outils d'orchestration (Zapier, Make). Publier une feuille de route publique, un espace développeur et des exemples d'intégration aiderait à rivaliser avec les plateformes pro à forte communauté.
 
+## 8. Synthèse UI/UX & design
+
+**Constats UI actuels**
+
+- L'interface admin reste organisée autour d'un unique tableau de réglages par onglet (`<table class="form-table">`) sans hiérarchie secondaire, ce qui impose un long scroll comparé aux builders professionnels qui segmentent par panneaux/contextes.【F:sidebar-jlg/includes/admin-page.php†L96-L229】
+- Les composants visuels s'appuient majoritairement sur les styles WordPress par défaut (nav tabs, tables, boutons) avec un habillage ponctuel (`admin-style.css`) limité à quelques cartes/presets ; l'identité du produit n'est pas affirmée.【F:sidebar-jlg/assets/css/admin-style.css†L1-L102】
+- Les aperçus utilisent un fond blanc et des boutons système, sans rappel des couleurs configurées, ce qui rend la validation visuelle moins immédiate qu'une prévisualisation sur fond contextualisé ou avec un mockup d'appareil.【F:sidebar-jlg/includes/admin-page.php†L60-L95】
+
+**Améliorations proposées**
+
+- Introduire un layout en deux colonnes avec une barre latérale persistante (états, raccourcis, documentation) et transformer chaque groupe de réglages en cartes pliables/accumulables pour réduire la charge cognitive ; prévoir un champ de recherche de réglages similaire à Elementor Pro pour naviguer rapidement.【F:sidebar-jlg/includes/admin-page.php†L96-L229】
+- Construire un design system léger (palette, typographies, composants de formulaire) et remplacer les tables par des `fieldset` modulaires avec aides contextuelles, badges d'état et contrôles illustrés ; appliquer ces styles via `admin-style.css` pour dépasser la simple surcharge des classes WordPress.【F:sidebar-jlg/assets/css/admin-style.css†L1-L180】
+- Enrichir l'aperçu avec des cadres de devices (mobile/tablette/desktop), un fond personnalisable et des overlays d'accessibilité (contraste, focus) afin de rapprocher l'expérience de tests visuels des solutions premium ; connecter ces contrôles à la toolbar existante pour rester dans le même flux de travail.【F:sidebar-jlg/includes/admin-page.php†L60-L95】
+- Mettre en place une bibliothèque de composants réutilisables (cartes de menu, tuiles d'icônes) avec des états hover/focus documentés, afin d'aligner la cohérence visuelle entre l'administration et le rendu public et d'accélérer la création d'un éditeur visuel ultérieur.【F:sidebar-jlg/includes/sidebar-template.php†L129-L229】【F:sidebar-jlg/assets/css/admin-style.css†L103-L180】
+
 ---
 
 En priorisant un éditeur visuel temps réel, des scénarios conditionnels avancés et un accompagnement accessibilité/analytics, Sidebar JLG pourra rivaliser avec les leaders tout en capitalisant sur son intégration WordPress native.
