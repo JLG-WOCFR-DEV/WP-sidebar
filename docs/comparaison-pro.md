@@ -68,6 +68,30 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 - Les styles d'éditeur se limitent au composant de recherche ; les préréglages de la sidebar ne sont pas reflétés dans l'éditeur de site (pas de CSS généré côté Gutenberg). Étendre les feuilles `sidebar-search-editor.scss` et injecter les variables de thème renforcerait la parité visuelle.【F:sidebar-jlg/assets/css/sidebar-search-editor.scss†L1-L90】
 - Le mode aperçu ne se connecte pas au front-end en contexte multi-langue/profil (pas de switch direct entre profils). Ajouter une palette de contextes (profil actif, langue, rôle) dans l'UI offrirait une vision réaliste, comparable aux suites pro.
 
+## 6. Performance & maintenance
+
+**Forces actuelles**
+
+- Les assets publics ne sont chargés que lorsque la sidebar est effectivement activée et sont versionnés, avec injection conditionnelle de styles dynamiques pour éviter les allers-retours serveur inutiles.【F:sidebar-jlg/src/Frontend/SidebarRenderer.php†L288-L344】
+- Le cache HTML par profil repose sur des transients avec TTL et un index normalisé des locales, limitant les recalculs coûteux côté front lorsque la structure du menu reste stable.【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L172】
+
+**Écarts & pistes**
+
+- La distribution reste monolithique (un couple `public-style.css` / `public-script.js` sans dépendances ni découpage conditionnel), ce qui pénalise les projets qui visent des scores Core Web Vitals serrés. Un bundler (Vite, esbuild) pourrait produire des variantes minifiées, charger paresseusement les modules optionnels (effets, animations) et exposer un mode « performance » dans les réglages.【F:sidebar-jlg/src/Frontend/SidebarRenderer.php†L311-L344】
+- Le cache par transient utilise une expiration fixe de 24 h et un `clear()` global qui vide tous les profils/locales. Ajouter une purge différentielle (invalidation par profil/localisation), un pré-chargement à l'activation et une instrumentation (statistiques de hit/miss) alignerait la maintenance sur les offres pro orientées équipe.【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L107】
+- Aucun test automatisé n'analyse la taille/scope des assets générés ; intégrer un audit de bundle et des seuils d'alerte dans la CI garantirait la dérive maîtrisée après chaque version.
+
+## 7. Interopérabilité & écosystème
+
+**Forces actuelles**
+
+- Les endpoints AJAX internes couvrent la recherche de contenus, l'import/export des réglages et la génération de prévisualisations, ce qui facilite déjà plusieurs workflows d'administration avancés.【F:sidebar-jlg/src/Ajax/Endpoints.php†L50-L159】
+
+**Écarts & pistes**
+
+- Les hooks exposés restent cantonnés à `wp_ajax_*` côté authentifié : aucune déclinaison REST ou `wp_ajax_nopriv_*` ne permet d'intégrer la sidebar dans des architectures headless ou des parcours personnalisés. Fournir une API REST (ou GraphQL) avec schéma documenté et permissions granulaires élargirait l'écosystème (connecteurs CRM, automatisations marketing).【F:sidebar-jlg/src/Ajax/Endpoints.php†L50-L159】
+- Aucun SDK ni documentation de Webhooks n'est proposé pour relier des suites analytiques ou des outils d'orchestration (Zapier, Make). Publier une feuille de route publique, un espace développeur et des exemples d'intégration aiderait à rivaliser avec les plateformes pro à forte communauté.
+
 ---
 
 En priorisant un éditeur visuel temps réel, des scénarios conditionnels avancés et un accompagnement accessibilité/analytics, Sidebar JLG pourra rivaliser avec les leaders tout en capitalisant sur son intégration WordPress native.
