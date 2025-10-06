@@ -51,7 +51,17 @@ class RequestContextResolver
             return $this->trimPath($url);
         }
 
-        if (!isset($parts['scheme']) || !isset($parts['host'])) {
+        $rawScheme = isset($parts['scheme']) ? (string) $parts['scheme'] : '';
+        $scheme = $rawScheme !== '' ? strtolower($rawScheme) : '';
+        $hasScheme = $scheme !== '';
+        $host = isset($parts['host']) ? strtolower((string) $parts['host']) : '';
+        $hasHost = $host !== '';
+
+        if ($hasScheme && !$hasHost && !in_array($scheme, ['http', 'https'], true)) {
+            return $this->normalizeNonHttpUrl($rawScheme, $url);
+        }
+
+        if (!$hasScheme && !$hasHost) {
             $absoluteUrl = $this->convertRelativeUrlToAbsolute($url);
             if ($absoluteUrl !== null) {
                 $parts = @parse_url($absoluteUrl);
@@ -59,8 +69,18 @@ class RequestContextResolver
                     return $this->trimPath($absoluteUrl);
                 }
 
+                $rawScheme = isset($parts['scheme']) ? (string) $parts['scheme'] : '';
+                $scheme = $rawScheme !== '' ? strtolower($rawScheme) : '';
+                $hasScheme = $scheme !== '';
+                $host = isset($parts['host']) ? strtolower((string) $parts['host']) : '';
+                $hasHost = $host !== '';
                 $url = $absoluteUrl;
             }
+        }
+
+        if (!$hasScheme && $hasHost) {
+            $scheme = $this->detectCurrentScheme();
+            $hasScheme = true;
         }
 
         $path = isset($parts['path']) ? (string) $parts['path'] : '';
@@ -72,9 +92,7 @@ class RequestContextResolver
 
         $query = isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '';
 
-        if (isset($parts['scheme']) && isset($parts['host'])) {
-            $scheme = strtolower((string) $parts['scheme']);
-            $host = strtolower((string) $parts['host']);
+        if ($hasScheme && $hasHost) {
             $normalized = $scheme . '://' . $host;
 
             if (isset($parts['port']) && $parts['port'] !== null) {
@@ -530,6 +548,32 @@ class RequestContextResolver
         $trimmed = rtrim($path, '/');
 
         return $trimmed === '' ? '/' : $trimmed;
+    }
+
+    private function normalizeNonHttpUrl(string $scheme, string $original): string
+    {
+        $normalizedScheme = strtolower($scheme);
+        $separatorPosition = strpos($original, ':');
+
+        if ($separatorPosition === false) {
+            return $normalizedScheme . ':';
+        }
+
+        $afterScheme = substr($original, $separatorPosition + 1);
+        if ($afterScheme === false) {
+            $afterScheme = '';
+        }
+
+        return $normalizedScheme . ':' . ltrim((string) $afterScheme);
+    }
+
+    private function detectCurrentScheme(): string
+    {
+        if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+            return 'https';
+        }
+
+        return 'http';
     }
 
     private function isDefaultPortForScheme(int $port, string $scheme): bool
