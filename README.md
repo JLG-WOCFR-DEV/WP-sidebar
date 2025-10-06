@@ -109,19 +109,34 @@ Après activation, un menu "Sidebar JLG" apparait dans l'administration. Vous po
 
 ## Comparaison avec des solutions professionnelles et pistes d'amélioration
 
-Les constructeurs professionnels (Elementor Pro, JetMenu, Max Mega Menu, etc.) proposent des expériences hors-canvas riches. Sidebar JLG se démarque par :
+Les constructeurs professionnels (Elementor Pro, JetMenu, Max Mega Menu, ConvertBox, etc.) proposent des expériences hors-canvas complètes. La comparaison ci-dessous synthétise les écarts actuels :
 
-- **Une intégration WordPress native** (réglages, profils, bloc Gutenberg) là où les solutions premium utilisent souvent des builders propriétaires.
-- **Un ciblage contextuel fin** basé sur les rôles, les terminaux, les langues et la temporalité, fonctionnalité généralement réservée aux offres haut de gamme.
-- **Une gouvernance des actifs SVG** stricte (manifest, validation, notifications) rarement aussi poussée dans les alternatives.
+| Critère | Sidebar JLG | Solutions professionnelles |
+| --- | --- | --- |
+| **Intégration WordPress** | Native (options, profils, bloc Gutenberg) | Souvent via interfaces propriétaires ou shortcodes spécifiques |
+| **Ciblage contextuel** | Rôles, appareils, langues, horaires | Segmentations basiques (rôles/terminaux) ; granularité avancée payante |
+| **Gestion des icônes/SVG** | Manifest versionné, sanitation stricte, notifications | Upload simple, rarement audité ou mutualisé |
+| **Éditeur visuel** | Formulaire administrateur + prévisualisation AJAX | Constructeurs WYSIWYG temps réel, drag & drop |
+| **Bibliothèque de widgets** | Menu, recherche, icônes sociales | CTA, formulaires, sliders, intégrations CRM/marketing |
+| **Analytique** | Absente | Tableaux de bord intégrés (taux d'ouverture, conversions) |
+| **Personnalisation dynamique** | Profils basés sur contexte WordPress | Déclencheurs comportementaux (scroll depth, sortie, A/B testing) |
+| **Qualité & CI** | Tests unitaires PHP/JS, pas d'E2E ni de CI prête à l'emploi | Pipelines CI/CD, tests visuels, linting complet |
 
-Pour atteindre le niveau de finition des meilleures suites professionnelles, les axes suivants sont recommandés :
+Sidebar JLG se démarque actuellement par :
 
-1. **Éditeur visuel temps réel** : proposer un mode WYSIWYG drag & drop (à la manière de l'éditeur Elementor) permettant de modifier la structure et les contenus sans quitter la page visitée.
-2. **Bibliothèque de composants** : ajouter des modules prêts à l'emploi (CTA, formulaires, flux sociaux) avec styles cohérents et options de tracking.
-3. **Analyse et personnalisation dynamique** : exposer des métriques d'engagement (taux d'ouverture, clics) et déclencheurs conditionnels (scroll depth, temps passé) pour rivaliser avec des solutions comme ConvertBox.
-4. **Internationalisation avancée** : intégrer automatiquement les traductions via WPML/Polylang et synchroniser les profils linguistiques.
-5. **Automatisation qualité** : fournir des commandes de tests E2E (Playwright/Cypress) et une suite de linting CI pour sécuriser les contributions open source.
+- **Une intégration WordPress native** : réglages, profils ciblés et bloc Gutenberg limitent les ruptures d'expérience avec l'écosystème WordPress.
+- **Un ciblage contextuel fin** : résolution de contexte unifiée, hiérarchie de profils et règles temporelles dignes d'offres haut de gamme.
+- **Une gouvernance des actifs SVG** stricte : validation, journalisation et notifications réduisent fortement les risques de sécurité.
+
+Pour atteindre (voire dépasser) le niveau de finition des meilleures suites professionnelles, les axes suivants sont recommandés :
+
+1. **Éditeur visuel temps réel** : proposer un mode WYSIWYG drag & drop (à la manière d'Elementor ou de Max Mega Menu Pro) permettant de modifier la structure et les contenus directement sur la page visitée.
+2. **Bibliothèque de composants** : ajouter des modules prêts à l'emploi (CTA, formulaires, flux sociaux, intégrations WooCommerce) avec styles cohérents, états de hover/focus et options de tracking.
+3. **Analyse et personnalisation dynamique** : exposer des métriques d'engagement (taux d'ouverture, clics) et des déclencheurs conditionnels (scroll depth, temps passé, détection d'intention de sortie) pour rivaliser avec des solutions comme ConvertBox ou OptinMonster.
+4. **Internationalisation avancée** : intégrer automatiquement les traductions via WPML/Polylang, synchroniser les profils linguistiques et permettre la duplication rapide d'un profil dans une autre langue.
+5. **Automatisation qualité** : fournir des commandes de tests E2E (Playwright/Cypress), un pipeline CI (GitHub Actions) et des préconfigurations de linting (PHP_CodeSniffer, ESLint, Stylelint) pour sécuriser les contributions open source.
+6. **Accessibilité renforcée** : ajouter une grille d'audit automatique (axe DevTools Lighthouse, tests pa11y) et documenter les cas d'usage pour les lecteurs d'écran afin de se placer au niveau des offres labellisées ADA/WCAG.
+7. **Monétisation et support** : proposer un canal de support communautaire, une feuille de route publique et, à terme, des plans premium (icônes exclusives, intégrations marketing) pour rassurer les équipes qui comparent avec des éditeurs établis.
 
 ## Désinstallation
 
