@@ -4,8 +4,14 @@ namespace JLG\Sidebar\Frontend;
 
 class RequestContextResolver
 {
+    private ?array $cachedContext = null;
+
     public function resolve(): array
     {
+        if ($this->cachedContext !== null) {
+            return $this->cachedContext;
+        }
+
         $postContext = $this->resolvePostContext();
         $userContext = $this->resolveUserContext();
 
@@ -15,9 +21,18 @@ class RequestContextResolver
             $normalizedUrl = $this->normalizeUrlForComparison($currentUrl);
         }
 
-        return $postContext + $userContext + [
+        $context = $postContext + $userContext + [
             'current_url' => $normalizedUrl,
         ];
+
+        $this->cachedContext = $context;
+
+        return $context;
+    }
+
+    public function resetCachedContext(): void
+    {
+        $this->cachedContext = null;
     }
 
     public function normalizeUrlForComparison(?string $url): string
