@@ -113,6 +113,19 @@ if (!function_exists('wp_mkdir_p')) {
     }
 }
 
+if (!function_exists('locate_template')) {
+    function locate_template($templates, $load = false, $require_once = true, $args = [])
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return is_string($result) ? $result : '';
+        }
+
+        return '';
+    }
+}
+
 if (!function_exists('add_action')) {
     function add_action($hook, $callback, $priority = 10, $accepted_args = 1): void
     {
