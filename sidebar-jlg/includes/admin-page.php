@@ -431,6 +431,39 @@ $textTransformLabels = [
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e( 'Déclencheurs comportementaux', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <p>
+                            <label for="sidebar-jlg-auto-open-delay"><?php esc_html_e( 'Ouvrir automatiquement après (secondes)', 'sidebar-jlg' ); ?></label>
+                            <input
+                                type="number"
+                                id="sidebar-jlg-auto-open-delay"
+                                name="sidebar_jlg_settings[auto_open_time_delay]"
+                                min="0"
+                                max="600"
+                                step="1"
+                                value="<?php echo esc_attr( (string) (int) ( $options['auto_open_time_delay'] ?? 0 ) ); ?>"
+                                class="small-text"
+                            />
+                        </p>
+                        <p>
+                            <label for="sidebar-jlg-auto-open-scroll"><?php esc_html_e( 'Ouvrir après un pourcentage de scroll', 'sidebar-jlg' ); ?></label>
+                            <input
+                                type="number"
+                                id="sidebar-jlg-auto-open-scroll"
+                                name="sidebar_jlg_settings[auto_open_scroll_depth]"
+                                min="0"
+                                max="100"
+                                step="5"
+                                value="<?php echo esc_attr( (string) (int) ( $options['auto_open_scroll_depth'] ?? 0 ) ); ?>"
+                                class="small-text"
+                            />
+                            <span class="description" style="margin-left: 0.5rem;">%</span>
+                        </p>
+                        <p class="description"><?php esc_html_e( 'Définissez 0 pour désactiver un déclencheur. La sidebar ne se rouvrira pas automatiquement si l’utilisateur l’a refermée manuellement.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e( 'Libellé ARIA de la navigation', 'sidebar-jlg' ); ?></th>
                     <td>
                         <input type="text" class="regular-text" name="sidebar_jlg_settings[nav_aria_label]" value="<?php echo esc_attr( $options['nav_aria_label'] ?? '' ); ?>" />
@@ -959,6 +992,7 @@ $textTransformLabels = [
                     $analyticsDaily         = isset( $analyticsSummary['daily'] ) && is_array( $analyticsSummary['daily'] ) ? $analyticsSummary['daily'] : [];
                     $analyticsProfilesData  = isset( $analyticsSummary['profiles'] ) && is_array( $analyticsSummary['profiles'] ) ? $analyticsSummary['profiles'] : [];
                     $analyticsTargets       = isset( $analyticsSummary['targets'] ) && is_array( $analyticsSummary['targets'] ) ? $analyticsSummary['targets'] : [];
+                    $analyticsWindows       = isset( $analyticsSummary['windows'] ) && is_array( $analyticsSummary['windows'] ) ? $analyticsSummary['windows'] : [];
                     $sidebarOpensTotal      = (int) ( $analyticsTotals['sidebar_open'] ?? 0 );
                     $menuClicksTotal        = (int) ( $analyticsTotals['menu_link_click'] ?? 0 );
                     $ctaViewsTotal          = (int) ( $analyticsTotals['cta_view'] ?? 0 );
@@ -993,6 +1027,12 @@ $textTransformLabels = [
                         'cta_view'        => __( 'Vues CTA', 'sidebar-jlg' ),
                         'cta_click'       => __( 'Clics CTA', 'sidebar-jlg' ),
                     ];
+                    $windowLast7 = isset( $analyticsWindows['last7'] ) && is_array( $analyticsWindows['last7'] ) ? $analyticsWindows['last7'] : [];
+                    $windowLast30 = isset( $analyticsWindows['last30'] ) && is_array( $analyticsWindows['last30'] ) ? $analyticsWindows['last30'] : [];
+                    $last7Totals = isset( $windowLast7['totals'] ) && is_array( $windowLast7['totals'] ) ? $windowLast7['totals'] : [];
+                    $last30Totals = isset( $windowLast30['totals'] ) && is_array( $windowLast30['totals'] ) ? $windowLast30['totals'] : [];
+                    $last7Days = isset( $windowLast7['days'] ) ? (int) $windowLast7['days'] : 0;
+                    $last30Days = isset( $windowLast30['days'] ) ? (int) $windowLast30['days'] : 0;
                     ?>
                     <?php if ( $totalInteractions === 0 ) : ?>
                         <p><?php esc_html_e( 'Les métriques apparaîtront dès que vos visiteurs interagiront avec la sidebar.', 'sidebar-jlg' ); ?></p>
@@ -1022,6 +1062,43 @@ $textTransformLabels = [
                                 <tr><td><?php esc_html_e( 'Taux de clic navigation / ouverture', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_percentage_label( $clickRate ) ); ?></td></tr>
                             </tbody>
                         </table>
+                        <?php
+                        $hasWindowComparison = array_sum( array_map( 'intval', $last7Totals ) ) > 0 || array_sum( array_map( 'intval', $last30Totals ) ) > 0;
+                        if ( $hasWindowComparison ) :
+                            ?>
+                            <h3><?php esc_html_e( 'Comparatif 7j / 30j', 'sidebar-jlg' ); ?></h3>
+                            <p class="description"><?php esc_html_e( 'Visualisez le poids de la dernière semaine par rapport à la fenêtre des 30 derniers jours.', 'sidebar-jlg' ); ?></p>
+                            <table class="widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th scope="col"><?php esc_html_e( 'Événement', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( '7 derniers jours', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( '30 derniers jours', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( 'Part des 7 derniers jours', 'sidebar-jlg' ); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ( $eventLabels as $eventKey => $eventLabel ) :
+                                        $value7 = (int) ( $last7Totals[ $eventKey ] ?? 0 );
+                                        $value30 = (int) ( $last30Totals[ $eventKey ] ?? 0 );
+                                        $share = $value30 > 0 ? ( $value7 / $value30 ) * 100 : ( $value7 > 0 ? 100 : 0 );
+                                        ?>
+                                        <tr>
+                                            <td><?php echo esc_html( $eventLabel ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $value7 ) ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $value30 ) ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_percentage_label( $share ) ); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <?php if ( $last30Days > 0 && $last30Days < 30 ) : ?>
+                                <p class="description"><?php printf( esc_html__( 'Fenêtre 30j calculée sur %s jour(s) de données disponibles.', 'sidebar-jlg' ), esc_html( sidebar_jlg_format_metric_number( $last30Days ) ) ); ?></p>
+                            <?php endif; ?>
+                            <?php if ( $last7Days > 0 && $last7Days < 7 ) : ?>
+                                <p class="description"><?php printf( esc_html__( 'Fenêtre 7j calculée sur %s jour(s) de données disponibles.', 'sidebar-jlg' ), esc_html( sidebar_jlg_format_metric_number( $last7Days ) ) ); ?></p>
+                            <?php endif; ?>
+                        <?php endif; ?>
                         <?php if ( ! empty( $recentDaily ) ) : ?>
                             <h3><?php esc_html_e( '7 derniers jours', 'sidebar-jlg' ); ?></h3>
                             <table class="widefat striped">

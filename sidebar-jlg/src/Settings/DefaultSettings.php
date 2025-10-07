@@ -213,6 +213,9 @@ class DefaultSettings
             'close_on_link_click' => false,
             // Persist open state, scroll position and interactions between page loads.
             'remember_last_state' => false,
+            // Auto-open helpers triggered by visitor behaviour. Values set to 0 disable the trigger.
+            'auto_open_time_delay' => 0,
+            'auto_open_scroll_depth' => 0,
             'nav_aria_label'   => '',
             'toggle_open_label'  => '',
             'toggle_close_label' => '',

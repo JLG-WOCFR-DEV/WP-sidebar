@@ -53,6 +53,8 @@ namespace {
     $initialSummary = $repository->getSummary();
     assertSame(0, $initialSummary['totals']['sidebar_open'] ?? null, 'Initial totals start at zero');
     assertSame([], $initialSummary['targets']['sidebar_open'] ?? [], 'Initial targets array is empty');
+    assertSame(0, $initialSummary['windows']['last7']['days'] ?? null, 'Initial 7-day window has no days');
+    assertSame(0, $initialSummary['windows']['last30']['totals']['sidebar_open'] ?? null, 'Initial 30-day window starts at zero');
 
     $GLOBALS['analytics_test_current_time'] = strtotime('2024-01-01 10:00:00');
     $repository->recordEvent('sidebar_open', [
@@ -63,6 +65,8 @@ namespace {
     $summaryAfterOpen = $repository->getSummary();
     assertSame(1, $summaryAfterOpen['totals']['sidebar_open'] ?? null, 'Sidebar open increments total');
     assertSame('toggle_button', array_key_first($summaryAfterOpen['targets']['sidebar_open'] ?? []) ?? null, 'Sidebar open target stored');
+    assertSame(1, $summaryAfterOpen['windows']['last7']['totals']['sidebar_open'] ?? null, '7-day window counts sidebar open');
+    assertSame(1, $summaryAfterOpen['windows']['last30']['totals']['sidebar_open'] ?? null, '30-day window counts sidebar open');
 
     $GLOBALS['analytics_test_current_time'] = strtotime('2024-01-01 10:05:00');
     $repository->recordEvent('cta_view', [
@@ -80,6 +84,7 @@ namespace {
     assertSame(1, $summaryAfterCta['profiles']['profile-alpha']['totals']['cta_click'] ?? null, 'Profile totals record CTA clicks');
     assertSame('Alpha', $summaryAfterCta['profiles']['profile-alpha']['label'] ?? null, 'Profile label persisted');
     assertSame('cta_button', array_key_first($summaryAfterCta['targets']['cta_click'] ?? []) ?? null, 'CTA click target tracked');
+    assertSame(1, $summaryAfterCta['windows']['last7']['totals']['cta_click'] ?? null, '7-day window counts CTA click');
 
     $reflection = new \ReflectionClass(AnalyticsRepository::class);
     $maxBuckets = (int) $reflection->getConstant('MAX_DAILY_BUCKETS');
@@ -91,6 +96,7 @@ namespace {
 
     $summaryAfterRetention = $repository->getSummary();
     assertSame($maxBuckets, count($summaryAfterRetention['daily']), 'Daily retention window enforced');
+    assertSame($maxBuckets, $summaryAfterRetention['windows']['last30']['days'] ?? null, '30-day window records capped day count');
 
     $repository->recordEvent('unknown_event', []);
     $postUnknownSummary = $repository->getSummary();

@@ -55,6 +55,7 @@ class AnalyticsRepository
      *     daily: array<string, array<string, int>>,
      *     profiles: array<string, array{label: string, is_fallback: bool, totals: array<string, int>}>,
      *     targets: array<string, array<string, int>>,
+     *     windows: array<string, array{days: int, totals: array<string, int>}>,
      *     last_event_at: ?string,
      *     last_event_type: ?string
      * }
@@ -76,6 +77,7 @@ class AnalyticsRepository
      *     daily: array<string, array<string, int>>,
      *     profiles: array<string, array{label: string, is_fallback: bool, totals: array<string, int>}>,
      *     targets: array<string, array<string, int>>,
+     *     windows: array<string, array{days: int, totals: array<string, int>}>,
      *     last_event_at: ?string,
      *     last_event_type: ?string
      * }
@@ -429,13 +431,54 @@ class AnalyticsRepository
      */
     private function buildSummaryFromData(array $data): array
     {
+        $totals = $this->normalizeTotals($data['totals'] ?? []);
+        $daily = $this->normalizeDaily($data['daily'] ?? []);
+
         return [
-            'totals' => $this->normalizeTotals($data['totals'] ?? []),
-            'daily' => $this->normalizeDaily($data['daily'] ?? []),
+            'totals' => $totals,
+            'daily' => $daily,
             'profiles' => $this->normalizeProfiles($data['profiles'] ?? []),
             'targets' => $this->normalizeTargets($data['targets'] ?? []),
+            'windows' => [
+                'last7' => $this->computeRollingWindowTotals($daily, 7),
+                'last30' => $this->computeRollingWindowTotals($daily, 30),
+            ],
             'last_event_at' => $this->normalizeDateTime($data['last_event_at'] ?? null),
             'last_event_type' => $this->normalizeEventKey($data['last_event_type'] ?? ''),
         ];
+    }
+
+    /**
+     * @param array<string, array<string, int>> $daily
+     *
+     * @return array{days: int, totals: array<string, int>}
+     */
+    private function computeRollingWindowTotals(array $daily, int $windowSize): array
+    {
+        $normalized = [
+            'days' => 0,
+            'totals' => $this->getEmptyEventCounts(),
+        ];
+
+        if ($windowSize <= 0 || $daily === []) {
+            return $normalized;
+        }
+
+        $window = array_slice($daily, -$windowSize, null, true);
+        $normalized['days'] = count($window);
+
+        foreach ($window as $counts) {
+            if (!is_array($counts)) {
+                continue;
+            }
+
+            foreach ($normalized['totals'] as $eventKey => $currentTotal) {
+                if (isset($counts[$eventKey]) && is_numeric($counts[$eventKey])) {
+                    $normalized['totals'][$eventKey] = $currentTotal + max(0, (int) $counts[$eventKey]);
+                }
+            }
+        }
+
+        return $normalized;
     }
 }

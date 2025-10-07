@@ -83,6 +83,20 @@ document.addEventListener('DOMContentLoaded', function() {
     let persistedState = persistentStorage ? loadPersistedState() : { ...defaultPersistedState };
     let isRestoringState = false;
     let scrollPersistTimeout = null;
+    const rawBehaviorTriggers = typeof sidebarSettings !== 'undefined'
+        && sidebarSettings.behavior_triggers
+        && typeof sidebarSettings.behavior_triggers === 'object'
+        ? sidebarSettings.behavior_triggers
+        : {};
+    const autoOpenTimeDelay = Math.max(0, parseInt(rawBehaviorTriggers.time_delay, 10) || 0);
+    const autoOpenScrollDepth = Math.max(
+        0,
+        Math.min(100, parseInt(rawBehaviorTriggers.scroll_depth, 10) || 0)
+    );
+    let manualDismissed = false;
+    let autoOpenTriggered = false;
+    let autoOpenTimer = null;
+    let autoOpenScrollListener = null;
 
     if (!shouldRememberState) {
         const fallbackStorage = resolvePersistentStorage();
@@ -177,6 +191,115 @@ document.addEventListener('DOMContentLoaded', function() {
             persistentStorage.setItem(storageKey, JSON.stringify(merged));
         } catch (error) {
             // Ignore persistence errors (private browsing, quota, etc.).
+        }
+    }
+
+    function cancelAutoOpenTimer() {
+        if (autoOpenTimer !== null) {
+            window.clearTimeout(autoOpenTimer);
+            autoOpenTimer = null;
+        }
+    }
+
+    function teardownAutoOpenTriggers() {
+        cancelAutoOpenTimer();
+
+        if (autoOpenScrollListener) {
+            window.removeEventListener('scroll', autoOpenScrollListener);
+            autoOpenScrollListener = null;
+        }
+    }
+
+    function logAutoOpen(reason) {
+        if (typeof sidebarSettings === 'undefined' || sidebarSettings.debug_mode !== '1') {
+            return;
+        }
+
+        if (typeof console !== 'undefined' && typeof console.info === 'function') {
+            console.info(`Sidebar JLG auto-open trigger: ${reason}`);
+        }
+    }
+
+    function canAutoOpen() {
+        if (autoOpenTriggered || manualDismissed) {
+            return false;
+        }
+
+        if (document.body.classList.contains('sidebar-open')) {
+            return false;
+        }
+
+        if (persistedState.isOpen) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function triggerAutoOpen(reason) {
+        if (!canAutoOpen()) {
+            return;
+        }
+
+        autoOpenTriggered = true;
+        teardownAutoOpenTriggers();
+        logAutoOpen(reason);
+        openSidebar();
+    }
+
+    function handleAutoOpenScroll() {
+        if (!canAutoOpen()) {
+            teardownAutoOpenTriggers();
+            return;
+        }
+
+        const doc = document.documentElement || document.body;
+        if (!doc) {
+            return;
+        }
+
+        const viewportHeight = typeof window.innerHeight === 'number'
+            ? window.innerHeight
+            : doc.clientHeight || 0;
+        const scrollHeight = doc.scrollHeight || 0;
+        const scrollableHeight = Math.max(scrollHeight - viewportHeight, 0);
+        const scrollTop = typeof window.pageYOffset === 'number'
+            ? window.pageYOffset
+            : (doc.scrollTop || (document.body ? document.body.scrollTop : 0) || 0);
+
+        const progress = scrollableHeight <= 0
+            ? 100
+            : (scrollTop / scrollableHeight) * 100;
+
+        if (progress >= autoOpenScrollDepth) {
+            triggerAutoOpen('scroll');
+        }
+    }
+
+    function setupAutoOpenTriggers() {
+        if ((autoOpenTimeDelay <= 0 && autoOpenScrollDepth <= 0) || autoOpenTriggered) {
+            return;
+        }
+
+        if (!canAutoOpen()) {
+            autoOpenTriggered = document.body.classList.contains('sidebar-open') || persistedState.isOpen;
+            return;
+        }
+
+        if (autoOpenTimeDelay > 0) {
+            cancelAutoOpenTimer();
+            autoOpenTimer = window.setTimeout(() => {
+                autoOpenTimer = null;
+                triggerAutoOpen('timer');
+            }, autoOpenTimeDelay * 1000);
+        }
+
+        if (autoOpenScrollDepth > 0 && !autoOpenScrollListener) {
+            autoOpenScrollListener = () => {
+                handleAutoOpenScroll();
+            };
+            window.addEventListener('scroll', autoOpenScrollListener, { passive: true });
+            handleAutoOpenScroll();
         }
     }
 
@@ -907,6 +1030,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const skipFocus = options.skipFocus === true;
         const skipAnalytics = options.skipAnalytics === true;
 
+        autoOpenTriggered = true;
+        teardownAutoOpenTriggers();
         applyScrollLockCompensation();
         applyScrollLock();
         document.body.classList.add('sidebar-open');
@@ -948,9 +1073,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         options = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
         const { returnFocus = true } = options;
+        const source = typeof options.source === 'string' ? options.source : 'user';
+        teardownAutoOpenTriggers();
         const isSidebarOpen = document.body.classList.contains('sidebar-open');
         if (!isSidebarOpen) {
             return;
+        }
+        if (source !== 'responsive') {
+            manualDismissed = true;
         }
         document.body.classList.remove('sidebar-open');
         releaseScrollLock();
@@ -1096,6 +1226,8 @@ document.addEventListener('DOMContentLoaded', function() {
         persistedState = { ...defaultPersistedState };
     }
 
+    setupAutoOpenTriggers();
+
     // Appliquer la classe d'effet de survol en fonction de la taille de l'écran
     function teardownHoverEffectListeners() {
         if (typeof cleanupHoverEffectListeners === 'function') {
@@ -1223,7 +1355,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (window.innerWidth >= DESKTOP_BREAKPOINT) {
-            closeSidebar({ returnFocus: false });
+            closeSidebar({ returnFocus: false, source: 'responsive' });
         } else {
             applyScrollLockCompensation();
             applyScrollLock();

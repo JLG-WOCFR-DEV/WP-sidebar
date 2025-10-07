@@ -425,6 +425,78 @@ describe('public-script.js', () => {
     expect(link.style.getPropertyValue('--rotate-y')).toBe('');
   });
 
+  test('auto opens after the configured timer delay', () => {
+    loadScript({ behavior_triggers: { time_delay: 2, scroll_depth: 0 } });
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+    jest.advanceTimersByTime(1900);
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+
+    jest.advanceTimersByTime(200);
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+  });
+
+  test('auto opens once the scroll threshold is reached', () => {
+    const htmlElement = document.documentElement;
+    const originalScrollHeight = Object.getOwnPropertyDescriptor(htmlElement, 'scrollHeight');
+    const originalClientHeight = Object.getOwnPropertyDescriptor(htmlElement, 'clientHeight');
+    const originalPageYOffset = Object.getOwnPropertyDescriptor(window, 'pageYOffset');
+    const originalInnerHeight = Object.getOwnPropertyDescriptor(window, 'innerHeight');
+
+    Object.defineProperty(htmlElement, 'scrollHeight', { configurable: true, value: 2000, writable: true });
+    Object.defineProperty(htmlElement, 'clientHeight', { configurable: true, value: 1000, writable: true });
+    Object.defineProperty(window, 'pageYOffset', { configurable: true, value: 0, writable: true });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1000, writable: true });
+
+    loadScript({ behavior_triggers: { time_delay: 0, scroll_depth: 50 } });
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+
+    window.dispatchEvent(new Event('scroll'));
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+
+    window.pageYOffset = 600;
+    window.dispatchEvent(new Event('scroll'));
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+
+    if (originalScrollHeight) {
+      Object.defineProperty(htmlElement, 'scrollHeight', originalScrollHeight);
+    } else {
+      delete htmlElement.scrollHeight;
+    }
+
+    if (originalClientHeight) {
+      Object.defineProperty(htmlElement, 'clientHeight', originalClientHeight);
+    } else {
+      delete htmlElement.clientHeight;
+    }
+
+    if (originalPageYOffset) {
+      Object.defineProperty(window, 'pageYOffset', originalPageYOffset);
+    } else {
+      delete window.pageYOffset;
+    }
+
+    if (originalInnerHeight) {
+      Object.defineProperty(window, 'innerHeight', originalInnerHeight);
+    } else {
+      delete window.innerHeight;
+    }
+  });
+
+  test('manual close cancels subsequent auto-open triggers', () => {
+    loadScript({ behavior_triggers: { time_delay: 1, scroll_depth: 0 } });
+
+    jest.advanceTimersByTime(1000);
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+
+    overlay.click();
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+
+    jest.advanceTimersByTime(2000);
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+  });
+
   test('logs localized missing elements message when provided', () => {
     document.body.innerHTML = '<div id="app"></div>';
 

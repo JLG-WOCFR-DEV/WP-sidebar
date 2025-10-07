@@ -334,6 +334,10 @@ class SidebarRenderer
             'animation_type' => $options['animation_type'] ?? 'slide-left',
             'close_on_link_click' => $options['close_on_link_click'] ?? '',
             'remember_last_state' => $options['remember_last_state'] ?? false,
+            'behavior_triggers' => [
+                'time_delay' => max(0, min(600, (int) ($options['auto_open_time_delay'] ?? 0))),
+                'scroll_depth' => max(0, min(100, (int) ($options['auto_open_scroll_depth'] ?? 0))),
+            ],
             'debug_mode' => (string) ($options['debug_mode'] ?? '0'),
             'sidebar_position' => $this->resolveSidebarPosition($options),
             'active_profile_id' => isset($profile['id']) ? (string) $profile['id'] : 'default',

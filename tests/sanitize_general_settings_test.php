@@ -130,6 +130,26 @@ $result_remember_zero = $method->invoke($sanitizer, $input_remember_zero, $exist
 
 assertSame(false, $result_remember_zero['remember_last_state'] ?? null, 'Remember state option treats "0" as disabled');
 
+$input_auto_open_valid = [
+    'auto_open_time_delay' => '45',
+    'auto_open_scroll_depth' => '60',
+];
+
+$result_auto_open_valid = $method->invoke($sanitizer, $input_auto_open_valid, $existing_options);
+
+assertSame(45, $result_auto_open_valid['auto_open_time_delay'] ?? null, 'Auto-open timer accepts valid delay');
+assertSame(60, $result_auto_open_valid['auto_open_scroll_depth'] ?? null, 'Auto-open scroll accepts valid depth');
+
+$input_auto_open_out_of_range = [
+    'auto_open_time_delay' => '7200',
+    'auto_open_scroll_depth' => '140',
+];
+
+$result_auto_open_out_of_range = $method->invoke($sanitizer, $input_auto_open_out_of_range, $existing_options);
+
+assertSame(600, $result_auto_open_out_of_range['auto_open_time_delay'] ?? null, 'Auto-open timer is capped at 600 seconds');
+assertSame(100, $result_auto_open_out_of_range['auto_open_scroll_depth'] ?? null, 'Auto-open scroll depth capped at 100');
+
 $existing_numeric_general = array_merge($defaults->all(), [
     'border_width'     => 4,
     'width_desktop'    => 360,

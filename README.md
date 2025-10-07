@@ -12,8 +12,9 @@ Une extension WordPress qui fournit une sidebar animée et entièrement personna
 ### Interface d'administration complète
 
 - Page de configuration unique avec regroupement logique des réglages (contenu, styles, comportements) et champs spécialisés : color picker natif, sélection d'icônes, tri et drag & drop des éléments de menu. 
-- Prévisualisation embarquée de la sidebar, synchronisée via AJAX (`jlg_render_preview`) pour valider instantanément les variations graphiques et la sélection de profil actif. 
-- Bibliothèque d'icônes prête à l'emploi (manifest JSON), outils de téléversement sécurisé (limites MIME/taille) et récupération du SVG pour les besoins spécifiques. 
+- Prévisualisation embarquée de la sidebar, synchronisée via AJAX (`jlg_render_preview`) pour valider instantanément les variations graphiques et la sélection de profil actif.
+- Déclencheurs comportementaux directement configurables (timer, profondeur de scroll) pour ouvrir automatiquement la sidebar sans recourir au code.
+- Bibliothèque d'icônes prête à l'emploi (manifest JSON), outils de téléversement sécurisé (limites MIME/taille) et récupération du SVG pour les besoins spécifiques.
 - Outils d'import/export JSON versionnés, remise à zéro contrôlée et sélection directe de contenus WordPress (articles, pages, catégories) grâce aux points d'entrée AJAX dédiés. 
 - Préréglages de style (`style_presets`) comprenant visuels de comparaison avant/après pour accélérer la mise en production.
 - Nouveau preset « Radix Neutrals » inspiré de Radix UI : surfaces superposées, bordures subtiles et accents violets prêts à l’emploi.
@@ -59,6 +60,7 @@ Une extension WordPress qui fournit une sidebar animée et entièrement personna
 
 - Tableau de bord dédié dans l’administration (« Insights & Analytics ») pour suivre les ouvertures, clics de navigation et conversions CTA.
 - Répartition par profil actif et historique des sept derniers jours afin de comparer rapidement les campagnes contextuelles.
+- Comparatif 7j/30j intégré pour visualiser le poids de la dernière semaine dans le volume global d'interactions.
 - Collecte optionnelle activable dans l’onglet Général pour respecter les environnements sensibles aux métriques.
 
 ## Installation
