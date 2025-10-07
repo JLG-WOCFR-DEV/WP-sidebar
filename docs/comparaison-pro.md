@@ -110,3 +110,120 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 ---
 
 En priorisant un éditeur visuel temps réel, des scénarios conditionnels avancés et un accompagnement accessibilité/analytics, Sidebar JLG pourra rivaliser avec les leaders tout en capitalisant sur son intégration WordPress native.
+
+## 9. Approfondissements UX/UI inspirés des suites professionnelles
+
+### 9.1 Palette de commande et regroupements contextuels
+
+Les onglets actuels reposent sur un ruban `nav-tab` classique et de longues tables de réglages, ce qui oblige à scroller pour retrouver un champ précis lors des itérations rapides.【F:sidebar-jlg/includes/admin-page.php†L96-L229】 Les constructeurs premium comme Elementor ou JetMenu proposent désormais une palette de commande (`Cmd/Ctrl + K`) et un moteur de recherche de réglages. Pour rapprocher Sidebar JLG de ces standards :
+
+**Objectif UX**
+- Offrir un accès instantané à n'importe quel réglage par la saisie clavier ou via des favoris contextuels.
+- Réduire le temps passé à naviguer entre les onglets lorsque l'utilisateur effectue des tests A/B successifs.
+
+**Solutions proposées**
+- Ajouter une barre de recherche persistante en haut de l'interface qui filtre dynamiquement les champs visibles par mot-clé, catégorie ou type d'option. Les résultats doivent être accessibles au clavier (flèches + Entrée) et mettre en évidence le champ ciblé dans le panneau principal.
+- Introduire une palette de commande (`Cmd/Ctrl + K`) qui ouvre un modal léger listant les actions rapides : aller à un onglet, basculer un preset, dupliquer un profil, ouvrir l'aperçu. Le modal doit être alimenté par un index JSON des réglages pour garantir des performances instantanées.
+- Ajouter une section « Favoris » ou « Récents » qui mémorise les groupes utilisés lors des sessions précédentes. On peut stocker ces préférences côté navigateur (`localStorage`) afin d'offrir une expérience personnalisée sans impacter le serveur.
+- Prévoir un mode compact qui réorganise les champs en deux colonnes responsives, avec des labels au-dessus et des descriptions en tooltip, à la manière des panneaux latéraux de Figma. Ce mode pourrait être activé via un toggle dans la barre d'outils.
+
+**Livrables & prochaines étapes**
+- Maquettes haute fidélité du header de configuration (search + palette + toggle mode compact).
+- Spécification fonctionnelle du moteur de recherche (structure de l'index, logique de scoring, raccourcis clavier).
+- Prototype interactif (Figma ou Storybook) pour tester les animations d'ouverture/fermeture de la palette.
+
+### 9.2 Mode "canvas" immersif pour l'aperçu
+
+L'aperçu AJAX actuel offre déjà des boutons de breakpoint et une bascule comparaison, mais reste encapsulé dans un panneau statique blanc.【F:sidebar-jlg/includes/admin-page.php†L107-L132】 Pour proposer une expérience équivalente aux simulateurs de Framer ou ConvertBox :
+
+**Objectif UX**
+- Faire de l'aperçu une zone d'édition immersive qui réduit les allers-retours entre configuration et validation.
+- Permettre aux profils avancés de tester des variations visuelles dans un environnement quasi-réel.
+
+**Solutions proposées**
+- Créer un mode plein écran « canvas » qui masque temporairement le reste de l'interface et verrouille l'édition contextuelle. L'utilisateur peut cliquer directement sur les textes, icônes ou boutons pour ouvrir des popovers d'édition inline (titre, couleur, icône).
+- Intégrer des cadres d'appareils (smartphone, tablette, desktop, widescreen) avec la possibilité de choisir un fond (couleur, image) afin de vérifier le contraste et la lisibilité. Les cadres doivent être responsive et mémoriser le dernier appareil utilisé.
+- Ajouter des overlays d'analyse tels que : heatmap des clics récents, surlignage des zones à faible contraste, affichage du chemin de focus clavier. Ces overlays pourraient être alimentés par les métriques internes et se superposer via des calques activables.
+- Prévoir une mini-barre d'outils flottante (breakpoints, undo/redo, historique) accessible dans ce mode canvas pour limiter les interactions avec le panneau principal.
+
+**Livrables & prochaines étapes**
+- Diagramme d'état du mode canvas (entrée/sortie, verrouillage, raccourcis clavier).
+- Spécification des APIs nécessaires côté aperçu (édition inline, synchronisation des modifications en direct avec les formulaires).
+- Prototype de transitions (CSS/JS) pour animer le passage au canvas et l'affichage des overlays.
+
+### 9.3 Tableau de bord narratif
+
+Le tab « Insights & Analytics » synthétise déjà les totaux, l'historique 7 jours et la répartition par profil au format tableau.【F:sidebar-jlg/includes/admin-page.php†L942-L1099】 Pour se rapprocher de la narration visuelle des solutions marketing (OptinMonster, ConvertBox) :
+
+**Objectif UX**
+- Transformer les données brutes en storytelling opérationnel qui suggère des actions concrètes.
+- Faciliter la comparaison temporelle sans obliger l'utilisateur à exporter les données.
+
+**Solutions proposées**
+- Convertir les KPI clés (ouvertures, conversions, taux de clic) en cartes visuelles avec sparklines et indications de tendance (+/- vs période précédente). Chaque carte doit comporter une recommandation automatique (ex. « Boostez ce CTA sur desktop ») générée selon des seuils configurables.
+- Mettre en avant les profils ou surfaces en surperformance via des badges de couleur, des icônes et des libellés descriptifs. Une section « Opportunités » suggère des actions (dupliquer un profil, ajuster un horaire) avec un bouton direct vers l'action correspondante.
+- Offrir une timeline interactive qui recense les événements (ouverture, clic CTA, fermeture automatique) avec un filtre par déclencheur (scroll depth, temporisation, segment). Les pics sont annotés pour expliquer les variations (campagne spécifique, changement de design).
+- Prévoir une exportation rapide (PDF/PNG) du dashboard narratif pour les réunions d'équipe.
+
+**Livrables & prochaines étapes**
+- Wireframe du dashboard réorganisé (grille de cartes, timeline, section opportunités).
+- Schéma de données nécessaires pour alimenter les annotations automatiques et les comparaisons temporelles.
+- Plan de tests utilisateurs (questions de compréhension, temps pour identifier une opportunité).
+
+### 9.4 Atelier de profils contextuels
+
+L'éditeur de profils propose déjà un planificateur horaire, des filtres par taxonomie et des actions de clonage, mais sans visualisation synthétique des cibles ni prévisualisation contextuelle.【F:sidebar-jlg/includes/admin-page.php†L900-L923】 Pour atteindre le niveau des « Audience Builders » professionnels :
+
+**Objectif UX**
+- Simplifier la compréhension des segments actifs et éviter les configurations conflictuelles.
+- Offrir une validation visuelle immédiate du rendu associé à chaque profil.
+
+**Solutions proposées**
+- Ajouter un résumé graphique en tête de chaque profil : badges colorés pour les critères (pays, rôles, devices), icônes d'état (actif, en attente, expiré) et alertes lorsque des règles se chevauchent. Les alertes renvoient vers un panneau latéral expliquant le conflit.
+- Intégrer une prévisualisation instantanée couplée à l'aperçu principal : sélectionner un profil recharge le canvas avec les contenus et styles correspondants, sans quitter l'onglet. Une bascule « comparer » pourrait juxtaposer deux profils.
+- Proposer une bibliothèque de profils préconfigurés (Week-end mobile, VIP connectés, Nouveaux visiteurs) avec descriptions et indicateurs de performance attendue. L'utilisateur peut les activer et personnaliser rapidement.
+- Introduire un système de tags et de recherche dans la liste des profils pour retrouver instantanément un segment.
+
+**Livrables & prochaines étapes**
+- User flow détaillé de la création/modification de profil intégrant la prévisualisation en direct.
+- Kit UI des badges, alertes et cartes de profils (états par couleur, icônes normalisées).
+- Backlog technique listant les dépendances (API d'aperçu, stockage des presets, gestion des conflits).
+
+### 9.5 Design system cohérent et composables
+
+Les styles admin reposent encore majoritairement sur les classes WordPress (`form-table`, `widefat`) avec quelques cartes/presets dédiées.【F:sidebar-jlg/assets/css/admin-style.css†L1-L180】 Pour renforcer la cohérence et préparer une future interface SPA :
+
+**Objectif UX/UI**
+- Créer un langage visuel distinctif et unifié entre l'administration, l'aperçu et le front.
+- Garantir la réutilisabilité des composants lors de l'ajout d'un builder visuel.
+
+**Solutions proposées**
+- Définir des tokens de design (palette, typographies, rayons, ombres, espacement) et documenter leur usage dans un guide accessible depuis l'admin. Ces tokens seront injectés via CSS Custom Properties pour simplifier leur réutilisation.
+- Remplacer progressivement les tables par des `fieldset` modulaires ou des cartes avec titres collants, descriptions contextuelles, helpers inline et états (succès, attention). Chaque composant doit exister en version light/dark pour anticiper un mode sombre.
+- Décliner les préréglages actuels en cartes interactives réutilisables dans plusieurs contextes (sélection de menus, CTA, badges d'état). Ces cartes afficheront un aperçu miniature et des métadonnées (nombre de liens, style principal) pour faciliter les décisions.
+- Préparer une librairie de composants (React ou Web Components) dans Storybook pour tester et documenter les interactions, en vue d'une éventuelle migration vers une interface type SPA.
+
+**Livrables & prochaines étapes**
+- Fondation du design system (fichier Figma + tokens exportables).
+- Documentation Storybook initiale (boutons, champs, cartes, badges, overlays).
+- Plan de migration progressive des écrans existants vers les nouveaux composants.
+
+### 9.6 Micro-interactions front & mobile
+
+Le script public gère déjà le tracking Analytics, les CTA et l'accessibilité clavier, mais reste focalisé sur les clics et l'ouverture via le bouton toggle.【F:sidebar-jlg/assets/js/public-script.js†L36-L219】 Pour atteindre le niveau d'apps mobiles premium :
+
+**Objectif UX**
+- Fluidifier la perception de la sidebar sur mobile et offrir des retours sensoriels riches.
+- Augmenter l'engagement tout en respectant les préférences d'accessibilité.
+
+**Solutions proposées**
+- Ajouter des gestes tactiles natifs (swipe depuis le bord, swipe pour fermer, pull-to-refresh du contenu) gérés via `PointerEvent`/`TouchEvent`, avec seuils de déclenchement clairs et animations liées. En complément, déclencher des retours haptiques légers via l'API `navigator.vibrate` lorsque disponible.
+- Implémenter un « smart reopen » : mémoriser dans `localStorage` le dernier sous-menu ouvert, la position de scroll et les CTA cliqués pour permettre à l'utilisateur de retrouver l'état précédent après un rechargement ou une navigation interne.
+- Synchroniser les animations avec `prefers-reduced-motion`, mais proposer une palette de transitions contextuelles (rebond, slide, zoom léger) choisies selon le preset actif. Les utilisateurs peuvent sélectionner leur style d'animation dans les réglages.
+- Ajouter des micro-indicateurs (glow autour du CTA actif, badge animé lorsqu'une promotion est disponible, pulsation sur le bouton hamburger) en respectant les règles d'accessibilité (aria-live, contraste).
+
+**Livrables & prochaines étapes**
+- Storyboard des gestes mobiles et retours haptiques associés.
+- Prototype technique des interactions (CodePen/Storybook) validant la performance sur appareils à faible puissance.
+- Plan de tests QA incluant la compatibilité avec `prefers-reduced-motion`, VoiceOver/TalkBack et différents navigateurs mobiles.
+
