@@ -2,6 +2,7 @@
 
 namespace JLG\Sidebar\Ajax;
 
+use JLG\Sidebar\Accessibility\AuditRunner;
 use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Cache\MenuCache;
@@ -10,6 +11,7 @@ use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
 use function __;
 use function current_time;
+use function esc_url_raw;
 use function gmdate;
 use function home_url;
 use function json_decode;
@@ -35,6 +37,7 @@ class Endpoints
     private AnalyticsRepository $analytics;
     private string $pluginFile;
     private SidebarRenderer $renderer;
+    private AuditRunner $auditRunner;
 
     public function __construct(
         SettingsRepository $settings,
@@ -43,7 +46,8 @@ class Endpoints
         SettingsSanitizer $sanitizer,
         AnalyticsRepository $analytics,
         string $pluginFile,
-        SidebarRenderer $renderer
+        SidebarRenderer $renderer,
+        AuditRunner $auditRunner
     )
     {
         $this->settings = $settings;
@@ -53,6 +57,7 @@ class Endpoints
         $this->analytics = $analytics;
         $this->pluginFile = $pluginFile;
         $this->renderer = $renderer;
+        $this->auditRunner = $auditRunner;
     }
 
     public function registerHooks(): void
@@ -67,6 +72,7 @@ class Endpoints
         add_action('wp_ajax_jlg_render_preview', [$this, 'ajax_render_preview']);
         add_action('wp_ajax_jlg_track_event', [$this, 'ajax_track_event']);
         add_action('wp_ajax_nopriv_jlg_track_event', [$this, 'ajax_track_event']);
+        add_action('wp_ajax_jlg_run_accessibility_audit', [$this, 'ajax_run_accessibility_audit']);
     }
 
     /**
@@ -650,6 +656,58 @@ class Endpoints
         wp_send_json_success([
             'message' => __('Réglages importés avec succès.', 'sidebar-jlg'),
         ]);
+    }
+
+    public function ajax_run_accessibility_audit(): void
+    {
+        $capability = $this->get_ajax_capability();
+
+        if (!current_user_can($capability)) {
+            wp_send_json_error(['message' => __('Permission refusée.', 'sidebar-jlg')]);
+        }
+
+        check_ajax_referer('jlg_accessibility_audit', 'nonce');
+
+        $targetUrl = '';
+        if (isset($_POST['target_url'])) {
+            $targetUrl = esc_url_raw(wp_unslash($_POST['target_url']));
+        }
+
+        if ($targetUrl === '') {
+            wp_send_json_error(['message' => __('Veuillez saisir une URL à analyser.', 'sidebar-jlg')]);
+        }
+
+        $result = $this->auditRunner->run($targetUrl);
+
+        if (empty($result['success'])) {
+            $payload = [
+                'message' => isset($result['message']) && is_string($result['message'])
+                    ? $result['message']
+                    : __('L’audit d’accessibilité a échoué.', 'sidebar-jlg'),
+            ];
+
+            if (!empty($result['log']) && is_string($result['log'])) {
+                $payload['log'] = $result['log'];
+            }
+
+            if (isset($result['exit_code'])) {
+                $payload['exit_code'] = (int) $result['exit_code'];
+            }
+
+            wp_send_json_error($payload);
+        }
+
+        $response = [
+            'summary' => isset($result['summary']) && is_array($result['summary']) ? $result['summary'] : [],
+            'issues' => isset($result['issues']) && is_array($result['issues']) ? $result['issues'] : [],
+            'meta' => isset($result['meta']) && is_array($result['meta']) ? $result['meta'] : [],
+        ];
+
+        if (!empty($result['log']) && is_string($result['log'])) {
+            $response['log'] = $result['log'];
+        }
+
+        wp_send_json_success($response);
     }
 
     public function ajax_render_preview(): void

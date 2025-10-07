@@ -188,6 +188,12 @@ $textTransformLabels = [
             $accessibilityProgressAriaTemplate,
             sidebar_jlg_format_metric_number( $accessibilityCompletionRatio )
         );
+        $auditStatus = isset( $auditStatus ) && is_array( $auditStatus ) ? $auditStatus : [];
+        $auditChecks = isset( $auditStatus['checks'] ) && is_array( $auditStatus['checks'] ) ? $auditStatus['checks'] : [];
+        $auditIsAvailable = ! empty( $auditStatus['can_run'] );
+        $auditDefaultUrl = isset( $auditDefaultUrl ) && is_string( $auditDefaultUrl ) && $auditDefaultUrl !== ''
+            ? $auditDefaultUrl
+            : esc_url( home_url( '/' ) );
         ?>
 
         <!-- Onglet Général -->
@@ -1268,6 +1274,40 @@ $textTransformLabels = [
         </div>
 
         <div id="tab-accessibility" class="tab-content" role="tabpanel" aria-labelledby="tab-accessibility-tab" aria-hidden="true" hidden>
+            <div id="sidebar-jlg-accessibility-audit" class="sidebar-jlg-accessibility-audit" data-is-available="<?php echo esc_attr( $auditIsAvailable ? '1' : '0' ); ?>">
+                <h3><?php esc_html_e( 'Audit automatisé (Pa11y)', 'sidebar-jlg' ); ?></h3>
+                <p class="description"><?php esc_html_e( 'Exécutez Pa11y depuis WordPress pour contrôler une URL de votre site. Nécessite Node.js et la commande Pa11y sur le serveur.', 'sidebar-jlg' ); ?></p>
+                <?php if ( ! empty( $auditChecks ) ) : ?>
+                    <ul class="sidebar-jlg-accessibility-audit__checks">
+                        <?php foreach ( $auditChecks as $check ) :
+                            $check = is_array( $check ) ? $check : [];
+                            $passed = ! empty( $check['passed'] );
+                            $label = isset( $check['label'] ) && is_string( $check['label'] ) ? $check['label'] : '';
+                            $help  = isset( $check['help'] ) && is_string( $check['help'] ) ? $check['help'] : '';
+                            ?>
+                            <li class="<?php echo esc_attr( $passed ? 'is-passed' : 'is-failed' ); ?>">
+                                <span class="dashicons <?php echo esc_attr( $passed ? 'dashicons-yes' : 'dashicons-warning' ); ?>" aria-hidden="true"></span>
+                                <span class="sidebar-jlg-accessibility-audit__check-label"><?php echo esc_html( $label ); ?></span>
+                                <?php if ( $help && ! $passed ) : ?>
+                                    <span class="description"><?php echo esc_html( $help ); ?></span>
+                                <?php endif; ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+                <?php if ( ! $auditIsAvailable ) : ?>
+                    <p class="sidebar-jlg-accessibility-audit__unavailable" role="alert"><?php esc_html_e( 'Pa11y n’est pas disponible actuellement. Vérifiez les prérequis ci-dessus avant de relancer un audit.', 'sidebar-jlg' ); ?></p>
+                <?php endif; ?>
+                <div class="sidebar-jlg-accessibility-audit__controls">
+                    <label for="sidebar-jlg-audit-url" class="sidebar-jlg-accessibility-audit__label"><?php esc_html_e( 'URL à analyser', 'sidebar-jlg' ); ?></label>
+                    <div class="sidebar-jlg-accessibility-audit__inputs">
+                        <input type="url" id="sidebar-jlg-audit-url" class="regular-text sidebar-jlg-accessibility-audit__url" value="<?php echo esc_attr( $auditDefaultUrl ); ?>" placeholder="https://example.com/" />
+                        <button type="button" class="button button-secondary sidebar-jlg-accessibility-audit__launch"><?php esc_html_e( 'Lancer l’audit', 'sidebar-jlg' ); ?></button>
+                    </div>
+                </div>
+                <div class="sidebar-jlg-accessibility-audit__status" aria-live="polite" role="status"></div>
+                <div id="sidebar-jlg-audit-result" class="sidebar-jlg-accessibility-audit__result" role="region" aria-live="polite" hidden></div>
+            </div>
             <div class="sidebar-jlg-accessibility" data-total-items="<?php echo esc_attr( $totalAccessibilityItems ); ?>" data-progress-template="<?php echo esc_attr( $accessibilityProgressTemplate ); ?>" data-progress-aria-template="<?php echo esc_attr( $accessibilityProgressAriaTemplate ); ?>">
                 <header class="sidebar-jlg-accessibility__intro">
                     <h2><?php esc_html_e( 'Checklist d’accessibilité WCAG 2.2', 'sidebar-jlg' ); ?></h2>

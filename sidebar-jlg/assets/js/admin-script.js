@@ -1834,6 +1834,7 @@ jQuery(document).ready(function($) {
     initializeUnitControls();
     initializeRangeControls();
     initializeAccessibilityChecklist();
+    initializeAccessibilityAudit();
 
     const compareControls = setupPreviewCompare(previewModule);
     initializeStylePresets(compareControls);
@@ -2654,6 +2655,290 @@ jQuery(document).ready(function($) {
         clear: function() { $(this).val('').trigger('change'); }
     });
     
+    function initializeAccessibilityAudit() {
+        const globalData = getSidebarGlobalData();
+        if (!globalData || !globalData.accessibility_audit) {
+            return;
+        }
+
+        const config = globalData.accessibility_audit;
+        const ajaxUrl = globalData.ajax_url || '';
+        const $container = $('#sidebar-jlg-accessibility-audit');
+
+        if (!$container.length) {
+            return;
+        }
+
+        const $urlInput = $container.find('.sidebar-jlg-accessibility-audit__url');
+        const $launchButton = $container.find('.sidebar-jlg-accessibility-audit__launch');
+        const $status = $container.find('.sidebar-jlg-accessibility-audit__status');
+        const $result = $('#sidebar-jlg-audit-result');
+        const defaultUrl = typeof config.default_url === 'string' ? config.default_url : '';
+        const buttonDefaultText = $launchButton.length ? $launchButton.text() : '';
+
+        if ($urlInput.length && defaultUrl && typeof $urlInput.val() === 'string' && !$urlInput.val()) {
+            $urlInput.val(defaultUrl);
+        }
+
+        const typeLabels = {
+            error: getI18nString('auditTypeError', 'Erreur'),
+            warning: getI18nString('auditTypeWarning', 'Avertissement'),
+            notice: getI18nString('auditTypeNotice', 'Notice'),
+        };
+
+        const setStatusMessage = (message, tone = '') => {
+            if (!$status.length) {
+                return;
+            }
+
+            const safeMessage = typeof message === 'string' ? message : '';
+            $status.text(safeMessage);
+            $status.removeClass('is-error is-success is-info');
+            if (tone) {
+                $status.addClass(`is-${tone}`);
+            }
+        };
+
+        const renderLog = (logText) => {
+            if (!$result.length || !logText) {
+                return;
+            }
+
+            const summaryLabel = getI18nString('auditLogTitle', 'Sortie technique');
+            const expandLabel = getI18nString('auditSeeDetails', 'Afficher les détails');
+            const collapseLabel = getI18nString('auditHideDetails', 'Masquer les détails');
+
+            const $details = $('<details/>', { class: 'sidebar-jlg-accessibility-audit__log' });
+            const $summary = $('<summary/>');
+            const $summaryLabel = $('<span/>', { class: 'sidebar-jlg-accessibility-audit__log-title' });
+            $summaryLabel.text(summaryLabel);
+            const $toggleLabel = $('<span/>', { class: 'sidebar-jlg-accessibility-audit__log-toggle' });
+            $toggleLabel.text(expandLabel);
+            $summary.append($summaryLabel).append($toggleLabel);
+            $details.append($summary);
+
+            const $pre = $('<pre/>', { class: 'sidebar-jlg-accessibility-audit__log-output' });
+            $pre.text(logText);
+            $details.append($pre);
+
+            $details.on('toggle', function() {
+                const isOpen = $details.prop('open');
+                $toggleLabel.text(isOpen ? collapseLabel : expandLabel);
+            });
+
+            $result.append($details);
+        };
+
+        const renderIssues = (issues) => {
+            const $list = $('<ol/>', { class: 'sidebar-jlg-accessibility-audit__issues' });
+
+            issues.forEach((rawIssue) => {
+                if (!rawIssue || typeof rawIssue !== 'object') {
+                    return;
+                }
+
+                const type = typeof rawIssue.type === 'string' ? rawIssue.type : 'notice';
+                const message = typeof rawIssue.message === 'string' ? rawIssue.message : '';
+                const selector = typeof rawIssue.selector === 'string' ? rawIssue.selector : '';
+                const code = typeof rawIssue.code === 'string' ? rawIssue.code : '';
+                const context = typeof rawIssue.context === 'string' ? rawIssue.context : '';
+
+                const $item = $('<li/>', { class: `sidebar-jlg-accessibility-audit__issue sidebar-jlg-accessibility-audit__issue--${type}` });
+                const $header = $('<div/>', { class: 'sidebar-jlg-accessibility-audit__issue-header' });
+                const $type = $('<span/>', { class: 'sidebar-jlg-accessibility-audit__issue-type' });
+                $type.text(typeLabels[type] || typeLabels.notice);
+                $header.append($type);
+
+                if (message) {
+                    const $message = $('<span/>', { class: 'sidebar-jlg-accessibility-audit__issue-message' });
+                    $message.text(message);
+                    $header.append($message);
+                }
+
+                $item.append($header);
+
+                if (code) {
+                    const codeLabel = getI18nString('auditIssueCode', 'Code : %s').replace('%s', code);
+                    const $code = $('<p/>', { class: 'sidebar-jlg-accessibility-audit__issue-code' });
+                    $code.text(codeLabel);
+                    $item.append($code);
+                }
+
+                if (selector) {
+                    const selectorLabel = getI18nString('auditIssueSelector', 'Sélecteur : %s').replace('%s', selector);
+                    const $selector = $('<p/>', { class: 'sidebar-jlg-accessibility-audit__issue-selector' });
+                    $selector.text(selectorLabel);
+                    $item.append($selector);
+                }
+
+                if (context) {
+                    const contextLabel = getI18nString('auditIssueContext', 'Extrait :');
+                    const $contextLabel = $('<p/>', { class: 'sidebar-jlg-accessibility-audit__issue-context-label' });
+                    $contextLabel.text(contextLabel);
+                    const $context = $('<pre/>', { class: 'sidebar-jlg-accessibility-audit__issue-context' });
+                    const $codeBlock = $('<code/>');
+                    $codeBlock.text(context);
+                    $context.append($codeBlock);
+                    $item.append($contextLabel).append($context);
+                }
+
+                $list.append($item);
+            });
+
+            return $list;
+        };
+
+        const renderSuccess = (data) => {
+            if (!$result.length) {
+                return;
+            }
+
+            const summary = data && typeof data.summary === 'object' ? data.summary : {};
+            const meta = data && typeof data.meta === 'object' ? data.meta : {};
+            const issues = Array.isArray(data && data.issues) ? data.issues : [];
+            const errorCount = parseInt(summary.error, 10) || 0;
+            const warningCount = parseInt(summary.warning, 10) || 0;
+            const noticeCount = parseInt(summary.notice, 10) || 0;
+            const summaryTemplate = getI18nString('auditSummaryTemplate', '%1$d erreur(s), %2$d avertissement(s), %3$d notice(s).');
+            const summaryText = summaryTemplate
+                .replace('%1$d', errorCount)
+                .replace('%2$d', warningCount)
+                .replace('%3$d', noticeCount);
+
+            $result.removeAttr('hidden').removeClass('has-error').addClass('has-success').empty();
+
+            $('<p/>', { class: 'sidebar-jlg-accessibility-audit__summary' }).text(summaryText).appendTo($result);
+
+            if (meta && typeof meta.page_url === 'string' && meta.page_url) {
+                const $linkWrapper = $('<p/>', { class: 'sidebar-jlg-accessibility-audit__meta' });
+                const $link = $('<a/>', {
+                    href: meta.page_url,
+                    target: '_blank',
+                    rel: 'noreferrer noopener',
+                    class: 'sidebar-jlg-accessibility-audit__link'
+                });
+                $link.text(meta.page_url);
+                $linkWrapper.append($link);
+                $result.append($linkWrapper);
+            }
+
+            if (meta && typeof meta.document_title === 'string' && meta.document_title) {
+                const titleLabel = getI18nString('auditDocumentTitle', 'Titre de page : %s').replace('%s', meta.document_title);
+                $('<p/>', { class: 'sidebar-jlg-accessibility-audit__meta' }).text(titleLabel).appendTo($result);
+            }
+
+            if (meta && typeof meta.execution_time_ms !== 'undefined') {
+                const duration = Number(meta.execution_time_ms);
+                if (Number.isFinite(duration) && duration >= 0) {
+                    const durationLabel = getI18nString('auditExecutionTime', 'Durée : %s ms').replace('%s', String(Math.round(duration)));
+                    $('<p/>', { class: 'sidebar-jlg-accessibility-audit__meta' }).text(durationLabel).appendTo($result);
+                }
+            }
+
+            if (!issues.length) {
+                const successText = getI18nString('auditNoIssues', 'Pa11y n’a détecté aucun problème critique.');
+                $('<p/>', { class: 'sidebar-jlg-accessibility-audit__success-message' }).text(successText).appendTo($result);
+                if (data && typeof data.log === 'string' && data.log) {
+                    renderLog(data.log);
+                }
+                return;
+            }
+
+            const $issuesList = renderIssues(issues);
+            if ($issuesList && $issuesList.children().length) {
+                $result.append($issuesList);
+            }
+
+            if (data && typeof data.log === 'string' && data.log) {
+                renderLog(data.log);
+            }
+        };
+
+        const renderError = (payload, message) => {
+            if (!$result.length) {
+                return;
+            }
+
+            const errorMessage = typeof message === 'string'
+                ? message
+                : getI18nString('auditGenericError', 'L’audit d’accessibilité a échoué.');
+
+            $result.removeAttr('hidden').removeClass('has-success').addClass('has-error').empty();
+
+            $('<p/>', { class: 'sidebar-jlg-accessibility-audit__error' }).text(errorMessage).appendTo($result);
+
+            if (payload && typeof payload.log === 'string' && payload.log) {
+                renderLog(payload.log);
+            }
+        };
+
+        if (!config.is_available) {
+            const unavailableMessage = getI18nString('auditUnavailable', 'Pa11y n’est pas disponible sur ce serveur.');
+            setStatusMessage(unavailableMessage, 'error');
+            if ($launchButton.length) {
+                $launchButton.prop('disabled', true).attr('aria-disabled', 'true');
+            }
+        }
+
+        if ($launchButton.length) {
+            $launchButton.on('click', function() {
+                if (!ajaxUrl) {
+                    renderNotice('error', getI18nString('auditGenericError', 'L’audit d’accessibilité a échoué.'));
+                    return;
+                }
+
+                if (!config.nonce) {
+                    renderNotice('error', getI18nString('auditGenericError', 'L’audit d’accessibilité a échoué.'));
+                    return;
+                }
+
+                const rawValue = $urlInput.length && typeof $urlInput.val() === 'string'
+                    ? $urlInput.val().trim()
+                    : '';
+
+                if (!rawValue) {
+                    const missingMessage = getI18nString('auditMissingUrl', 'Veuillez saisir une URL à analyser.');
+                    renderNotice('error', missingMessage);
+                    setStatusMessage(missingMessage, 'error');
+                    return;
+                }
+
+                setStatusMessage(getI18nString('auditRunning', 'Audit en cours…'), 'info');
+                $launchButton.prop('disabled', true).text(getI18nString('auditRunning', 'Audit en cours…'));
+                $container.addClass('is-running');
+
+                if ($result.length) {
+                    $result.attr('hidden', 'hidden').removeClass('has-success has-error').empty();
+                }
+
+                $.post(ajaxUrl, {
+                    action: config.action,
+                    nonce: config.nonce,
+                    target_url: rawValue
+                })
+                .done((response) => {
+                    if (response && response.success && response.data) {
+                        renderSuccess(response.data);
+                        setStatusMessage(getI18nString('auditCompleted', 'Audit terminé.'), 'success');
+                    } else {
+                        const message = getResponseMessage(response, getI18nString('auditGenericError', 'L’audit d’accessibilité a échoué.'));
+                        renderError(response ? response.data : null, message);
+                        setStatusMessage(message, 'error');
+                    }
+                })
+                .fail((xhr) => {
+                    const message = getResponseMessage(xhr ? xhr.responseJSON : null, getI18nString('auditGenericError', 'L’audit d’accessibilité a échoué.'));
+                    renderError(xhr ? xhr.responseJSON : null, message);
+                    setStatusMessage(message, 'error');
+                })
+                .always(() => {
+                    $container.removeClass('is-running');
+                    $launchButton.prop('disabled', !config.is_available).text(buttonDefaultText);
+                });
+            });
+        }
+    }
+
     function initializeAccessibilityChecklist() {
         const containers = $('.sidebar-jlg-accessibility');
         if (!containers.length) {

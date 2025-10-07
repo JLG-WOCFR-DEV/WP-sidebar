@@ -2,6 +2,7 @@
 
 namespace JLG\Sidebar;
 
+use JLG\Sidebar\Accessibility\AuditRunner;
 use JLG\Sidebar\Admin\MenuPage;
 use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Admin\View\ColorPickerField;
@@ -32,6 +33,7 @@ class Plugin
     private SidebarRenderer $renderer;
     private Endpoints $ajax;
     private SearchBlock $searchBlock;
+    private AuditRunner $auditRunner;
 
     public function __construct(string $pluginFile, string $version)
     {
@@ -45,6 +47,8 @@ class Plugin
         $this->analytics = new AnalyticsRepository();
         $this->requestContextResolver = new RequestContextResolver();
         $this->profileSelector = new ProfileSelector($this->settings, $this->requestContextResolver);
+        $this->auditRunner = new AuditRunner($pluginFile);
+
         $this->menuPage = new MenuPage(
             $this->settings,
             $this->sanitizer,
@@ -52,7 +56,8 @@ class Plugin
             new ColorPickerField(),
             $this->analytics,
             $pluginFile,
-            $version
+            $version,
+            $this->auditRunner
         );
         $this->renderer = new SidebarRenderer(
             $this->settings,
@@ -70,7 +75,8 @@ class Plugin
             $this->sanitizer,
             $this->analytics,
             $pluginFile,
-            $this->renderer
+            $this->renderer,
+            $this->auditRunner
         );
         $this->searchBlock = new SearchBlock($this->settings, $pluginFile, $version);
     }
