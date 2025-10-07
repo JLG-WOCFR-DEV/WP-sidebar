@@ -150,6 +150,7 @@ class DefaultSettings
     {
         return [
             'enable_sidebar'    => true,
+            'enable_analytics'  => false,
             'app_name'          => 'Sidebar JLG',
             'layout_style'      => 'full',
             'sidebar_position'  => 'left',

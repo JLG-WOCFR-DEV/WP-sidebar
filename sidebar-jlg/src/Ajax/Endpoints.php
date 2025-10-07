@@ -3,6 +3,7 @@
 namespace JLG\Sidebar\Ajax;
 
 use JLG\Sidebar\Admin\SettingsSanitizer;
+use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
@@ -13,9 +14,13 @@ use function gmdate;
 use function home_url;
 use function json_decode;
 use function sanitize_option;
+use function sanitize_key;
+use function sanitize_text_field;
 use function update_option;
 use function time;
 use function wp_parse_args;
+use function wp_send_json_error;
+use function wp_send_json_success;
 use function wp_unslash;
 
 class Endpoints
@@ -27,6 +32,7 @@ class Endpoints
     private MenuCache $cache;
     private IconLibrary $icons;
     private SettingsSanitizer $sanitizer;
+    private AnalyticsRepository $analytics;
     private string $pluginFile;
     private SidebarRenderer $renderer;
 
@@ -35,6 +41,7 @@ class Endpoints
         MenuCache $cache,
         IconLibrary $icons,
         SettingsSanitizer $sanitizer,
+        AnalyticsRepository $analytics,
         string $pluginFile,
         SidebarRenderer $renderer
     )
@@ -43,6 +50,7 @@ class Endpoints
         $this->cache = $cache;
         $this->icons = $icons;
         $this->sanitizer = $sanitizer;
+        $this->analytics = $analytics;
         $this->pluginFile = $pluginFile;
         $this->renderer = $renderer;
     }
@@ -57,6 +65,8 @@ class Endpoints
         add_action('wp_ajax_jlg_export_settings', [$this, 'ajax_export_settings']);
         add_action('wp_ajax_jlg_import_settings', [$this, 'ajax_import_settings']);
         add_action('wp_ajax_jlg_render_preview', [$this, 'ajax_render_preview']);
+        add_action('wp_ajax_jlg_track_event', [$this, 'ajax_track_event']);
+        add_action('wp_ajax_nopriv_jlg_track_event', [$this, 'ajax_track_event']);
     }
 
     /**
@@ -687,6 +697,53 @@ class Endpoints
         ]);
     }
 
+    public function ajax_track_event(): void
+    {
+        check_ajax_referer('jlg_track_event', 'nonce');
+
+        $options = $this->settings->getOptions();
+        if (empty($options['enable_analytics'])) {
+            wp_send_json_error([
+                'message' => __('La collecte des métriques est désactivée.', 'sidebar-jlg'),
+            ]);
+        }
+
+        $rawEvent = isset($_POST['event_type']) ? wp_unslash($_POST['event_type']) : '';
+        $eventType = is_string($rawEvent) ? sanitize_key($rawEvent) : '';
+        $allowedEvents = $this->analytics->getSupportedEvents();
+
+        if ($eventType === '' || !in_array($eventType, $allowedEvents, true)) {
+            wp_send_json_error([
+                'message' => __('Type d’événement invalide.', 'sidebar-jlg'),
+            ]);
+        }
+
+        $rawProfileId = isset($_POST['profile_id']) ? wp_unslash($_POST['profile_id']) : '';
+        $profileId = is_string($rawProfileId) ? sanitize_key($rawProfileId) : '';
+        if ($profileId === '') {
+            $profileId = 'default';
+        }
+
+        $contextPayload = $this->decodeAnalyticsContext($_POST['context'] ?? null);
+
+        $recordContext = [
+            'profile_id' => $profileId,
+            'profile_label' => $this->resolveProfileLabel($profileId),
+            'is_fallback_profile' => $this->isFallbackProfile($profileId),
+        ];
+
+        if (isset($contextPayload['target']) && is_string($contextPayload['target'])) {
+            $recordContext['target'] = $contextPayload['target'];
+        }
+
+        $summary = $this->analytics->recordEvent($eventType, $recordContext);
+
+        wp_send_json_success([
+            'message' => __('Événement enregistré.', 'sidebar-jlg'),
+            'summary' => $summary,
+        ]);
+    }
+
     private function extractSettingsFromImport(array $decoded): array
     {
         if (isset($decoded['settings']) && is_array($decoded['settings'])) {
@@ -756,5 +813,84 @@ class Endpoints
     private function get_ajax_capability(): string
     {
         return apply_filters('sidebar_jlg_ajax_capability', 'manage_options');
+    }
+
+    /**
+     * @param mixed $rawContext
+     *
+     * @return array<string, mixed>
+     */
+    private function decodeAnalyticsContext($rawContext): array
+    {
+        if (is_array($rawContext)) {
+            return $rawContext;
+        }
+
+        if (is_string($rawContext)) {
+            $decoded = json_decode(wp_unslash($rawContext), true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return [];
+    }
+
+    private function resolveProfileLabel(string $profileId): string
+    {
+        if ($profileId === '' || $profileId === 'default') {
+            return __('Réglages globaux', 'sidebar-jlg');
+        }
+
+        $profiles = $this->settings->getProfiles();
+        foreach ($profiles as $profile) {
+            if (!is_array($profile)) {
+                continue;
+            }
+
+            $candidateId = isset($profile['id']) ? sanitize_key((string) $profile['id']) : '';
+            if ($candidateId !== $profileId) {
+                continue;
+            }
+
+            foreach (['title', 'label', 'name'] as $labelKey) {
+                if (isset($profile[$labelKey]) && is_string($profile[$labelKey]) && $profile[$labelKey] !== '') {
+                    return sanitize_text_field($profile[$labelKey]);
+                }
+            }
+
+            break;
+        }
+
+        return '';
+    }
+
+    private function isFallbackProfile(string $profileId): bool
+    {
+        if ($profileId === '' || $profileId === 'default') {
+            return true;
+        }
+
+        $profiles = $this->settings->getProfiles();
+        foreach ($profiles as $profile) {
+            if (!is_array($profile)) {
+                continue;
+            }
+
+            $candidateId = isset($profile['id']) ? sanitize_key((string) $profile['id']) : '';
+            if ($candidateId !== $profileId) {
+                continue;
+            }
+
+            foreach (['is_fallback', 'fallback', 'default', 'is_default'] as $flag) {
+                if (!empty($profile[$flag])) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return false;
     }
 }

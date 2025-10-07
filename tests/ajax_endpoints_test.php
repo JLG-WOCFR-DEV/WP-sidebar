@@ -298,6 +298,7 @@ $endpoints = new Endpoints(
     $pluginInstance->getMenuCache(),
     $pluginInstance->getIconLibrary(),
     $pluginInstance->getSanitizer(),
+    $pluginInstance->getAnalyticsRepository(),
     $pluginInstance->getPluginFile(),
     $pluginInstance->getSidebarRenderer()
 );
@@ -623,6 +624,36 @@ assertSame('sidebar_jlg_icon_request_limit_exceeded', $triggered['hook'] ?? null
 assertSame(25, $triggered['args'][0] ?? null, 'Icon limit hook receives total icon count');
 assertSame(25, count($triggered['args'][1] ?? []), 'Icon limit hook receives sanitized icon list');
 assertSame('[Sidebar JLG] Icon SVG request rejected: 25 icons requested (limit: 20).', $GLOBALS['logged_errors'][0] ?? null, 'Icon limit rejection logged');
+
+reset_test_environment();
+delete_option('sidebar_jlg_analytics');
+$_POST = [
+    'nonce' => 'analytics-disabled',
+    'event_type' => 'sidebar_open',
+    'profile_id' => 'default',
+];
+invoke_endpoint($endpoints, 'ajax_track_event');
+$analyticsError = $GLOBALS['json_error_payloads'][0] ?? [];
+assertSame('La collecte des métriques est désactivée.', $analyticsError['message'] ?? null, 'Analytics endpoint blocked when feature disabled');
+
+reset_test_environment();
+delete_option('sidebar_jlg_analytics');
+$analyticsOptions = $pluginInstance->getSettingsRepository()->getDefaultSettings();
+$analyticsOptions['enable_analytics'] = true;
+$pluginInstance->getSettingsRepository()->saveOptions($analyticsOptions);
+$GLOBALS['test_nonce_results']['jlg_track_event'] = true;
+$_POST = [
+    'nonce' => 'nonce-jlg_track_event',
+    'event_type' => 'sidebar_open',
+    'profile_id' => 'default',
+    'context' => json_encode(['target' => 'toggle_button']),
+];
+invoke_endpoint($endpoints, 'ajax_track_event');
+$analyticsSuccess = $GLOBALS['json_success_payloads'][0] ?? [];
+assertSame('Événement enregistré.', $analyticsSuccess['message'] ?? null, 'Analytics event records success message');
+$analyticsSummary = $analyticsSuccess['summary'] ?? [];
+assertSame(1, $analyticsSummary['totals']['sidebar_open'] ?? null, 'Analytics summary counts sidebar opens');
+assertSame('toggle_button', array_key_first($analyticsSummary['targets']['sidebar_open'] ?? []) ?? null, 'Analytics target captured for sidebar opens');
 
 if ($testsPassed) {
     echo "AJAX endpoints tests passed.\n";

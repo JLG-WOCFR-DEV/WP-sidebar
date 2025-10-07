@@ -52,7 +52,13 @@ Une extension WordPress qui fournit une sidebar animée et entièrement personna
 
 - Cache HTML des rendus de sidebar, segmenté par locale et suffixe de profil, avec invalidation automatique lors des mises à jour de contenu, menus, icônes ou version du plugin. 
 - Normalisation et sanitation poussée de tous les réglages (couleurs, dimensions, opacités, champs texte) pour éviter les injections et assurer la cohérence des données. 
-- Gestion des erreurs lors des téléversements d'icônes (journalisation, notices administrateur, rollback) pour que les incidents n'altèrent pas l'expérience de vos utilisateurs. 
+- Gestion des erreurs lors des téléversements d'icônes (journalisation, notices administrateur, rollback) pour que les incidents n'altèrent pas l'expérience de vos utilisateurs.
+
+### Insights & Analytics
+
+- Tableau de bord dédié dans l’administration (« Insights & Analytics ») pour suivre les ouvertures, clics de navigation et conversions CTA.
+- Répartition par profil actif et historique des sept derniers jours afin de comparer rapidement les campagnes contextuelles.
+- Collecte optionnelle activable dans l’onglet Général pour respecter les environnements sensibles aux métriques.
 
 ## Installation
 
@@ -118,7 +124,7 @@ Les constructeurs professionnels (Elementor Pro, JetMenu, Max Mega Menu, Convert
 | **Gestion des icônes/SVG** | Manifest versionné, sanitation stricte, notifications | Upload simple, rarement audité ou mutualisé |
 | **Éditeur visuel** | Formulaire administrateur + prévisualisation AJAX | Constructeurs WYSIWYG temps réel, drag & drop |
 | **Bibliothèque de widgets** | Menu, recherche, icônes sociales | CTA, formulaires, sliders, intégrations CRM/marketing |
-| **Analytique** | Absente | Tableaux de bord intégrés (taux d'ouverture, conversions) |
+| **Analytique** | Module Insights (ouvertures, clics, CTA) | Tableaux de bord intégrés (taux d'ouverture, conversions) |
 | **Personnalisation dynamique** | Profils basés sur contexte WordPress | Déclencheurs comportementaux (scroll depth, sortie, A/B testing) |
 | **Qualité & CI** | Tests unitaires PHP/JS, pas d'E2E ni de CI prête à l'emploi | Pipelines CI/CD, tests visuels, linting complet |
 
@@ -127,12 +133,13 @@ Sidebar JLG se démarque actuellement par :
 - **Une intégration WordPress native** : réglages, profils ciblés et bloc Gutenberg limitent les ruptures d'expérience avec l'écosystème WordPress.
 - **Un ciblage contextuel fin** : résolution de contexte unifiée, hiérarchie de profils et règles temporelles dignes d'offres haut de gamme.
 - **Une gouvernance des actifs SVG** stricte : validation, journalisation et notifications réduisent fortement les risques de sécurité.
+- **Un module Insights embarqué** : collecte activable et tableau de bord mettent en lumière les ouvertures, clics et conversions CTA sans quitter l’interface WordPress.
 
 Pour atteindre (voire dépasser) le niveau de finition des meilleures suites professionnelles, les axes suivants sont recommandés :
 
 1. **Éditeur visuel temps réel** : proposer un mode WYSIWYG drag & drop (à la manière d'Elementor ou de Max Mega Menu Pro) permettant de modifier la structure et les contenus directement sur la page visitée.
 2. **Bibliothèque de composants** : ajouter des modules prêts à l'emploi (CTA, formulaires, flux sociaux, intégrations WooCommerce) avec styles cohérents, états de hover/focus et options de tracking.
-3. **Analyse et personnalisation dynamique** : exposer des métriques d'engagement (taux d'ouverture, clics) et des déclencheurs conditionnels (scroll depth, temps passé, détection d'intention de sortie) pour rivaliser avec des solutions comme ConvertBox ou OptinMonster.
+3. **Analyse et personnalisation dynamique** : enrichir le module Insights avec des déclencheurs conditionnels (scroll depth, temps passé, intention de sortie) et des scénarios A/B pour atteindre le niveau des suites comme ConvertBox ou OptinMonster.
 4. **Internationalisation avancée** : intégrer automatiquement les traductions via WPML/Polylang, synchroniser les profils linguistiques et permettre la duplication rapide d'un profil dans une autre langue.
 5. **Automatisation qualité** : fournir des commandes de tests E2E (Playwright/Cypress), un pipeline CI (GitHub Actions) et des préconfigurations de linting (PHP_CodeSniffer, ESLint, Stylelint) pour sécuriser les contributions open source.
 6. **Accessibilité renforcée** : ajouter une grille d'audit automatique (axe DevTools Lighthouse, tests pa11y) et documenter les cas d'usage pour les lecteurs d'écran afin de se placer au niveau des offres labellisées ADA/WCAG.
