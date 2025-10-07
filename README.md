@@ -33,9 +33,11 @@ Une extension WordPress qui fournit une sidebar animée et entièrement personna
 
 ### Accessibilité et expérience utilisateur
 
-- Bouton toggle dédié aux sous-menus (`menu-item-has-children`) avec attributs ARIA (`aria-expanded`, `aria-controls`) et libellés dynamiques selon l'état. 
-- Navigation clavier complète : fermeture via `Esc`, flèche bas pour ouvrir, conservation du focus et différenciation mobile/desktop pour éviter les pièges lors du balayage tactile. 
-- États de focus alignés sur les hover, prise en charge automatique des contrastes pour la recherche (schémas clair/sombre) et préservation des attributs ARIA des icônes importées. 
+- Bouton toggle dédié aux sous-menus (`menu-item-has-children`) avec attributs ARIA (`aria-expanded`, `aria-controls`) et libellés dynamiques selon l'état.
+- Navigation clavier complète : fermeture via `Esc`, flèche bas pour ouvrir, conservation du focus et différenciation mobile/desktop pour éviter les pièges lors du balayage tactile.
+- États de focus alignés sur les hover, prise en charge automatique des contrastes pour la recherche (schémas clair/sombre) et préservation des attributs ARIA des icônes importées.
+- Onglet « Accessibilité & WCAG 2.2 » dédié dans l’administration avec checklist interactive (contrastes, focus, alternatives clavier, tailles de cibles, etc.) et calcul automatique du taux de conformité par profil.
+- Script `npm run audit:accessibility` (Pa11y) préconfiguré pour contrôler la page de démonstration et servir de base à vos audits personnalisés.
 
 ### Profils conditionnels et ciblage contextuel
 

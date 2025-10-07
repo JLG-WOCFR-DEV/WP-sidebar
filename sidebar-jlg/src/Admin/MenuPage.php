@@ -2,6 +2,7 @@
 
 namespace JLG\Sidebar\Admin;
 
+use JLG\Sidebar\Accessibility\Checklist;
 use JLG\Sidebar\Admin\View\ColorPickerField;
 use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Icons\IconLibrary;
@@ -90,6 +91,22 @@ class MenuPage
                 'sanitize_callback' => [$this->sanitizer, 'sanitize_active_profile'],
                 'default' => '',
                 'show_in_rest' => true,
+            ]
+        );
+
+        register_setting(
+            'sidebar_jlg_options_group',
+            'sidebar_jlg_accessibility_checklist',
+            [
+                'type' => 'array',
+                'sanitize_callback' => [$this->sanitizer, 'sanitize_accessibility_checklist'],
+                'default' => Checklist::getDefaultStatuses(),
+                'show_in_rest' => [
+                    'schema' => [
+                        'type' => 'object',
+                        'properties' => $this->buildAccessibilityChecklistSchema(),
+                    ],
+                ],
             ]
         );
     }
@@ -231,7 +248,31 @@ class MenuPage
                 'refresh' => __('Actualiser l’aperçu', 'sidebar-jlg'),
                 'activeProfile' => __('Profil actif : %s', 'sidebar-jlg'),
             ],
+            'accessibility_checklist' => get_option(
+                'sidebar_jlg_accessibility_checklist',
+                Checklist::getDefaultStatuses()
+            ),
         ]);
+    }
+
+    private function buildAccessibilityChecklistSchema(): array
+    {
+        $properties = [];
+
+        foreach (Checklist::getItems() as $item) {
+            $id = $item['id'] ?? '';
+            if (!is_string($id) || $id === '') {
+                continue;
+            }
+
+            $title = $item['title'] ?? '';
+            $properties[$id] = [
+                'type' => 'boolean',
+                'description' => is_string($title) ? wp_strip_all_tags($title) : '',
+            ];
+        }
+
+        return $properties;
     }
 
     public function render(): void
