@@ -3,6 +3,7 @@
 namespace JLG\Sidebar\Admin;
 
 use JLG\Sidebar\Admin\View\ColorPickerField;
+use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
 
@@ -12,6 +13,7 @@ class MenuPage
     private SettingsSanitizer $sanitizer;
     private IconLibrary $icons;
     private ColorPickerField $colorPicker;
+    private AnalyticsRepository $analytics;
     private string $pluginFile;
     private string $version;
 
@@ -20,6 +22,7 @@ class MenuPage
         SettingsSanitizer $sanitizer,
         IconLibrary $icons,
         ColorPickerField $colorPicker,
+        AnalyticsRepository $analytics,
         string $pluginFile,
         string $version
     ) {
@@ -27,6 +30,7 @@ class MenuPage
         $this->sanitizer = $sanitizer;
         $this->icons = $icons;
         $this->colorPicker = $colorPicker;
+        $this->analytics = $analytics;
         $this->pluginFile = $pluginFile;
         $this->version = $version;
     }
@@ -237,6 +241,7 @@ class MenuPage
         $stylePresets = $defaults['style_presets'] ?? [];
         $options = $this->settings->getOptionsWithRevalidation();
         $allIcons = $this->icons->getAllIcons();
+        $analyticsSummary = $this->analytics->getSummary();
 
         require plugin_dir_path($this->pluginFile) . 'includes/admin-page.php';
     }

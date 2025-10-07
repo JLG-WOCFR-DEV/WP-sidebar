@@ -5,6 +5,7 @@ namespace JLG\Sidebar;
 use JLG\Sidebar\Admin\MenuPage;
 use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Admin\View\ColorPickerField;
+use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Ajax\Endpoints;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\Blocks\SearchBlock;
@@ -24,6 +25,7 @@ class Plugin
     private SettingsRepository $settings;
     private MenuCache $cache;
     private SettingsSanitizer $sanitizer;
+    private AnalyticsRepository $analytics;
     private MenuPage $menuPage;
     private ProfileSelector $profileSelector;
     private RequestContextResolver $requestContextResolver;
@@ -40,6 +42,7 @@ class Plugin
         $this->settings = new SettingsRepository($this->defaults, $this->icons);
         $this->cache = new MenuCache();
         $this->sanitizer = new SettingsSanitizer($this->defaults, $this->icons);
+        $this->analytics = new AnalyticsRepository();
         $this->requestContextResolver = new RequestContextResolver();
         $this->profileSelector = new ProfileSelector($this->settings, $this->requestContextResolver);
         $this->menuPage = new MenuPage(
@@ -47,6 +50,7 @@ class Plugin
             $this->sanitizer,
             $this->icons,
             new ColorPickerField(),
+            $this->analytics,
             $pluginFile,
             $version
         );
@@ -64,6 +68,7 @@ class Plugin
             $this->cache,
             $this->icons,
             $this->sanitizer,
+            $this->analytics,
             $pluginFile,
             $this->renderer
         );
@@ -219,6 +224,11 @@ class Plugin
     public function getSanitizer(): SettingsSanitizer
     {
         return $this->sanitizer;
+    }
+
+    public function getAnalyticsRepository(): AnalyticsRepository
+    {
+        return $this->analytics;
     }
 
     public function getSidebarRenderer(): SidebarRenderer

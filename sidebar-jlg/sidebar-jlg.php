@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Sidebar - JLG
  * Description:       Une sidebar professionnelle, animée et entièrement personnalisable pour votre site WordPress.
- * Version:           4.9.2
+ * Version:           4.10.0
  * Author:            Jérôme Le Gousse
  * Author URI:        https://example.com
  * License:           GPL v2 or later
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'SIDEBAR_JLG_VERSION' ) ) {
-    define( 'SIDEBAR_JLG_VERSION', '4.9.2' );
+    define( 'SIDEBAR_JLG_VERSION', '4.10.0' );
 }
 
 require_once __DIR__ . '/autoload.php';

@@ -33,6 +33,128 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    const analyticsSettings = typeof sidebarSettings !== 'undefined' ? sidebarSettings.analytics : null;
+    const analyticsConfig = analyticsSettings
+        && analyticsSettings.enabled
+        && analyticsSettings.endpoint
+        && analyticsSettings.nonce
+        && analyticsSettings.action
+        ? {
+            endpoint: analyticsSettings.endpoint,
+            nonce: analyticsSettings.nonce,
+            action: analyticsSettings.action,
+            profileId: analyticsSettings.profile_id || analyticsSettings.profileId || 'default',
+            isFallback: analyticsSettings.profile_is_fallback ? '1' : (analyticsSettings.is_fallback_profile ? '1' : '0'),
+        }
+        : null;
+
+    const seenCtaElements = analyticsConfig
+        ? (typeof WeakSet === 'function' ? new WeakSet() : new Set())
+        : null;
+
+    function createFormBody(params) {
+        if (typeof URLSearchParams === 'function') {
+            const searchParams = new URLSearchParams();
+            Object.keys(params).forEach((key) => {
+                if (typeof params[key] !== 'undefined') {
+                    searchParams.append(key, params[key]);
+                }
+            });
+            return searchParams.toString();
+        }
+
+        const encoded = [];
+        Object.keys(params).forEach((key) => {
+            if (typeof params[key] === 'undefined') {
+                return;
+            }
+            encoded.push(encodeURIComponent(key) + '=' + encodeURIComponent(params[key]));
+        });
+        return encoded.join('&');
+    }
+
+    function dispatchAnalytics(eventType, context = {}) {
+        if (!analyticsConfig) {
+            return;
+        }
+
+        let encodedContext = '';
+        if (context && typeof context === 'object') {
+            try {
+                encodedContext = JSON.stringify(context);
+            } catch (error) {
+                encodedContext = '';
+            }
+        }
+
+        const body = createFormBody({
+            action: analyticsConfig.action,
+            nonce: analyticsConfig.nonce,
+            event_type: eventType,
+            profile_id: analyticsConfig.profileId,
+            is_fallback: analyticsConfig.isFallback === '1' ? '1' : '0',
+            context: encodedContext === '' ? undefined : encodedContext,
+        });
+
+        const supportsBeacon = typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function';
+        if (supportsBeacon) {
+            try {
+                const blob = new Blob([body], { type: 'application/x-www-form-urlencoded' });
+                navigator.sendBeacon(analyticsConfig.endpoint, blob);
+                return;
+            } catch (error) {
+                // Fallback to fetch below when sendBeacon is unavailable or fails.
+            }
+        }
+
+        if (typeof fetch === 'function') {
+            fetch(analyticsConfig.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                },
+                body,
+                keepalive: true,
+                credentials: 'same-origin',
+            }).catch(() => {});
+        }
+    }
+
+    function getCtaLabel(element, fallbackIndex) {
+        if (!element || typeof element.getAttribute !== 'function') {
+            return fallbackIndex ? `cta-${fallbackIndex}` : 'cta';
+        }
+
+        const explicit = element.getAttribute('data-cta-analytics');
+        if (explicit && explicit.trim() !== '') {
+            return explicit.trim();
+        }
+
+        if (element.id && element.id.trim() !== '') {
+            return element.id.trim();
+        }
+
+        const indexAttr = element.getAttribute('data-analytics-index') || fallbackIndex;
+        return indexAttr ? `cta-${indexAttr}` : 'cta';
+    }
+
+    function markCtaView(element, overrideLabel) {
+        if (!analyticsConfig || !seenCtaElements || !element) {
+            return;
+        }
+
+        if (typeof seenCtaElements.has === 'function' && seenCtaElements.has(element)) {
+            return;
+        }
+
+        if (typeof seenCtaElements.add === 'function') {
+            seenCtaElements.add(element);
+        }
+
+        const label = overrideLabel || getCtaLabel(element);
+        dispatchAnalytics('cta_view', { target: label });
+    }
+
     const sidebarPositionAttr = sidebar.getAttribute('data-position');
     const sidebarPosition = sidebarPositionAttr === 'right' ? 'right' : 'left';
     document.body.classList.remove('jlg-sidebar-position-left', 'jlg-sidebar-position-right');
@@ -87,6 +209,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const DESKTOP_BREAKPOINT = 993;
 
     document.body.classList.add('sidebar-js-enhanced');
+
+    let ctaObserver = null;
+    if (analyticsConfig) {
+        const ctaBlocks = Array.from(sidebar.querySelectorAll('.menu-cta[data-cta-analytics]'));
+        if (ctaBlocks.length) {
+            ctaBlocks.forEach((element, index) => {
+                if (element && typeof element.setAttribute === 'function') {
+                    element.setAttribute('data-analytics-index', String(index + 1));
+                }
+            });
+
+            if (typeof window !== 'undefined' && typeof window.IntersectionObserver === 'function') {
+                ctaObserver = new IntersectionObserver((entries) => {
+                    entries.forEach((entry) => {
+                        if (!entry || !entry.isIntersecting) {
+                            return;
+                        }
+                        const target = entry.target;
+                        markCtaView(target);
+                        if (ctaObserver && typeof ctaObserver.unobserve === 'function') {
+                            ctaObserver.unobserve(target);
+                        }
+                    });
+                }, { threshold: 0.5 });
+
+                ctaBlocks.forEach((element) => {
+                    ctaObserver.observe(element);
+                });
+            } else {
+                ctaBlocks.forEach((element) => {
+                    markCtaView(element);
+                });
+            }
+        }
+    }
 
     const SUBMENU_OPEN_CLASS = 'is-open';
     const SUBMENU_TOGGLE_SELECTOR = 'button.submenu-toggle';
@@ -471,6 +628,7 @@ document.addEventListener('DOMContentLoaded', function() {
         applyScrollLockCompensation();
         applyScrollLock();
         document.body.classList.add('sidebar-open');
+        dispatchAnalytics('sidebar_open', { target: 'toggle_button' });
         hamburgerBtn.classList.add('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'true');
         if (closeLabel) {
@@ -556,6 +714,37 @@ document.addEventListener('DOMContentLoaded', function() {
     hamburgerBtn.addEventListener('click', toggleSidebar);
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
+
+    if (analyticsConfig) {
+        sidebar.addEventListener('click', (event) => {
+            if (!event || !event.target || typeof event.target.closest !== 'function') {
+                return;
+            }
+
+            const link = event.target.closest('a');
+            if (!link || !sidebar.contains(link)) {
+                return;
+            }
+
+            if (link.classList && link.classList.contains('menu-cta__button')) {
+                const ctaWrapper = link.closest('.menu-cta');
+                if (ctaWrapper) {
+                    markCtaView(ctaWrapper);
+                }
+                dispatchAnalytics('cta_click', { target: 'cta_button' });
+                return;
+            }
+
+            if (link.closest('.social-icons')) {
+                dispatchAnalytics('menu_link_click', { target: 'social_link' });
+                return;
+            }
+
+            if (link.closest('.sidebar-menu')) {
+                dispatchAnalytics('menu_link_click', { target: 'menu_link' });
+            }
+        }, true);
+    }
 
     const closeOnClickTruthyValues = new Set([true, 1, '1', 'true']);
     const shouldCloseOnLinkClick = typeof sidebarSettings !== 'undefined'

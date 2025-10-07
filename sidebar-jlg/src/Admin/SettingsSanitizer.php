@@ -165,6 +165,7 @@ class SettingsSanitizer
         $defaults = $this->defaults->all();
 
         $sanitized['enable_sidebar'] = !empty($input['enable_sidebar']);
+        $sanitized['enable_analytics'] = !empty($input['enable_analytics']);
         $sanitized['layout_style'] = $this->sanitizeChoice(
             $input['layout_style'] ?? null,
             $this->allowedChoices['layout_style'],

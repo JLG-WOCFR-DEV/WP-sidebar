@@ -57,6 +57,7 @@ $normalizedOverlayDefault = preg_replace('/\s+/', '', $defaultSettings['overlay_
 
 assertTrue(is_array($sanitized), 'Sanitized settings returns an array for corrupted stored options');
 assertSame(true, $sanitized['enable_sidebar'] ?? null, 'Enable sidebar flag keeps submitted truthy value');
+assertSame(false, $sanitized['enable_analytics'] ?? null, 'Enable analytics flag defaults to disabled when missing');
 assertSame($defaultSettings['layout_style'], $sanitized['layout_style'] ?? null, 'Layout style falls back to default when missing from input');
 assertSame($normalizedOverlayDefault, $sanitized['overlay_color'] ?? null, 'Overlay color falls back to default when missing from input');
 assertSame($defaultSettings['social_position'], $sanitized['social_position'] ?? null, 'Social position falls back to default when missing from input');

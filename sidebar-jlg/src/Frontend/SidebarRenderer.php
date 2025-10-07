@@ -7,6 +7,8 @@ use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
 use JLG\Sidebar\Settings\ValueNormalizer;
 use JLG\Sidebar\Settings\TypographyOptions;
+use function admin_url;
+use function wp_create_nonce;
 
 class SidebarRenderer
 {
@@ -339,6 +341,20 @@ class SidebarRenderer
                 'missingElements' => __('Sidebar JLG : menu introuvable.', 'sidebar-jlg'),
             ],
         ];
+
+        $analyticsConfig = [
+            'enabled' => !empty($options['enable_analytics']),
+        ];
+
+        if (!empty($options['enable_analytics'])) {
+            $analyticsConfig['endpoint'] = admin_url('admin-ajax.php');
+            $analyticsConfig['nonce'] = wp_create_nonce('jlg_track_event');
+            $analyticsConfig['action'] = 'jlg_track_event';
+            $analyticsConfig['profile_id'] = $localizedOptions['active_profile_id'];
+            $analyticsConfig['profile_is_fallback'] = $localizedOptions['is_fallback_profile'];
+        }
+
+        $localizedOptions['analytics'] = $analyticsConfig;
 
         wp_localize_script('sidebar-jlg-public-js', 'sidebarSettings', $localizedOptions);
     }

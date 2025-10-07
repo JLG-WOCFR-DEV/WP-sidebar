@@ -24,6 +24,42 @@ if ( ! function_exists( 'sidebar_jlg_prepare_dimension_option' ) ) {
     }
 }
 
+if ( ! function_exists( 'sidebar_jlg_format_metric_number' ) ) {
+    function sidebar_jlg_format_metric_number( $value, int $decimals = 0 ): string {
+        $number = is_numeric( $value ) ? (float) $value : 0.0;
+
+        if ( function_exists( 'number_format_i18n' ) ) {
+            return number_format_i18n( $number, $decimals );
+        }
+
+        return number_format( $number, $decimals );
+    }
+}
+
+if ( ! function_exists( 'sidebar_jlg_format_percentage_label' ) ) {
+    function sidebar_jlg_format_percentage_label( $value ): string {
+        return sidebar_jlg_format_metric_number( $value, 1 ) . '%';
+    }
+}
+
+if ( ! function_exists( 'sidebar_jlg_format_local_date' ) ) {
+    function sidebar_jlg_format_local_date( string $date_string ): string {
+        $timestamp = strtotime( $date_string );
+
+        if ( ! $timestamp ) {
+            return $date_string;
+        }
+
+        if ( function_exists( 'wp_date' ) ) {
+            $date_format = function_exists( 'get_option' ) ? ( get_option( 'date_format' ) ?: 'Y-m-d' ) : 'Y-m-d';
+
+            return wp_date( $date_format, $timestamp );
+        }
+
+        return date( 'Y-m-d', $timestamp );
+    }
+}
+
 $fontFamilies = TypographyOptions::getFontFamilies();
 $safeFontFamilies = array_filter(
     $fontFamilies,
@@ -64,6 +100,7 @@ $textTransformLabels = [
         <a href="#tab-menu" class="nav-tab" id="tab-menu-tab" role="tab" aria-controls="tab-menu" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Contenu du Menu', 'sidebar-jlg' ); ?></a>
         <a href="#tab-social" class="nav-tab" id="tab-social-tab" role="tab" aria-controls="tab-social" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Réseaux Sociaux', 'sidebar-jlg' ); ?></a>
         <a href="#tab-effects" class="nav-tab" id="tab-effects-tab" role="tab" aria-controls="tab-effects" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Effets & Animations', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-analytics" class="nav-tab" id="tab-analytics-tab" role="tab" aria-controls="tab-analytics" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Insights & Analytics', 'sidebar-jlg' ); ?></a>
         <a href="#tab-tools" class="nav-tab" id="tab-tools-tab" role="tab" aria-controls="tab-tools" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Outils', 'sidebar-jlg' ); ?></a>
     </div>
 
@@ -120,6 +157,7 @@ $textTransformLabels = [
         $profilesOption = get_option( 'sidebar_jlg_profiles', [] );
         $profilesData = is_array( $profilesOption ) ? $profilesOption : [];
         $activeProfileId = get_option( 'sidebar_jlg_active_profile', '' );
+        $analyticsSummary = isset( $analyticsSummary ) && is_array( $analyticsSummary ) ? $analyticsSummary : [];
         ?>
 
         <!-- Onglet Général -->
@@ -133,6 +171,16 @@ $textTransformLabels = [
                             <span class="jlg-slider"></span>
                         </label>
                         <p class="description"><?php esc_html_e( 'Active ou désactive complètement la sidebar sur votre site.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e( 'Insights & Analytics', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <label class="jlg-switch">
+                            <input type="checkbox" name="sidebar_jlg_settings[enable_analytics]" value="1" <?php checked( ! empty( $options['enable_analytics'] ) ); ?> />
+                            <span class="jlg-slider"></span>
+                        </label>
+                        <p class="description"><?php esc_html_e( 'Collecte les ouvertures, clics de navigation et interactions CTA pour alimenter le tableau de bord Analytics.', 'sidebar-jlg' ); ?></p>
                     </td>
                 </tr>
                 <tr>
@@ -891,6 +939,174 @@ $textTransformLabels = [
         </div>
 
         <!-- Onglet Outils & Débogage -->
+        <div id="tab-analytics" class="tab-content" role="tabpanel" aria-labelledby="tab-analytics-tab" aria-hidden="true" hidden>
+            <div class="card">
+                <h2><?php esc_html_e( 'Tableau de bord Insights & Analytics', 'sidebar-jlg' ); ?></h2>
+                <p class="description"><?php esc_html_e( 'Visualisez les interactions clés (ouvertures, clics de navigation, conversions CTA) pour rapprocher votre expérience de ce que proposent les suites professionnelles.', 'sidebar-jlg' ); ?></p>
+                <?php $analyticsEnabled = ! empty( $options['enable_analytics'] ); ?>
+                <?php if ( ! $analyticsEnabled ) : ?>
+                    <p><?php esc_html_e( 'Activez la collecte dans l’onglet « Général & Comportement » pour commencer à enregistrer les métriques.', 'sidebar-jlg' ); ?></p>
+                <?php
+                else :
+                    $analyticsTotals        = isset( $analyticsSummary['totals'] ) && is_array( $analyticsSummary['totals'] ) ? $analyticsSummary['totals'] : [];
+                    $analyticsDaily         = isset( $analyticsSummary['daily'] ) && is_array( $analyticsSummary['daily'] ) ? $analyticsSummary['daily'] : [];
+                    $analyticsProfilesData  = isset( $analyticsSummary['profiles'] ) && is_array( $analyticsSummary['profiles'] ) ? $analyticsSummary['profiles'] : [];
+                    $analyticsTargets       = isset( $analyticsSummary['targets'] ) && is_array( $analyticsSummary['targets'] ) ? $analyticsSummary['targets'] : [];
+                    $sidebarOpensTotal      = (int) ( $analyticsTotals['sidebar_open'] ?? 0 );
+                    $menuClicksTotal        = (int) ( $analyticsTotals['menu_link_click'] ?? 0 );
+                    $ctaViewsTotal          = (int) ( $analyticsTotals['cta_view'] ?? 0 );
+                    $ctaClicksTotal         = (int) ( $analyticsTotals['cta_click'] ?? 0 );
+                    $totalInteractions      = array_sum( array_map( 'intval', $analyticsTotals ) );
+                    $clickRate              = $sidebarOpensTotal > 0 ? ( $menuClicksTotal / $sidebarOpensTotal ) * 100 : 0.0;
+                    $ctaRate                = $ctaViewsTotal > 0 ? ( $ctaClicksTotal / $ctaViewsTotal ) * 100 : 0.0;
+                    $recentDaily            = $analyticsDaily ? array_slice( array_reverse( $analyticsDaily, true ), 0, 7, true ) : [];
+                    $analyticsLastEvent     = isset( $analyticsSummary['last_event_at'] ) ? $analyticsSummary['last_event_at'] : null;
+                    $formattedLastEvent     = '';
+                    if ( $analyticsLastEvent ) {
+                        $lastTimestamp = strtotime( (string) $analyticsLastEvent );
+                        if ( $lastTimestamp ) {
+                            if ( function_exists( 'wp_date' ) ) {
+                                $dateFormat = function_exists( 'get_option' ) ? ( get_option( 'date_format' ) ?: 'Y-m-d' ) : 'Y-m-d';
+                                $timeFormat = function_exists( 'get_option' ) ? ( get_option( 'time_format' ) ?: 'H:i' ) : 'H:i';
+                                $formattedLastEvent = wp_date( $dateFormat . ' ' . $timeFormat, $lastTimestamp );
+                            } else {
+                                $formattedLastEvent = date( 'Y-m-d H:i', $lastTimestamp );
+                            }
+                        }
+                    }
+                    $targetLabels = [
+                        'menu_link'      => __( 'Navigation principale', 'sidebar-jlg' ),
+                        'social_link'    => __( 'Icônes sociales', 'sidebar-jlg' ),
+                        'cta_button'     => __( 'Bouton CTA', 'sidebar-jlg' ),
+                        'toggle_button'  => __( 'Bouton hamburger', 'sidebar-jlg' ),
+                    ];
+                    $eventLabels = [
+                        'sidebar_open'    => __( 'Ouvertures', 'sidebar-jlg' ),
+                        'menu_link_click' => __( 'Clics de navigation', 'sidebar-jlg' ),
+                        'cta_view'        => __( 'Vues CTA', 'sidebar-jlg' ),
+                        'cta_click'       => __( 'Clics CTA', 'sidebar-jlg' ),
+                    ];
+                    ?>
+                    <?php if ( $totalInteractions === 0 ) : ?>
+                        <p><?php esc_html_e( 'Les métriques apparaîtront dès que vos visiteurs interagiront avec la sidebar.', 'sidebar-jlg' ); ?></p>
+                    <?php else : ?>
+                        <div class="sidebar-jlg-analytics-kpis">
+                            <p><strong><?php echo esc_html( sidebar_jlg_format_metric_number( $sidebarOpensTotal ) ); ?></strong><br><span class="description"><?php esc_html_e( 'Ouvertures de la sidebar', 'sidebar-jlg' ); ?></span></p>
+                            <p><strong><?php echo esc_html( sidebar_jlg_format_metric_number( $menuClicksTotal ) ); ?></strong><br><span class="description"><?php esc_html_e( 'Clics de navigation', 'sidebar-jlg' ); ?></span></p>
+                            <p><strong><?php echo esc_html( sidebar_jlg_format_metric_number( $ctaClicksTotal ) ); ?></strong><br><span class="description"><?php esc_html_e( 'Conversions CTA', 'sidebar-jlg' ); ?></span></p>
+                            <p><strong><?php echo esc_html( sidebar_jlg_format_percentage_label( $ctaRate ) ); ?></strong><br><span class="description"><?php esc_html_e( 'Taux de clic CTA', 'sidebar-jlg' ); ?></span></p>
+                        </div>
+                        <?php if ( $formattedLastEvent ) : ?>
+                            <p><em><?php printf( esc_html__( 'Dernier événement enregistré : %s.', 'sidebar-jlg' ), esc_html( $formattedLastEvent ) ); ?></em></p>
+                        <?php endif; ?>
+                        <h3><?php esc_html_e( 'Synthèse globale', 'sidebar-jlg' ); ?></h3>
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col"><?php esc_html_e( 'Événement', 'sidebar-jlg' ); ?></th>
+                                    <th scope="col"><?php esc_html_e( 'Total', 'sidebar-jlg' ); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><?php esc_html_e( 'Ouvertures', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $sidebarOpensTotal ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Clics de navigation', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $menuClicksTotal ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Vues CTA', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $ctaViewsTotal ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Clics CTA', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $ctaClicksTotal ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Taux de clic navigation / ouverture', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_percentage_label( $clickRate ) ); ?></td></tr>
+                            </tbody>
+                        </table>
+                        <?php if ( ! empty( $recentDaily ) ) : ?>
+                            <h3><?php esc_html_e( '7 derniers jours', 'sidebar-jlg' ); ?></h3>
+                            <table class="widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th scope="col"><?php esc_html_e( 'Date', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( 'Ouvertures', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( 'Clics de navigation', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( 'Clics CTA', 'sidebar-jlg' ); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ( $recentDaily as $dateKey => $counts ) :
+                                        $counts = is_array( $counts ) ? $counts : [];
+                                        ?>
+                                        <tr>
+                                            <td><?php echo esc_html( sidebar_jlg_format_local_date( (string) $dateKey ) ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $counts['sidebar_open'] ?? 0 ) ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $counts['menu_link_click'] ?? 0 ) ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $counts['cta_click'] ?? 0 ) ); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                        <?php if ( ! empty( $analyticsProfilesData ) ) : ?>
+                            <h3><?php esc_html_e( 'Performance par profil', 'sidebar-jlg' ); ?></h3>
+                            <table class="widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th scope="col"><?php esc_html_e( 'Profil', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( 'Ouvertures', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( 'Clics navigation', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( 'Clics CTA', 'sidebar-jlg' ); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ( $analyticsProfilesData as $profileId => $profileData ) :
+                                        if ( ! is_array( $profileData ) ) {
+                                            continue;
+                                        }
+                                        $profileTotals = isset( $profileData['totals'] ) && is_array( $profileData['totals'] ) ? $profileData['totals'] : [];
+                                        $profileLabel  = isset( $profileData['label'] ) && $profileData['label'] !== ''
+                                            ? $profileData['label']
+                                            : ( 'default' === $profileId ? __( 'Réglages globaux', 'sidebar-jlg' ) : (string) $profileId );
+                                        if ( ! empty( $profileData['is_fallback'] ) ) {
+                                            $profileLabel = sprintf( '%s · %s', $profileLabel, __( 'profil de repli', 'sidebar-jlg' ) );
+                                        }
+                                        ?>
+                                        <tr>
+                                            <td><?php echo esc_html( $profileLabel ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $profileTotals['sidebar_open'] ?? 0 ) ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $profileTotals['menu_link_click'] ?? 0 ) ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $profileTotals['cta_click'] ?? 0 ) ); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                        <?php
+                        $targetsToDisplay = array_filter(
+                            $analyticsTargets,
+                            static fn( $counts ) => is_array( $counts ) && ! empty( $counts )
+                        );
+                        if ( ! empty( $targetsToDisplay ) ) :
+                            ?>
+                            <h3><?php esc_html_e( 'Répartition des surfaces', 'sidebar-jlg' ); ?></h3>
+                            <ul>
+                                <?php foreach ( $targetsToDisplay as $eventKey => $distribution ) :
+                                    if ( ! is_array( $distribution ) || empty( $distribution ) ) {
+                                        continue;
+                                    }
+                                    $eventLabel = $eventLabels[ $eventKey ] ?? $eventKey;
+                                    ?>
+                                    <li>
+                                        <strong><?php echo esc_html( $eventLabel ); ?> :</strong>
+                                        <ul>
+                                            <?php foreach ( $distribution as $targetKey => $count ) :
+                                                $label = $targetLabels[ $targetKey ] ?? (string) $targetKey;
+                                                ?>
+                                                <li><?php echo esc_html( $label ); ?> — <?php echo esc_html( sidebar_jlg_format_metric_number( $count ) ); ?></li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <div id="tab-tools" class="tab-content" role="tabpanel" aria-labelledby="tab-tools-tab" aria-hidden="true" hidden>
             <table class="form-table">
                 <tr>
