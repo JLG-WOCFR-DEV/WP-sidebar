@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Démo Sidebar JLG</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../sidebar-jlg/assets/css/public-style.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #0f172a, #1e1b4b);
+      color: #e2e8f0;
+    }
+    main {
+      max-width: 720px;
+      padding: 48px;
+      background: rgba(15, 23, 42, 0.78);
+      border-radius: 24px;
+      box-shadow: 0 28px 60px rgba(8, 11, 27, 0.65);
+    }
+    main h1 {
+      margin-top: 0;
+      font-size: 2.25rem;
+    }
+  </style>
+  <script>
+    window.sidebarSettings = {
+      remember_last_state: "1",
+      state_storage_key: "sidebar-jlg-demo",
+      active_profile_id: "demo",
+      messages: {
+        missingElements: "Demo: éléments manquants."
+      }
+    };
+  </script>
+</head>
+<body class="jlg-sidebar-active jlg-sidebar-position-left">
+  <div id="page">
+    <main>
+      <h1>Demo de la Sidebar JLG</h1>
+      <p>Ce document statique charge les assets front de l'extension afin de réaliser un contrôle visuel rapide après refonte CSS.</p>
+      <p>Les styles sont injectés via des variables CSS pour simuler l'intégration WordPress.</p>
+    </main>
+  </div>
+  <div class="sidebar-overlay is-visible" id="sidebar-overlay" aria-hidden="false" tabindex="-1"></div>
+  <button class="hamburger-menu orientation-left is-active" id="hamburger-btn" type="button" aria-label="Ouvrir le menu" aria-controls="pro-sidebar" aria-expanded="true" data-open-label="Ouvrir le menu" data-close-label="Fermer le menu" data-position="left">
+    <div class="hamburger-icon">
+      <div class="icon-1"></div>
+      <div class="icon-2"></div>
+      <div class="icon-3"></div>
+    </div>
+  </button>
+  <aside class="pro-sidebar layout-full orientation-left" id="pro-sidebar" data-hover-desktop="tile-slide" data-hover-mobile="tile-slide" data-layout="full" data-horizontal-alignment="space-between" data-position="left" style="
+    --sidebar-width-desktop: 340px;
+    --sidebar-width-tablet: 320px;
+    --sidebar-width-mobile: min(92vw, 320px);
+    --sidebar-bg-color: rgba(16, 18, 27, 0.92);
+    --sidebar-bg-image: linear-gradient(135deg, rgba(15,23,42,0.75) 0%, rgba(2,6,23,0.65) 100%);
+    --sidebar-text-color: rgba(236, 236, 248, 0.96);
+    --sidebar-text-hover-color: #ffffff;
+    --primary-accent-color: #6366f1;
+    --primary-accent-image: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    --sidebar-font-family: 'Inter', system-ui, sans-serif;
+    --sidebar-font-size: 16px;
+    --sidebar-font-weight: 500;
+    --sidebar-text-transform: none;
+    --sidebar-letter-spacing: 0.04em;
+    --overlay-color: rgba(15, 23, 42, 0.92);
+    --overlay-opacity: 0.6;
+    --border-color: rgba(99, 102, 241, 0.35);
+    --border-width: 1px;
+    --border-radius: 22px;
+    --hamburger-color: #e2e8f0;
+    --hamburger-size: 56px;
+    --hamburger-top-position: 3.5rem;
+    --content-margin: 3rem;
+  ">
+    <div class="sidebar-inner">
+      <div class="sidebar-header">
+        <span class="logo-text">Sidebar JLG</span>
+        <button class="close-sidebar-btn" type="button" aria-label="Fermer le menu">
+          <span class="close-sidebar-fallback" aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="sidebar-search">
+        <form role="search">
+          <label class="screen-reader-text" for="demo-search">Rechercher</label>
+          <input id="demo-search" type="search" placeholder="Rechercher...">
+          <button class="search-submit" type="submit">Rechercher</button>
+        </form>
+      </div>
+      <nav class="sidebar-navigation" role="navigation" aria-label="Navigation principale">
+        <ul class="sidebar-menu">
+          <li class="menu-item current-menu-item">
+            <a href="#">
+              <span class="menu-icon svg-icon"><img src="https://cdn.jsdelivr.net/gh/tabler/tabler-icons@2.44.0/icons/home.svg" alt=""></span>
+              <span>Accueil</span>
+            </a>
+          </li>
+          <li class="menu-item has-submenu-toggle is-open current-menu-ancestor">
+            <a href="#">
+              <span class="menu-icon svg-icon"><img src="https://cdn.jsdelivr.net/gh/tabler/tabler-icons@2.44.0/icons/package.svg" alt=""></span>
+              <span>Produits</span>
+            </a>
+            <button class="submenu-toggle is-open" type="button" aria-expanded="true" aria-controls="submenu-demo" aria-haspopup="true" aria-label="Masquer le sous-menu" data-label-expand="Afficher le sous-menu" data-label-collapse="Masquer le sous-menu">
+              <span class="screen-reader-text">Masquer le sous-menu</span>
+              <span aria-hidden="true" class="submenu-toggle-indicator"></span>
+            </button>
+            <ul id="submenu-demo" class="submenu is-open" aria-hidden="false">
+              <li class="menu-item"><a href="#"><span>Intégrations</span></a></li>
+              <li class="menu-item"><a href="#"><span>Bibliothèque d'icônes</span></a></li>
+              <li class="menu-item"><a href="#"><span>Animations</span></a></li>
+            </ul>
+          </li>
+          <li class="menu-item menu-item-cta">
+            <div class="menu-cta">
+              <p class="menu-cta__eyebrow">Nouveau</p>
+              <h3 class="menu-cta__title">Preset « Glassmorphism »</h3>
+              <p class="menu-cta__description">Déployez un style futuriste prêt à l'emploi avec blur adaptatif.</p>
+              <a class="menu-cta__button" href="#">Découvrir</a>
+            </div>
+          </li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="social-icons">
+          <a href="#" aria-label="Twitter"><svg viewBox="0 0 24 24" role="img"><path fill="currentColor" d="M22.46 6c-.77.35-1.6.58-2.46.69a4.3 4.3 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.05 4.28 4.28 0 0 0-7.3 3.9 12.15 12.15 0 0 1-8.82-4.47 4.28 4.28 0 0 0 1.32 5.72 4.25 4.25 0 0 1-1.94-.54v.05a4.29 4.29 0 0 0 3.44 4.2 4.3 4.3 0 0 1-1.93.07 4.29 4.29 0 0 0 4 2.98A8.6 8.6 0 0 1 2 19.54 12.14 12.14 0 0 0 8.29 21c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.35-.02-.53A8.35 8.35 0 0 0 22.46 6z"/></svg></a>
+          <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" role="img"><path fill="currentColor" d="M20.45 20.45h-3.56v-5.54c0-1.32-.02-3.02-1.84-3.02-1.84 0-2.12 1.43-2.12 2.91v5.65H9.37V9h3.42v1.56h.05c.48-.9 1.65-1.84 3.4-1.84 3.64 0 4.31 2.4 4.31 5.52v6.21zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.55V9h3.57v11.45z"/></svg></a>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <script src="../sidebar-jlg/assets/js/public-script.js"></script>
+</body>
+</html>
