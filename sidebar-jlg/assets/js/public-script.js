@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    if (overlay) {
+        const overlayIsVisible = overlay.classList.contains('is-visible');
+        overlay.setAttribute('aria-hidden', overlayIsVisible ? 'false' : 'true');
+    }
+
     const analyticsSettings = typeof sidebarSettings !== 'undefined' ? sidebarSettings.analytics : null;
     const analyticsConfig = analyticsSettings
         && analyticsSettings.enabled
@@ -913,7 +918,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (closeLabel) {
             hamburgerBtn.setAttribute('aria-label', closeLabel);
         }
-        if (overlay) overlay.classList.add('is-visible');
+        if (overlay) {
+            overlay.classList.add('is-visible');
+            overlay.setAttribute('aria-hidden', 'false');
+        }
         if (sidebarInner && shouldRememberState && typeof persistedState.scrollTop === 'number') {
             sidebarInner.scrollTop = persistedState.scrollTop;
         }
@@ -951,7 +959,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (openLabel) {
             hamburgerBtn.setAttribute('aria-label', openLabel);
         }
-        if (overlay) overlay.classList.remove('is-visible');
+        if (overlay) {
+            overlay.classList.remove('is-visible');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
         clearScrollLockCompensation();
         if (returnFocus) {
             hamburgerBtn.focus();
