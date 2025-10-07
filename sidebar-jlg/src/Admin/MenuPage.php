@@ -2,11 +2,17 @@
 
 namespace JLG\Sidebar\Admin;
 
+use JLG\Sidebar\Accessibility\AuditRunner;
 use JLG\Sidebar\Accessibility\Checklist;
 use JLG\Sidebar\Admin\View\ColorPickerField;
 use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
+use function esc_url;
+use function esc_url_raw;
+use function home_url;
+use function sanitize_key;
+use function wp_create_nonce;
 
 class MenuPage
 {
@@ -17,6 +23,7 @@ class MenuPage
     private AnalyticsRepository $analytics;
     private string $pluginFile;
     private string $version;
+    private AuditRunner $auditRunner;
 
     public function __construct(
         SettingsRepository $settings,
@@ -25,7 +32,8 @@ class MenuPage
         ColorPickerField $colorPicker,
         AnalyticsRepository $analytics,
         string $pluginFile,
-        string $version
+        string $version,
+        AuditRunner $auditRunner
     ) {
         $this->settings = $settings;
         $this->sanitizer = $sanitizer;
@@ -34,6 +42,7 @@ class MenuPage
         $this->analytics = $analytics;
         $this->pluginFile = $pluginFile;
         $this->version = $version;
+        $this->auditRunner = $auditRunner;
     }
 
     public function registerHooks(): void
@@ -179,6 +188,14 @@ class MenuPage
             'preview_action' => 'jlg_render_preview',
             'svg_url_restrictions' => $this->sanitizer->getSvgUrlRestrictions(),
             'style_presets' => $stylePresets,
+            'accessibility_audit' => [
+                'action' => 'jlg_run_accessibility_audit',
+                'nonce' => wp_create_nonce('jlg_accessibility_audit'),
+                'default_url' => esc_url_raw(home_url('/')),
+                'is_available' => !empty($auditReport['can_run']),
+                'checks' => $auditChecks,
+                'binary' => isset($auditReport['binary']) && is_string($auditReport['binary']) ? $auditReport['binary'] : '',
+            ],
             'i18n' => [
                 'menuItemDefaultTitle' => __('Nouvel élément', 'sidebar-jlg'),
                 'socialIconDefaultTitle' => __('Nouvelle icône', 'sidebar-jlg'),
@@ -206,6 +223,24 @@ class MenuPage
                 'importSuccess' => __('Réglages importés avec succès. Rechargement de la page…', 'sidebar-jlg'),
                 'importError' => __('L’import des réglages a échoué.', 'sidebar-jlg'),
                 'importMissingFile' => __('Veuillez sélectionner un fichier JSON avant de lancer l’import.', 'sidebar-jlg'),
+                'auditRunning' => __('Audit en cours…', 'sidebar-jlg'),
+                'auditMissingUrl' => __('Veuillez saisir une URL à analyser.', 'sidebar-jlg'),
+                'auditGenericError' => __('L’audit d’accessibilité a échoué.', 'sidebar-jlg'),
+                'auditNoIssues' => __('Pa11y n’a détecté aucun problème critique.', 'sidebar-jlg'),
+                'auditSummaryTemplate' => __('%1$d erreur(s), %2$d avertissement(s), %3$d notice(s).', 'sidebar-jlg'),
+                'auditTypeError' => __('Erreur', 'sidebar-jlg'),
+                'auditTypeWarning' => __('Avertissement', 'sidebar-jlg'),
+                'auditTypeNotice' => __('Notice', 'sidebar-jlg'),
+                'auditLogTitle' => __('Sortie technique', 'sidebar-jlg'),
+                'auditUnavailable' => __('Pa11y n’est pas disponible sur ce serveur. Vérifiez les prérequis listés ci-dessous.', 'sidebar-jlg'),
+                'auditCompleted' => __('Audit terminé.', 'sidebar-jlg'),
+                'auditExecutionTime' => __('Durée : %s ms', 'sidebar-jlg'),
+                'auditDocumentTitle' => __('Titre de page : %s', 'sidebar-jlg'),
+                'auditSeeDetails' => __('Afficher les détails', 'sidebar-jlg'),
+                'auditHideDetails' => __('Masquer les détails', 'sidebar-jlg'),
+                'auditIssueCode' => __('Code : %s', 'sidebar-jlg'),
+                'auditIssueSelector' => __('Sélecteur : %s', 'sidebar-jlg'),
+                'auditIssueContext' => __('Extrait :', 'sidebar-jlg'),
                 'navMenuFieldLabel' => __('Menu WordPress', 'sidebar-jlg'),
                 'navMenuSelectPlaceholder' => __('Sélectionnez un menu…', 'sidebar-jlg'),
                 'navMenuDepthLabel' => __('Profondeur maximale', 'sidebar-jlg'),
@@ -283,6 +318,8 @@ class MenuPage
         $options = $this->settings->getOptionsWithRevalidation();
         $allIcons = $this->icons->getAllIcons();
         $analyticsSummary = $this->analytics->getSummary();
+        $auditStatus = $this->auditRunner->getEnvironmentReport();
+        $auditDefaultUrl = esc_url(home_url('/'));
 
         require plugin_dir_path($this->pluginFile) . 'includes/admin-page.php';
     }
