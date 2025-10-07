@@ -199,6 +199,8 @@ describe('public-script.js', () => {
   test('opens and closes the sidebar via UI controls', () => {
     loadScript();
 
+    expect(overlay.getAttribute('aria-hidden')).toBe('true');
+
     hamburgerBtn.click();
     jest.runOnlyPendingTimers();
 
@@ -207,6 +209,7 @@ describe('public-script.js', () => {
     expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('true');
     expect(hamburgerBtn.getAttribute('aria-label')).toBe('Fermer');
     expect(overlay.classList.contains('is-visible')).toBe(true);
+    expect(overlay.getAttribute('aria-hidden')).toBe('false');
     const focusableContent = getVisibleFocusable();
     expect(document.activeElement).toBe(focusableContent[0]);
 
@@ -216,6 +219,7 @@ describe('public-script.js', () => {
     expect(hamburgerBtn.classList.contains('is-active')).toBe(false);
     expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('false');
     expect(hamburgerBtn.getAttribute('aria-label')).toBe('Ouvrir');
+    expect(overlay.getAttribute('aria-hidden')).toBe('true');
     expect(document.activeElement).toBe(hamburgerBtn);
   });
 
