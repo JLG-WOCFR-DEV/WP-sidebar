@@ -66,13 +66,14 @@ if ($toggleCollapseLabelOption !== '') {
 }
 $toggleCollapseLabel = $toggleCollapseLabelOption !== '' ? $toggleCollapseLabelOption : $defaultToggleCollapseLabel;
 
-$renderMenuNodes = static function (array $nodes, string $layout) use (&$renderMenuNodes, $toggleExpandLabel, $toggleCollapseLabel): string {
+$submenuIndex = 0;
+
+$renderMenuNodes = static function (array $nodes, string $layout) use (&$renderMenuNodes, $toggleExpandLabel, $toggleCollapseLabel, &$submenuIndex): string {
     if ($nodes === []) {
         return '';
     }
 
     $html = '';
-    static $submenuIndex = 0;
 
     foreach ($nodes as $node) {
         if (!is_array($node)) {
