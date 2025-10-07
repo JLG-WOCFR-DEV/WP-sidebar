@@ -35,10 +35,11 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 
 - Le script public gère la position, les préférences de réduction de mouvement, le verrouillage du scroll et l'accessibilité clavier (focus trap, close sur `Esc`).【F:sidebar-jlg/assets/js/public-script.js†L1-L555】
 - Les sous-menus se replient automatiquement sur mobile et recalculent leur hauteur via `ResizeObserver`, ce qui évite les débordements courants.【F:sidebar-jlg/assets/js/public-script.js†L246-L362】
+- Des gestes tactiles configurables (ouverture depuis le bord, fermeture par glissement) rapprochent l'expérience mobile de celle des apps premium tout en restant désactivables pour les contextes sensibles.【F:sidebar-jlg/includes/admin-page.php†L404-L459】【F:sidebar-jlg/assets/js/public-script.js†L600-L1269】
 
 **Écarts & pistes**
 
-- Aucune gestuelle native (swipe pour ouvrir/fermer, tirage du bord) ni haptic feedback n'est implémentée, alors que les solutions mobiles premium en font un standard. Étendre `public-script.js` avec des listeners pointer/touch dédiés permettrait de capter ces interactions.【F:sidebar-jlg/assets/js/public-script.js†L556-L727】
+- Les gestes restent limités à un swipe latéral : pas de feedback haptique, de détection d'intention (tirage du bord vers l'intérieur pour annuler) ni d'indicateurs visuels contextuels. Ajouter des vibrations optionnelles (`navigator.vibrate`), un retour visuel progressif et des seuils adaptatifs selon le preset permettrait d'égaler les offres mobiles premium.
 - Pas de logique de persistance d'état (sidebar ré-ouverte au rechargement, souvenir du dernier sous-menu) ni de délai configurable d'autoclose. Introduire un stockage local léger (localStorage/sessionStorage) et des timers optionnels alignerait l'expérience sur les produits pro.
 - La gestion du bouton hamburger reste unique : pas de variantes (icônes animées, badges d'alerte, positionnement contextuel). Prévoir un sélecteur d'icônes animées et un système d'état (ex. badge pour promotions) améliorerait la perception.
 

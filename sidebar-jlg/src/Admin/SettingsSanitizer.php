@@ -303,6 +303,13 @@ class SettingsSanitizer
         $sanitized['close_on_link_click'] = !empty($input['close_on_link_click']);
         // Checkbox for remembering sidebar state across navigations.
         $sanitized['remember_last_state'] = !empty($input['remember_last_state']);
+        // Touch gestures inspired by premium off-canvas editors.
+        $sanitized['touch_gestures_edge_swipe'] = !empty($input['touch_gestures_edge_swipe']);
+        $sanitized['touch_gestures_close_swipe'] = !empty($input['touch_gestures_close_swipe']);
+        $edgeSize = $this->sanitizeIntegerOption($input, 'touch_gestures_edge_size', $existingOptions, $defaults);
+        $sanitized['touch_gestures_edge_size'] = max(0, min(200, $edgeSize));
+        $minDistance = $this->sanitizeIntegerOption($input, 'touch_gestures_min_distance', $existingOptions, $defaults);
+        $sanitized['touch_gestures_min_distance'] = max(30, min(600, $minDistance));
         $timeDelay = $this->sanitizeIntegerOption($input, 'auto_open_time_delay', $existingOptions, $defaults);
         $sanitized['auto_open_time_delay'] = max(0, min(600, $timeDelay));
         $scrollDepth = $this->sanitizeIntegerOption($input, 'auto_open_scroll_depth', $existingOptions, $defaults);

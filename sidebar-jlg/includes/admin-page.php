@@ -461,6 +461,52 @@ $textTransformLabels = [
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e( 'Gestes tactiles', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <p>
+                            <label>
+                                <input type="checkbox" name="sidebar_jlg_settings[touch_gestures_edge_swipe]" value="1" <?php checked( ! empty( $options['touch_gestures_edge_swipe'] ), 1 ); ?> />
+                                <?php esc_html_e( 'Autoriser l’ouverture en glissant depuis le bord (mobile).', 'sidebar-jlg' ); ?>
+                            </label>
+                        </p>
+                        <p>
+                            <label>
+                                <input type="checkbox" name="sidebar_jlg_settings[touch_gestures_close_swipe]" value="1" <?php checked( ! empty( $options['touch_gestures_close_swipe'] ), 1 ); ?> />
+                                <?php esc_html_e( 'Permettre la fermeture en glissant la sidebar vers l’extérieur.', 'sidebar-jlg' ); ?>
+                            </label>
+                        </p>
+                        <p>
+                            <label for="sidebar-jlg-gesture-edge-size"><?php esc_html_e( 'Largeur de la zone active', 'sidebar-jlg' ); ?></label>
+                            <input
+                                type="number"
+                                id="sidebar-jlg-gesture-edge-size"
+                                name="sidebar_jlg_settings[touch_gestures_edge_size]"
+                                class="small-text"
+                                min="0"
+                                max="200"
+                                step="1"
+                                value="<?php echo esc_attr( (string) (int) ( $options['touch_gestures_edge_size'] ?? $defaults['touch_gestures_edge_size'] ?? 32 ) ); ?>"
+                            />
+                            <span class="description">px</span>
+                        </p>
+                        <p>
+                            <label for="sidebar-jlg-gesture-min-distance"><?php esc_html_e( 'Distance minimale du geste', 'sidebar-jlg' ); ?></label>
+                            <input
+                                type="number"
+                                id="sidebar-jlg-gesture-min-distance"
+                                name="sidebar_jlg_settings[touch_gestures_min_distance]"
+                                class="small-text"
+                                min="30"
+                                max="600"
+                                step="5"
+                                value="<?php echo esc_attr( (string) (int) ( $options['touch_gestures_min_distance'] ?? $defaults['touch_gestures_min_distance'] ?? 96 ) ); ?>"
+                            />
+                            <span class="description">px</span>
+                        </p>
+                        <p class="description"><?php esc_html_e( 'Ajoute des gestes type « swipe » comparables aux barres latérales professionnelles. Les paramètres ne s’appliquent que sous 992px de large.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e( 'Déclencheurs comportementaux', 'sidebar-jlg' ); ?></th>
                     <td>
                         <p>

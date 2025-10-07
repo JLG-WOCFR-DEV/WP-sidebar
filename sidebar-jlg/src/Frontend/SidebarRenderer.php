@@ -338,6 +338,12 @@ class SidebarRenderer
                 'time_delay' => max(0, min(600, (int) ($options['auto_open_time_delay'] ?? 0))),
                 'scroll_depth' => max(0, min(100, (int) ($options['auto_open_scroll_depth'] ?? 0))),
             ],
+            'touch_gestures' => [
+                'edge_swipe_enabled' => !empty($options['touch_gestures_edge_swipe']),
+                'close_swipe_enabled' => !empty($options['touch_gestures_close_swipe']),
+                'edge_size' => max(0, min(200, (int) ($options['touch_gestures_edge_size'] ?? 32))),
+                'min_distance' => max(30, min(600, (int) ($options['touch_gestures_min_distance'] ?? 96))),
+            ],
             'debug_mode' => (string) ($options['debug_mode'] ?? '0'),
             'sidebar_position' => $this->resolveSidebarPosition($options),
             'active_profile_id' => isset($profile['id']) ? (string) $profile['id'] : 'default',
