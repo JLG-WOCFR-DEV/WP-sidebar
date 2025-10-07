@@ -81,6 +81,20 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     const persistentStorage = shouldRememberState ? resolvePersistentStorage() : null;
     let persistedState = persistentStorage ? loadPersistedState() : { ...defaultPersistedState };
+    const rawGestureSettings = typeof sidebarSettings !== 'undefined'
+        && sidebarSettings.touch_gestures
+        && typeof sidebarSettings.touch_gestures === 'object'
+            ? sidebarSettings.touch_gestures
+            : {};
+    const gestureTruthyValues = new Set([true, 'true', 1, '1']);
+    const gestureSettings = {
+        edgeSwipeEnabled: gestureTruthyValues.has(rawGestureSettings.edge_swipe_enabled),
+        closeSwipeEnabled: gestureTruthyValues.has(rawGestureSettings.close_swipe_enabled),
+        edgeSize: Math.max(0, Math.min(200, parseInt(rawGestureSettings.edge_size, 10) || 0)),
+        minDistance: Math.max(30, Math.min(600, parseInt(rawGestureSettings.min_distance, 10) || 96)),
+    };
+    const isSidebarOnRight = typeof sidebarSettings !== 'undefined'
+        && sidebarSettings.sidebar_position === 'right';
     let isRestoringState = false;
     let scrollPersistTimeout = null;
     const rawBehaviorTriggers = typeof sidebarSettings !== 'undefined'
@@ -244,7 +258,8 @@ document.addEventListener('DOMContentLoaded', function() {
         autoOpenTriggered = true;
         teardownAutoOpenTriggers();
         logAutoOpen(reason);
-        openSidebar();
+        const analyticsReason = typeof reason === 'string' && reason !== '' ? `auto_${reason}` : 'auto_trigger';
+        openSidebar({ analyticsTarget: analyticsReason });
     }
 
     function handleAutoOpenScroll() {
@@ -601,6 +616,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const originalSidebarTabIndex = sidebar.hasAttribute('tabindex') ? sidebar.getAttribute('tabindex') : null;
     let cachedFocusableElements = [];
     const DESKTOP_BREAKPOINT = 993;
+    const GESTURE_POINTER_TYPES = new Set(['touch', 'pen']);
+    const GESTURE_VERTICAL_RATIO_LIMIT = 0.6;
+    const supportsPointerEvents = typeof window !== 'undefined' && typeof window.PointerEvent === 'function';
+    let activeTouchGesture = null;
 
     document.body.classList.add('sidebar-js-enhanced');
 
@@ -1029,6 +1048,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const options = (rawOptions && typeof rawOptions === 'object' && !Array.isArray(rawOptions)) ? rawOptions : {};
         const skipFocus = options.skipFocus === true;
         const skipAnalytics = options.skipAnalytics === true;
+        const analyticsTarget = typeof options.analyticsTarget === 'string' && options.analyticsTarget !== ''
+            ? options.analyticsTarget
+            : 'toggle_button';
 
         autoOpenTriggered = true;
         teardownAutoOpenTriggers();
@@ -1036,7 +1058,7 @@ document.addEventListener('DOMContentLoaded', function() {
         applyScrollLock();
         document.body.classList.add('sidebar-open');
         if (!skipAnalytics) {
-            dispatchAnalytics('sidebar_open', { target: 'toggle_button' });
+            dispatchAnalytics('sidebar_open', { target: analyticsTarget });
         }
         hamburgerBtn.classList.add('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'true');
@@ -1116,6 +1138,164 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function isTouchPointer(event) {
+        if (!event) {
+            return false;
+        }
+
+        if (typeof event.pointerType === 'string') {
+            return GESTURE_POINTER_TYPES.has(event.pointerType);
+        }
+
+        return false;
+    }
+
+    function shouldIgnoreEdgeGestureTarget(target) {
+        if (!target || typeof target.closest !== 'function') {
+            return false;
+        }
+
+        if (sidebar.contains(target) || (overlay && overlay.contains(target))) {
+            return true;
+        }
+
+        if (target === hamburgerBtn || hamburgerBtn.contains(target)) {
+            return true;
+        }
+
+        if (target.closest('[data-sidebar-gesture="ignore"]')) {
+            return true;
+        }
+
+        if (target.closest('input, textarea, select, button, a, [role="button"], [contenteditable="true"]')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function handleGesturePointerDown(event) {
+        if (!supportsPointerEvents || activeTouchGesture || !isTouchPointer(event) || event.isPrimary === false) {
+            return;
+        }
+
+        if (isDesktopViewport()) {
+            return;
+        }
+
+        const pointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
+        const startX = typeof event.clientX === 'number' ? event.clientX : null;
+        const startY = typeof event.clientY === 'number' ? event.clientY : null;
+        if (pointerId === null || startX === null || startY === null) {
+            return;
+        }
+
+        const sidebarIsOpen = document.body.classList.contains('sidebar-open');
+        const viewportWidth = window.innerWidth || (document.documentElement ? document.documentElement.clientWidth : 0) || 0;
+
+        if (!sidebarIsOpen && gestureSettings.edgeSwipeEnabled && gestureSettings.edgeSize > 0) {
+            if (shouldIgnoreEdgeGestureTarget(event.target)) {
+                return;
+            }
+
+            if (!isSidebarOnRight && startX > gestureSettings.edgeSize) {
+                return;
+            }
+
+            if (isSidebarOnRight && (viewportWidth - startX) > gestureSettings.edgeSize) {
+                return;
+            }
+
+            activeTouchGesture = {
+                pointerId,
+                type: 'edge-open',
+                startX,
+                startY,
+                triggered: false,
+            };
+            return;
+        }
+
+        if (sidebarIsOpen && gestureSettings.closeSwipeEnabled) {
+            const target = event.target;
+            if (!target || (target !== sidebar && !sidebar.contains(target) && !(overlay && overlay.contains(target)))) {
+                return;
+            }
+
+            activeTouchGesture = {
+                pointerId,
+                type: 'close',
+                startX,
+                startY,
+                triggered: false,
+            };
+        }
+    }
+
+    function handleGesturePointerMove(event) {
+        if (!activeTouchGesture || !isTouchPointer(event) || event.pointerId !== activeTouchGesture.pointerId) {
+            return;
+        }
+
+        if (activeTouchGesture.triggered) {
+            event.preventDefault();
+            return;
+        }
+
+        const deltaX = event.clientX - activeTouchGesture.startX;
+        const deltaY = event.clientY - activeTouchGesture.startY;
+        const horizontalDistance = Math.abs(deltaX);
+        const verticalDistance = Math.abs(deltaY);
+
+        if (horizontalDistance < verticalDistance || horizontalDistance < 10) {
+            return;
+        }
+
+        const verticalRatio = verticalDistance / Math.max(horizontalDistance, 1);
+        if (verticalRatio > GESTURE_VERTICAL_RATIO_LIMIT) {
+            return;
+        }
+
+        if (activeTouchGesture.type === 'edge-open') {
+            const meetsThreshold = !isSidebarOnRight
+                ? deltaX >= gestureSettings.minDistance
+                : (-deltaX) >= gestureSettings.minDistance;
+            if (!meetsThreshold) {
+                return;
+            }
+
+            activeTouchGesture.triggered = true;
+            openSidebar({ analyticsTarget: 'gesture_swipe' });
+            event.preventDefault();
+            return;
+        }
+
+        if (activeTouchGesture.type === 'close') {
+            const meetsThreshold = !isSidebarOnRight
+                ? (-deltaX) >= gestureSettings.minDistance
+                : deltaX >= gestureSettings.minDistance;
+            if (!meetsThreshold) {
+                return;
+            }
+
+            activeTouchGesture.triggered = true;
+            closeSidebar({ returnFocus: false, source: 'gesture' });
+            event.preventDefault();
+        }
+    }
+
+    function handleGesturePointerEnd(event) {
+        if (!activeTouchGesture) {
+            return;
+        }
+
+        if (typeof event.pointerId === 'number' && event.pointerId !== activeTouchGesture.pointerId) {
+            return;
+        }
+
+        activeTouchGesture = null;
+    }
+
     function trapFocus(e) {
         const isTabPressed = e.key === 'Tab' || e.keyCode === 9;
         if (!isTabPressed) return;
@@ -1150,6 +1330,13 @@ document.addEventListener('DOMContentLoaded', function() {
     hamburgerBtn.addEventListener('click', toggleSidebar);
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
+
+    if (supportsPointerEvents && (gestureSettings.edgeSwipeEnabled || gestureSettings.closeSwipeEnabled)) {
+        window.addEventListener('pointerdown', handleGesturePointerDown, { passive: true });
+        window.addEventListener('pointermove', handleGesturePointerMove, { passive: false });
+        window.addEventListener('pointerup', handleGesturePointerEnd, { passive: true });
+        window.addEventListener('pointercancel', handleGesturePointerEnd, { passive: true });
+    }
 
     sidebar.addEventListener('click', (event) => {
         if (!event || !event.target || typeof event.target.closest !== 'function') {

@@ -184,6 +184,8 @@ describe('public-script.js', () => {
       configurable: true,
       value: 1200,
     });
+
+    window.PointerEvent = function PointerEvent() {};
   });
 
   afterEach(() => {
@@ -191,6 +193,7 @@ describe('public-script.js', () => {
     jest.useRealTimers();
     delete global.sidebarSettings;
     delete window.matchMedia;
+    delete window.PointerEvent;
     removeRecordedListeners();
     document.body.innerHTML = '';
     window.localStorage.clear();
@@ -423,6 +426,90 @@ describe('public-script.js', () => {
     expect(link.style.getPropertyValue('--mouse-y')).toBe('');
     expect(link.style.getPropertyValue('--rotate-x')).toBe('');
     expect(link.style.getPropertyValue('--rotate-y')).toBe('');
+  });
+
+  test('edge swipe opens the sidebar when enabled', () => {
+    loadScript({
+      touch_gestures: {
+        edge_swipe_enabled: '1',
+        close_swipe_enabled: '0',
+        edge_size: '80',
+        min_distance: '40',
+      },
+    });
+
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 480,
+    });
+
+    const pointerId = 21;
+    dispatchPointerEvent(window, 'pointerdown', {
+      pointerId,
+      pointerType: 'touch',
+      clientX: 12,
+      clientY: 180,
+      isPrimary: true,
+    });
+
+    const moveEvent = dispatchPointerEvent(window, 'pointermove', {
+      pointerId,
+      pointerType: 'touch',
+      clientX: 140,
+      clientY: 190,
+    });
+
+    expect(moveEvent.defaultPrevented).toBe(true);
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+  });
+
+  test('swipe closes the sidebar without returning focus when enabled', () => {
+    loadScript({
+      touch_gestures: {
+        edge_swipe_enabled: '0',
+        close_swipe_enabled: '1',
+        edge_size: '60',
+        min_distance: '50',
+      },
+    });
+
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 480,
+    });
+
+    hamburgerBtn.click();
+    jest.runOnlyPendingTimers();
+
+    const pointerId = 42;
+    dispatchPointerEvent(sidebar, 'pointerdown', {
+      pointerId,
+      pointerType: 'touch',
+      clientX: 200,
+      clientY: 140,
+      isPrimary: true,
+    });
+
+    const moveEvent = dispatchPointerEvent(window, 'pointermove', {
+      pointerId,
+      pointerType: 'touch',
+      clientX: 40,
+      clientY: 150,
+    });
+
+    expect(moveEvent.defaultPrevented).toBe(true);
+
+    dispatchPointerEvent(window, 'pointerup', {
+      pointerId,
+      pointerType: 'touch',
+      clientX: 40,
+      clientY: 150,
+    });
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+    expect(document.activeElement).not.toBe(hamburgerBtn);
   });
 
   test('auto opens after the configured timer delay', () => {
