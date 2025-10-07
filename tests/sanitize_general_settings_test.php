@@ -108,6 +108,28 @@ $result_close_zero = $method->invoke($sanitizer, $input_close_on_click_zero, $ex
 
 assertSame(false, $result_close_zero['close_on_link_click'] ?? null, 'Close-on-click option treats "0" as disabled');
 
+$input_remember_enabled = [
+    'remember_last_state' => '1',
+];
+
+$result_remember_enabled = $method->invoke($sanitizer, $input_remember_enabled, $existing_options);
+
+assertSame(true, $result_remember_enabled['remember_last_state'] ?? null, 'Remember state option converts truthy value to true');
+
+$input_remember_disabled = [];
+
+$result_remember_disabled = $method->invoke($sanitizer, $input_remember_disabled, $existing_options);
+
+assertSame(false, $result_remember_disabled['remember_last_state'] ?? null, 'Remember state option defaults to disabled');
+
+$input_remember_zero = [
+    'remember_last_state' => '0',
+];
+
+$result_remember_zero = $method->invoke($sanitizer, $input_remember_zero, $existing_options);
+
+assertSame(false, $result_remember_zero['remember_last_state'] ?? null, 'Remember state option treats "0" as disabled');
+
 $existing_numeric_general = array_merge($defaults->all(), [
     'border_width'     => 4,
     'width_desktop'    => 360,

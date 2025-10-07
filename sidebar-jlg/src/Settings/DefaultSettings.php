@@ -177,6 +177,8 @@ class DefaultSettings
             'show_close_button' => true,
             // Automatically close the sidebar after clicking menu or social links.
             'close_on_link_click' => false,
+            // Persist open state, scroll position and interactions between page loads.
+            'remember_last_state' => false,
             'nav_aria_label'   => '',
             'toggle_open_label'  => '',
             'toggle_close_label' => '',

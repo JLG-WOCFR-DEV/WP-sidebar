@@ -333,6 +333,7 @@ class SidebarRenderer
         $localizedOptions = [
             'animation_type' => $options['animation_type'] ?? 'slide-left',
             'close_on_link_click' => $options['close_on_link_click'] ?? '',
+            'remember_last_state' => $options['remember_last_state'] ?? false,
             'debug_mode' => (string) ($options['debug_mode'] ?? '0'),
             'sidebar_position' => $this->resolveSidebarPosition($options),
             'active_profile_id' => isset($profile['id']) ? (string) $profile['id'] : 'default',
@@ -355,6 +356,11 @@ class SidebarRenderer
         }
 
         $localizedOptions['analytics'] = $analyticsConfig;
+
+        $localizedOptions['state_storage_key'] = sprintf(
+            'sidebar-jlg-state:%s',
+            sanitize_key($localizedOptions['active_profile_id'] ?? 'default')
+        );
 
         wp_localize_script('sidebar-jlg-public-js', 'sidebarSettings', $localizedOptions);
     }
