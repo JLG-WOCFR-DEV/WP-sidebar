@@ -1833,6 +1833,7 @@ jQuery(document).ready(function($) {
 
     initializeUnitControls();
     initializeRangeControls();
+    initializeAccessibilityChecklist();
 
     const compareControls = setupPreviewCompare(previewModule);
     initializeStylePresets(compareControls);
@@ -2653,6 +2654,90 @@ jQuery(document).ready(function($) {
         clear: function() { $(this).val('').trigger('change'); }
     });
     
+    function initializeAccessibilityChecklist() {
+        const containers = $('.sidebar-jlg-accessibility');
+        if (!containers.length) {
+            return;
+        }
+
+        const locale = document.documentElement ? document.documentElement.lang || undefined : undefined;
+        const numberFormatter = typeof Intl !== 'undefined' && Intl.NumberFormat
+            ? new Intl.NumberFormat(locale, { maximumFractionDigits: 0 })
+            : null;
+
+        const formatNumber = (value) => {
+            if (typeof value !== 'number' || !Number.isFinite(value)) {
+                return '0';
+            }
+
+            if (numberFormatter) {
+                try {
+                    return numberFormatter.format(value);
+                } catch (error) {
+                    return String(Math.round(value));
+                }
+            }
+
+            return String(Math.round(value));
+        };
+
+        containers.each(function() {
+            const $container = $(this);
+            const $checkboxes = $container.find('input[type="checkbox"]');
+            const totalItemsData = parseInt($container.data('totalItems'), 10);
+            const totalItems = Number.isFinite(totalItemsData) && totalItemsData > 0
+                ? totalItemsData
+                : $checkboxes.length;
+            const $status = $container.find('.sidebar-jlg-accessibility__progress-status');
+            const $progress = $container.find('.sidebar-jlg-accessibility__progress-meter');
+            const template = String($container.data('progressTemplate') || '');
+            const ariaTemplate = String($container.data('progressAriaTemplate') || '');
+
+            const formatProgressText = (completed, total, percent) => {
+                if (!template) {
+                    return `${formatNumber(completed)} / ${formatNumber(total)} (${formatNumber(percent)}%)`;
+                }
+
+                return template
+                    .replace('%1$s', formatNumber(completed))
+                    .replace('%2$s', formatNumber(total))
+                    .replace('%3$s', formatNumber(percent));
+            };
+
+            const formatAriaLabel = (percent) => {
+                if (!ariaTemplate) {
+                    return `${formatNumber(percent)}%`;
+                }
+
+                return ariaTemplate.replace('%1$s', formatNumber(percent));
+            };
+
+            const updateProgress = () => {
+                let completed = 0;
+                $checkboxes.each(function() {
+                    if ($(this).prop('checked')) {
+                        completed += 1;
+                    }
+                });
+
+                const percent = totalItems > 0 ? Math.round((completed / totalItems) * 100) : 0;
+
+                if ($status.length) {
+                    $status.text(formatProgressText(completed, totalItems, percent));
+                }
+
+                if ($progress.length) {
+                    $progress.attr('value', completed);
+                    $progress.attr('max', totalItems);
+                    $progress.attr('aria-label', formatAriaLabel(percent));
+                }
+            };
+
+            $checkboxes.on('change', updateProgress);
+            updateProgress();
+        });
+    }
+
     // --- Gestion des onglets ---
     const tabWrapper = $('.nav-tab-wrapper');
     const tabPanels = $('.tab-content');

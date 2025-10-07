@@ -1,5 +1,6 @@
 <?php
 
+use JLG\Sidebar\Accessibility\Checklist;
 use JLG\Sidebar\Settings\TypographyOptions;
 use JLG\Sidebar\Settings\ValueNormalizer;
 
@@ -101,6 +102,7 @@ $textTransformLabels = [
         <a href="#tab-social" class="nav-tab" id="tab-social-tab" role="tab" aria-controls="tab-social" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Réseaux Sociaux', 'sidebar-jlg' ); ?></a>
         <a href="#tab-effects" class="nav-tab" id="tab-effects-tab" role="tab" aria-controls="tab-effects" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Effets & Animations', 'sidebar-jlg' ); ?></a>
         <a href="#tab-analytics" class="nav-tab" id="tab-analytics-tab" role="tab" aria-controls="tab-analytics" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Insights & Analytics', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-accessibility" class="nav-tab" id="tab-accessibility-tab" role="tab" aria-controls="tab-accessibility" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Accessibilité & WCAG 2.2', 'sidebar-jlg' ); ?></a>
         <a href="#tab-tools" class="nav-tab" id="tab-tools-tab" role="tab" aria-controls="tab-tools" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Outils', 'sidebar-jlg' ); ?></a>
     </div>
 
@@ -158,6 +160,34 @@ $textTransformLabels = [
         $profilesData = is_array( $profilesOption ) ? $profilesOption : [];
         $activeProfileId = get_option( 'sidebar_jlg_active_profile', '' );
         $analyticsSummary = isset( $analyticsSummary ) && is_array( $analyticsSummary ) ? $analyticsSummary : [];
+        $accessibilityItems = Checklist::getItems();
+        $rawAccessibilityStatuses = get_option( 'sidebar_jlg_accessibility_checklist', Checklist::getDefaultStatuses() );
+        $accessibilityStatuses = is_array( $rawAccessibilityStatuses ) ? $rawAccessibilityStatuses : [];
+        $normalizedAccessibilityStatuses = [];
+        foreach ( $accessibilityItems as $item ) {
+            $itemId = isset( $item['id'] ) && is_string( $item['id'] ) ? $item['id'] : '';
+            if ( '' === $itemId ) {
+                continue;
+            }
+
+            $normalizedAccessibilityStatuses[ $itemId ] = ! empty( $accessibilityStatuses[ $itemId ] );
+        }
+
+        $completedAccessibilityItems = array_sum( array_map( static fn( $value ) => $value ? 1 : 0, $normalizedAccessibilityStatuses ) );
+        $totalAccessibilityItems = count( $accessibilityItems );
+        $accessibilityCompletionRatio = $totalAccessibilityItems > 0 ? round( ( $completedAccessibilityItems / $totalAccessibilityItems ) * 100 ) : 0;
+        $accessibilityProgressTemplate = __( '%1$s critères validés sur %2$s (%3$s%%)', 'sidebar-jlg' );
+        $accessibilityProgressAriaTemplate = __( 'Avancement : %1$s%% des critères d’accessibilité sont validés.', 'sidebar-jlg' );
+        $accessibilityProgressText = sprintf(
+            $accessibilityProgressTemplate,
+            sidebar_jlg_format_metric_number( $completedAccessibilityItems ),
+            sidebar_jlg_format_metric_number( $totalAccessibilityItems ),
+            sidebar_jlg_format_metric_number( $accessibilityCompletionRatio )
+        );
+        $accessibilityProgressAria = sprintf(
+            $accessibilityProgressAriaTemplate,
+            sidebar_jlg_format_metric_number( $accessibilityCompletionRatio )
+        );
         ?>
 
         <!-- Onglet Général -->
@@ -1188,6 +1218,90 @@ $textTransformLabels = [
                         <?php endif; ?>
                     <?php endif; ?>
                 <?php endif; ?>
+            </div>
+        </div>
+
+        <div id="tab-accessibility" class="tab-content" role="tabpanel" aria-labelledby="tab-accessibility-tab" aria-hidden="true" hidden>
+            <div class="sidebar-jlg-accessibility" data-total-items="<?php echo esc_attr( $totalAccessibilityItems ); ?>" data-progress-template="<?php echo esc_attr( $accessibilityProgressTemplate ); ?>" data-progress-aria-template="<?php echo esc_attr( $accessibilityProgressAriaTemplate ); ?>">
+                <header class="sidebar-jlg-accessibility__intro">
+                    <h2><?php esc_html_e( 'Checklist d’accessibilité WCAG 2.2', 'sidebar-jlg' ); ?></h2>
+                    <p class="description"><?php esc_html_e( 'Validez chaque critère avant publication pour garantir une expérience conforme aux exigences WCAG 2.2 niveau AA.', 'sidebar-jlg' ); ?></p>
+                </header>
+                <section class="sidebar-jlg-accessibility__progress" aria-live="polite">
+                    <p class="sidebar-jlg-accessibility__progress-status"><?php echo esc_html( $accessibilityProgressText ); ?></p>
+                    <progress class="sidebar-jlg-accessibility__progress-meter" max="<?php echo esc_attr( $totalAccessibilityItems ); ?>" value="<?php echo esc_attr( $completedAccessibilityItems ); ?>" aria-label="<?php echo esc_attr( $accessibilityProgressAria ); ?>"></progress>
+                </section>
+                <fieldset class="sidebar-jlg-accessibility__list">
+                    <legend><?php esc_html_e( 'Critères à vérifier pour chaque profil', 'sidebar-jlg' ); ?></legend>
+                    <ul class="sidebar-jlg-accessibility__items">
+                        <?php foreach ( $accessibilityItems as $item ) :
+                            $itemId = isset( $item['id'] ) && is_string( $item['id'] ) ? $item['id'] : '';
+                            if ( '' === $itemId ) {
+                                continue;
+                            }
+
+                            $checkboxId = 'sidebar-jlg-accessibility-' . sanitize_html_class( $itemId );
+                            $descriptionId = $checkboxId . '-description';
+                            $wcagId = $checkboxId . '-wcag';
+                            $isChecked = ! empty( $normalizedAccessibilityStatuses[ $itemId ] );
+                            $principle = isset( $item['principle'] ) && is_string( $item['principle'] ) ? $item['principle'] : '';
+                            $title = isset( $item['title'] ) && is_string( $item['title'] ) ? $item['title'] : '';
+                            $description = isset( $item['description'] ) && is_string( $item['description'] ) ? $item['description'] : '';
+                            $wcagCodes = isset( $item['wcag'] ) && is_array( $item['wcag'] ) ? array_filter( array_map( 'strval', $item['wcag'] ) ) : [];
+                            $resources = isset( $item['resources'] ) && is_array( $item['resources'] ) ? $item['resources'] : [];
+                            $describedby = trim( $descriptionId . ' ' . $wcagId );
+                            ?>
+                            <li class="sidebar-jlg-accessibility__item">
+                                <div class="sidebar-jlg-accessibility__item-header">
+                                    <input type="checkbox" name="sidebar_jlg_accessibility_checklist[<?php echo esc_attr( $itemId ); ?>]" value="1" id="<?php echo esc_attr( $checkboxId ); ?>" <?php checked( $isChecked ); ?> aria-describedby="<?php echo esc_attr( $describedby ); ?>" />
+                                    <label for="<?php echo esc_attr( $checkboxId ); ?>">
+                                        <span class="sidebar-jlg-accessibility__item-title"><?php echo esc_html( $title ); ?></span>
+                                        <?php if ( '' !== $principle ) : ?>
+                                            <span class="sidebar-jlg-accessibility__item-principle"><?php echo esc_html( $principle ); ?></span>
+                                        <?php endif; ?>
+                                    </label>
+                                </div>
+                                <?php if ( '' !== $description ) : ?>
+                                    <p class="sidebar-jlg-accessibility__item-description" id="<?php echo esc_attr( $descriptionId ); ?>"><?php echo esc_html( $description ); ?></p>
+                                <?php endif; ?>
+                                <?php if ( ! empty( $wcagCodes ) ) :
+                                    $wcagList = implode( ', ', $wcagCodes );
+                                    ?>
+                                    <p class="sidebar-jlg-accessibility__item-wcag" id="<?php echo esc_attr( $wcagId ); ?>"><?php printf( esc_html__( 'WCAG %s', 'sidebar-jlg' ), esc_html( $wcagList ) ); ?></p>
+                                <?php endif; ?>
+                                <?php if ( ! empty( $resources ) ) :
+                                    $validResources = array_values( array_filter(
+                                        $resources,
+                                        static function ( $resource ): bool {
+                                            if ( ! is_array( $resource ) ) {
+                                                return false;
+                                            }
+
+                                            $label = $resource['label'] ?? '';
+                                            $url = $resource['url'] ?? '';
+
+                                            return is_string( $label ) && '' !== $label && is_string( $url ) && '' !== $url;
+                                        }
+                                    ) );
+
+                                    if ( ! empty( $validResources ) ) :
+                                        ?>
+                                        <p class="sidebar-jlg-accessibility__item-resources">
+                                            <?php esc_html_e( 'Ressources :', 'sidebar-jlg' ); ?>
+                                            <?php foreach ( $validResources as $resourceIndex => $resource ) :
+                                                $resourceLabel = (string) $resource['label'];
+                                                $resourceUrl = (string) $resource['url'];
+                                                ?>
+                                                <a href="<?php echo esc_url( $resourceUrl ); ?>" target="_blank" rel="noopener noreferrer" class="sidebar-jlg-accessibility__resource-link"><?php echo esc_html( $resourceLabel ); ?></a><?php if ( $resourceIndex < count( $validResources ) - 1 ) : ?> <span aria-hidden="true">·</span> <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </p>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </fieldset>
+                <p class="description sidebar-jlg-accessibility__export-hint"><?php esc_html_e( 'Les critères cochés sont enregistrés dans la base WordPress : exportez vos réglages pour partager l’état d’avancement avec votre équipe.', 'sidebar-jlg' ); ?></p>
             </div>
         </div>
 

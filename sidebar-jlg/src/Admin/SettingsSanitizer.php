@@ -2,6 +2,7 @@
 
 namespace JLG\Sidebar\Admin;
 
+use JLG\Sidebar\Accessibility\Checklist;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
 use JLG\Sidebar\Settings\OptionChoices;
@@ -64,6 +65,26 @@ class SettingsSanitizer
         $this->defaults = $defaults;
         $this->icons = $icons;
         $this->allowedChoices = OptionChoices::getAll();
+    }
+
+    /**
+     * @param mixed $value
+     */
+    public function sanitize_accessibility_checklist($value): array
+    {
+        $input = is_array($value) ? $value : [];
+        $sanitized = [];
+
+        foreach (Checklist::getItems() as $item) {
+            $id = $item['id'] ?? '';
+            if (!is_string($id) || $id === '') {
+                continue;
+            }
+
+            $sanitized[$id] = !empty($input[$id]);
+        }
+
+        return $sanitized;
     }
 
     public function sanitize_settings($input, ?array $existingOptionsOverride = null): array
