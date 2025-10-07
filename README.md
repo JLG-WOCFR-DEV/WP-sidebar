@@ -152,6 +152,10 @@ Pour atteindre (voire dépasser) le niveau de finition des meilleures suites pro
 11. **Expérience mobile améliorée** : proposer une vue éditeur mobile-first avec prévisualisation tactile simulée, des breakpoints configurables et un mode "split view" pour comparer facilement les rendus desktop/tablette/mobile.
 12. **Marketplace d'extensions** : ouvrir un système d'extensions légères (hooks documentés, manifest JSON) pour que la communauté puisse ajouter des connecteurs (CRM, analytics, marketing automation) et partager leurs composants.
 
+### Feuille de route
+
+Chaque axe dispose d'un lot prioritaire, de prérequis et d'indicateurs associés détaillés dans la feuille de route dédiée : [docs/axes-roadmap.md](docs/axes-roadmap.md).
+
 ## Désinstallation
 
 La désinstallation supprime les options enregistrées par le plugin.
