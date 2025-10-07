@@ -424,6 +424,13 @@ $textTransformLabels = [
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e( 'Mémoire de session', 'sidebar-jlg' ); ?></th>
+                    <td>
+                        <label><input type="checkbox" name="sidebar_jlg_settings[remember_last_state]" value="1" <?php checked( $options['remember_last_state'], 1 ); ?> /> <?php esc_html_e( 'Rouvrir la sidebar comme à la dernière visite (état, sous-menus, position de défilement).', 'sidebar-jlg' ); ?></label>
+                        <p class="description"><?php esc_html_e( 'Utilise le stockage local du navigateur pour restaurer les sous-menus ouverts, la position de scroll et les CTA consultés.', 'sidebar-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e( 'Libellé ARIA de la navigation', 'sidebar-jlg' ); ?></th>
                     <td>
                         <input type="text" class="regular-text" name="sidebar_jlg_settings[nav_aria_label]" value="<?php echo esc_attr( $options['nav_aria_label'] ?? '' ); ?>" />

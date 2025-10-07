@@ -52,6 +52,129 @@ document.addEventListener('DOMContentLoaded', function() {
         ? (typeof WeakSet === 'function' ? new WeakSet() : new Set())
         : null;
 
+    const sidebarInner = sidebar ? sidebar.querySelector('.sidebar-inner') : null;
+    const rememberTruthyValues = new Set([true, 'true', 1, '1']);
+    const shouldRememberState = typeof sidebarSettings !== 'undefined'
+        && rememberTruthyValues.has(sidebarSettings.remember_last_state);
+    const activeProfileId = typeof sidebarSettings !== 'undefined'
+        && typeof sidebarSettings.active_profile_id === 'string'
+        && sidebarSettings.active_profile_id !== ''
+        ? sidebarSettings.active_profile_id
+        : 'default';
+    const storageKey = typeof sidebarSettings !== 'undefined'
+        && typeof sidebarSettings.state_storage_key === 'string'
+        && sidebarSettings.state_storage_key !== ''
+        ? sidebarSettings.state_storage_key
+        : `sidebar-jlg-state:${activeProfileId}`;
+    const CTA_CLICKED_CLASS = 'menu-cta--clicked';
+    const defaultPersistedState = {
+        isOpen: false,
+        scrollTop: 0,
+        openSubmenus: [],
+        clickedCtas: [],
+        lastOpenSubmenu: null,
+    };
+    const persistentStorage = shouldRememberState ? resolvePersistentStorage() : null;
+    let persistedState = persistentStorage ? loadPersistedState() : { ...defaultPersistedState };
+    let isRestoringState = false;
+    let scrollPersistTimeout = null;
+
+    if (!shouldRememberState) {
+        const fallbackStorage = resolvePersistentStorage();
+        if (fallbackStorage) {
+            try {
+                fallbackStorage.removeItem(storageKey);
+            } catch (error) {
+                // Ignore storage cleanup errors.
+            }
+        }
+    }
+
+    function resolvePersistentStorage() {
+        if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+            return null;
+        }
+
+        try {
+            const probeKey = `${storageKey}__probe`;
+            window.localStorage.setItem(probeKey, '1');
+            window.localStorage.removeItem(probeKey);
+            return window.localStorage;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function normalizePersistedState(rawState) {
+        const normalized = { ...defaultPersistedState };
+        if (!rawState || typeof rawState !== 'object') {
+            return normalized;
+        }
+
+        if (rawState.isOpen === true) {
+            normalized.isOpen = true;
+        }
+
+        if (typeof rawState.scrollTop === 'number' && !Number.isNaN(rawState.scrollTop)) {
+            normalized.scrollTop = rawState.scrollTop;
+        }
+
+        if (Array.isArray(rawState.openSubmenus)) {
+            normalized.openSubmenus = Array.from(new Set(rawState.openSubmenus.filter((value) => typeof value === 'string' && value !== '')));
+        }
+
+        if (Array.isArray(rawState.clickedCtas)) {
+            normalized.clickedCtas = Array.from(new Set(rawState.clickedCtas.filter((value) => typeof value === 'string' && value !== '')));
+        }
+
+        if (typeof rawState.lastOpenSubmenu === 'string' && rawState.lastOpenSubmenu !== '') {
+            normalized.lastOpenSubmenu = rawState.lastOpenSubmenu;
+        }
+
+        return normalized;
+    }
+
+    function loadPersistedState() {
+        if (!persistentStorage) {
+            return { ...defaultPersistedState };
+        }
+
+        try {
+            const raw = persistentStorage.getItem(storageKey);
+            if (typeof raw !== 'string' || raw === '') {
+                return { ...defaultPersistedState };
+            }
+
+            const parsed = JSON.parse(raw);
+            return normalizePersistedState(parsed);
+        } catch (error) {
+            return { ...defaultPersistedState };
+        }
+    }
+
+    function persistState(partialState) {
+        if (!partialState || typeof partialState !== 'object') {
+            return;
+        }
+
+        const merged = normalizePersistedState({
+            ...persistedState,
+            ...partialState,
+        });
+
+        persistedState = merged;
+
+        if (!shouldRememberState || !persistentStorage) {
+            return;
+        }
+
+        try {
+            persistentStorage.setItem(storageKey, JSON.stringify(merged));
+        } catch (error) {
+            // Ignore persistence errors (private browsing, quota, etc.).
+        }
+    }
+
     function createFormBody(params) {
         if (typeof URLSearchParams === 'function') {
             const searchParams = new URLSearchParams();
@@ -153,6 +276,149 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const label = overrideLabel || getCtaLabel(element);
         dispatchAnalytics('cta_view', { target: label });
+    }
+
+    function collectOpenSubmenuIds() {
+        if (!Array.isArray(menuItemsWithChildren)) {
+            return [];
+        }
+
+        const openIds = [];
+        menuItemsWithChildren.forEach((menuItem) => {
+            const submenu = findDirectChild(menuItem, SUBMENU_SELECTOR);
+            const toggle = findDirectChild(menuItem, SUBMENU_TOGGLE_SELECTOR);
+            if (!submenu || !toggle) {
+                return;
+            }
+
+            if (toggle.getAttribute('aria-expanded') === 'true' && typeof submenu.id === 'string' && submenu.id !== '') {
+                openIds.push(submenu.id);
+            }
+        });
+
+        return openIds;
+    }
+
+    function persistOpenSubmenus(lastOpenedId) {
+        if (!shouldRememberState) {
+            return;
+        }
+
+        const openIds = collectOpenSubmenuIds();
+        let nextLast = persistedState.lastOpenSubmenu;
+
+        if (typeof lastOpenedId === 'string' && lastOpenedId !== '') {
+            nextLast = lastOpenedId;
+        } else if (!openIds.includes(nextLast || '')) {
+            nextLast = openIds.length > 0 ? openIds[openIds.length - 1] : null;
+        }
+
+        persistState({
+            openSubmenus: openIds,
+            lastOpenSubmenu: nextLast,
+        });
+    }
+
+    function scheduleScrollPersistence() {
+        if (!shouldRememberState || !sidebarInner) {
+            return;
+        }
+
+        if (scrollPersistTimeout !== null) {
+            clearTimeout(scrollPersistTimeout);
+        }
+
+        scrollPersistTimeout = window.setTimeout(() => {
+            scrollPersistTimeout = null;
+            persistState({ scrollTop: sidebarInner.scrollTop || 0 });
+        }, 150);
+    }
+
+    function applyClickedCtas() {
+        if (!Array.isArray(persistedState.clickedCtas) || persistedState.clickedCtas.length === 0) {
+            return;
+        }
+
+        persistedState.clickedCtas.forEach((ctaId) => {
+            if (typeof ctaId !== 'string' || ctaId === '') {
+                return;
+            }
+
+            const ctaElement = sidebar.querySelector(`.menu-cta[data-cta-id="${ctaId}"]`);
+            if (!ctaElement) {
+                return;
+            }
+
+            ctaElement.classList.add(CTA_CLICKED_CLASS);
+            ctaElement.setAttribute('data-cta-clicked', 'true');
+        });
+    }
+
+    function markCtaAsClicked(ctaElement) {
+        if (!ctaElement) {
+            return;
+        }
+
+        ctaElement.classList.add(CTA_CLICKED_CLASS);
+        ctaElement.setAttribute('data-cta-clicked', 'true');
+
+        if (!shouldRememberState) {
+            return;
+        }
+
+        const ctaId = ctaElement.getAttribute('data-cta-id');
+        if (!ctaId || typeof ctaId !== 'string' || ctaId === '') {
+            return;
+        }
+
+        const updated = new Set(persistedState.clickedCtas || []);
+        updated.add(ctaId);
+        persistState({ clickedCtas: Array.from(updated) });
+    }
+
+    function restorePersistedState() {
+        if (!shouldRememberState) {
+            return;
+        }
+
+        if (Array.isArray(persistedState.openSubmenus) && persistedState.openSubmenus.length > 0) {
+            isRestoringState = true;
+            persistedState.openSubmenus.forEach((submenuId) => {
+                if (typeof submenuId !== 'string' || submenuId === '') {
+                    return;
+                }
+
+                const submenu = document.getElementById(submenuId);
+                if (!submenu) {
+                    return;
+                }
+
+                const menuItem = submenu.closest('.menu-item');
+                if (!menuItem) {
+                    return;
+                }
+
+                const toggle = findDirectChild(menuItem, SUBMENU_TOGGLE_SELECTOR);
+                if (!toggle) {
+                    return;
+                }
+
+                setMenuItemState(menuItem, submenu, toggle, true);
+            });
+            isRestoringState = false;
+        }
+
+        applyClickedCtas();
+
+        if (sidebarInner && typeof persistedState.scrollTop === 'number') {
+            sidebarInner.scrollTop = persistedState.scrollTop;
+        }
+
+        if (persistedState.isOpen) {
+            openSidebar({ skipFocus: true, skipAnalytics: true });
+        }
+
+        persistOpenSubmenus(persistedState.lastOpenSubmenu || null);
     }
 
     const sidebarPositionAttr = sidebar.getAttribute('data-position');
@@ -458,6 +724,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
+        if (shouldRememberState && !isRestoringState) {
+            const lastInteractedId = shouldOpen && typeof submenu.id === 'string' && submenu.id !== ''
+                ? submenu.id
+                : null;
+            persistOpenSubmenus(lastInteractedId);
+        }
+
         refreshFocusableElements();
 
         if (!shouldOpen && focusToggle) {
@@ -624,28 +897,48 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.remove(SCROLL_LOCK_CLASS);
     }
 
-    function openSidebar() {
+    function openSidebar(rawOptions = {}) {
+        const options = (rawOptions && typeof rawOptions === 'object' && !Array.isArray(rawOptions)) ? rawOptions : {};
+        const skipFocus = options.skipFocus === true;
+        const skipAnalytics = options.skipAnalytics === true;
+
         applyScrollLockCompensation();
         applyScrollLock();
         document.body.classList.add('sidebar-open');
-        dispatchAnalytics('sidebar_open', { target: 'toggle_button' });
+        if (!skipAnalytics) {
+            dispatchAnalytics('sidebar_open', { target: 'toggle_button' });
+        }
         hamburgerBtn.classList.add('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'true');
         if (closeLabel) {
             hamburgerBtn.setAttribute('aria-label', closeLabel);
         }
         if (overlay) overlay.classList.add('is-visible');
-        if (isReducedMotion) {
-            focusFirstAvailableElement();
-        } else {
-            setTimeout(() => {
+        if (sidebarInner && shouldRememberState && typeof persistedState.scrollTop === 'number') {
+            sidebarInner.scrollTop = persistedState.scrollTop;
+        }
+        if (!skipFocus) {
+            if (isReducedMotion) {
                 focusFirstAvailableElement();
-            }, 100);
+            } else {
+                setTimeout(() => {
+                    focusFirstAvailableElement();
+                }, 100);
+            }
         }
         document.addEventListener('keydown', trapFocus);
+        persistState({
+            isOpen: true,
+            scrollTop: sidebarInner ? (sidebarInner.scrollTop || 0) : 0,
+        });
     }
 
-    function closeSidebar(options = {}) {
+    function closeSidebar(rawOptions = {}) {
+        let options = rawOptions;
+        if (options && typeof options === 'object' && typeof options.type === 'string') {
+            options = {};
+        }
+        options = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
         const { returnFocus = true } = options;
         const isSidebarOpen = document.body.classList.contains('sidebar-open');
         if (!isSidebarOpen) {
@@ -670,6 +963,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             sidebar.setAttribute('tabindex', originalSidebarTabIndex);
         }
+
+        persistState({ isOpen: false });
     }
 
     function toggleSidebar() {
@@ -715,36 +1010,39 @@ document.addEventListener('DOMContentLoaded', function() {
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
 
-    if (analyticsConfig) {
-        sidebar.addEventListener('click', (event) => {
-            if (!event || !event.target || typeof event.target.closest !== 'function') {
-                return;
-            }
+    sidebar.addEventListener('click', (event) => {
+        if (!event || !event.target || typeof event.target.closest !== 'function') {
+            return;
+        }
 
-            const link = event.target.closest('a');
-            if (!link || !sidebar.contains(link)) {
-                return;
-            }
+        const link = event.target.closest('a');
+        if (!link || !sidebar.contains(link)) {
+            return;
+        }
 
-            if (link.classList && link.classList.contains('menu-cta__button')) {
-                const ctaWrapper = link.closest('.menu-cta');
-                if (ctaWrapper) {
+        if (link.classList && link.classList.contains('menu-cta__button')) {
+            const ctaWrapper = link.closest('.menu-cta');
+            if (ctaWrapper) {
+                if (analyticsConfig) {
                     markCtaView(ctaWrapper);
                 }
+                markCtaAsClicked(ctaWrapper);
+            }
+            if (analyticsConfig) {
                 dispatchAnalytics('cta_click', { target: 'cta_button' });
-                return;
             }
+            return;
+        }
 
-            if (link.closest('.social-icons')) {
-                dispatchAnalytics('menu_link_click', { target: 'social_link' });
-                return;
-            }
+        if (analyticsConfig && link.closest('.social-icons')) {
+            dispatchAnalytics('menu_link_click', { target: 'social_link' });
+            return;
+        }
 
-            if (link.closest('.sidebar-menu')) {
-                dispatchAnalytics('menu_link_click', { target: 'menu_link' });
-            }
-        }, true);
-    }
+        if (analyticsConfig && link.closest('.sidebar-menu')) {
+            dispatchAnalytics('menu_link_click', { target: 'menu_link' });
+        }
+    }, true);
 
     const closeOnClickTruthyValues = new Set([true, 1, '1', 'true']);
     const shouldCloseOnLinkClick = typeof sidebarSettings !== 'undefined'
@@ -776,6 +1074,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         closeSidebar();
     });
+
+    if (shouldRememberState && sidebarInner) {
+        sidebarInner.addEventListener('scroll', scheduleScrollPersistence, { passive: true });
+    }
+
+    if (shouldRememberState) {
+        restorePersistedState();
+    } else {
+        persistedState = { ...defaultPersistedState };
+    }
 
     // Appliquer la classe d'effet de survol en fonction de la taille de l'écran
     function teardownHoverEffectListeners() {

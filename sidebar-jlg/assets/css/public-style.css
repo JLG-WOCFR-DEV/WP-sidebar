@@ -476,6 +476,9 @@ body[data-sidebar-position="right"] .pro-sidebar {
     position: relative;
     overflow: hidden;
 }
+.sidebar-menu .menu-item-cta .menu-cta.menu-cta--clicked {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent-color, rgba(13, 110, 253, 1)) 45%, transparent), 0 10px 30px rgba(0, 0, 0, 0.25);
+}
 .sidebar-menu .menu-item-cta .menu-cta::after {
     content: "";
     position: absolute;
@@ -483,6 +486,9 @@ body[data-sidebar-position="right"] .pro-sidebar {
     border-radius: inherit;
     pointer-events: none;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 60%);
+}
+.sidebar-menu .menu-item-cta .menu-cta.menu-cta--clicked::after {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 65%);
 }
 .sidebar-menu .menu-item-cta .menu-cta__title {
     margin: 0;
@@ -516,6 +522,9 @@ body[data-sidebar-position="right"] .pro-sidebar {
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     position: relative;
     z-index: 1;
+}
+.sidebar-menu .menu-item-cta .menu-cta[data-cta-clicked="true"] .menu-cta__button {
+    background: color-mix(in srgb, var(--primary-accent-color, rgba(13, 110, 253, 1)) 70%, transparent);
 }
 .sidebar-menu .menu-item-cta .menu-cta__button:hover,
 .sidebar-menu .menu-item-cta .menu-cta__button:focus,

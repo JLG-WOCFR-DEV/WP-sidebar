@@ -108,6 +108,9 @@ describe('public-script.js', () => {
       global.sidebarSettings = {
         animation_type: 'fade',
         close_on_link_click: '0',
+        remember_last_state: '0',
+        state_storage_key: 'sidebar-jlg-state:test',
+        active_profile_id: 'test',
         ...settings,
       };
 
@@ -125,6 +128,7 @@ describe('public-script.js', () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
+    window.localStorage.clear();
 
     document.body.innerHTML = `
       <div id="sidebar-overlay"></div>
@@ -136,15 +140,41 @@ describe('public-script.js', () => {
         data-close-label="Fermer"
       >Menu</button>
       <aside id="pro-sidebar" data-hover-desktop="glow" data-hover-mobile="underline">
-        <button class="close-sidebar-btn">Fermer</button>
-        <input type="search" class="sidebar-search" placeholder="Rechercher" />
-        <nav class="sidebar-menu">
-          <a href="#item">Item</a>
-        </nav>
-        <div class="social-icons">
-          <a href="#social">Social</a>
+        <div class="sidebar-inner" style="max-height: 240px; overflow-y: auto;">
+          <div class="sidebar-header">
+            <button class="close-sidebar-btn">Fermer</button>
+          </div>
+          <input type="search" class="sidebar-search" placeholder="Rechercher" />
+          <nav class="sidebar-menu">
+            <ul class="sidebar-menu">
+              <li class="menu-item has-submenu-toggle">
+                <a href="#item">Item</a>
+                <button
+                  class="submenu-toggle"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="sidebar-submenu-1"
+                  data-label-expand="Open"
+                  data-label-collapse="Close"
+                >
+                  <span class="screen-reader-text">Open</span>
+                  <span aria-hidden="true" class="submenu-toggle-indicator"></span>
+                </button>
+                <ul id="sidebar-submenu-1" class="submenu" aria-hidden="true">
+                  <li class="menu-item"><a href="#child">Child</a></li>
+                </ul>
+              </li>
+            </ul>
+          </nav>
+          <div class="menu-cta" data-cta-id="cta-demo" data-cta-analytics="demo">
+            <a class="menu-cta__button" href="#cta">CTA</a>
+          </div>
+          <div class="social-icons">
+            <a href="#social">Social</a>
+          </div>
+          <button type="button">Action</button>
+          <div style="height: 400px"></div>
         </div>
-        <button type="button">Action</button>
       </aside>
     `;
     document.body.className = '';
@@ -163,6 +193,7 @@ describe('public-script.js', () => {
     delete window.matchMedia;
     removeRecordedListeners();
     document.body.innerHTML = '';
+    window.localStorage.clear();
   });
 
   test('opens and closes the sidebar via UI controls', () => {
@@ -214,15 +245,24 @@ describe('public-script.js', () => {
     jest.runOnlyPendingTimers();
 
     const closeButton = sidebar.querySelector('.close-sidebar-btn');
-    const actionButton = sidebar.querySelector('button[type="button"]');
+    const submenuToggle = sidebar.querySelector('.submenu-toggle');
+    const actionButton = sidebar.querySelector('.sidebar-inner > button[type="button"]');
     const navLink = sidebar.querySelector('.sidebar-menu a');
     const socialLink = sidebar.querySelector('.social-icons a');
     const searchField = sidebar.querySelector('input[type="search"]');
+    const ctaButton = sidebar.querySelector('.menu-cta__button');
 
     closeButton.hidden = true;
-    actionButton.disabled = true;
+    submenuToggle.disabled = true;
+    if (actionButton) {
+      actionButton.disabled = true;
+    }
     navLink.setAttribute('aria-hidden', 'true');
     socialLink.hidden = true;
+    if (ctaButton) {
+      ctaButton.setAttribute('aria-hidden', 'true');
+      ctaButton.setAttribute('tabindex', '-1');
+    }
 
     searchField.focus();
 
@@ -264,6 +304,63 @@ describe('public-script.js', () => {
 
     expect(document.body.classList.contains('sidebar-open')).toBe(false);
     expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  test('persists submenu state when remember_last_state is enabled', () => {
+    const storageKey = 'sidebar-jlg-state:remember-test';
+    loadScript({ remember_last_state: '1', state_storage_key: storageKey, active_profile_id: 'remember-test' });
+
+    const toggle = sidebar.querySelector('.submenu-toggle');
+
+    hamburgerBtn.click();
+    jest.runOnlyPendingTimers();
+    toggle.click();
+
+    const rawState = window.localStorage.getItem(storageKey);
+    expect(rawState).toBeTruthy();
+    const parsed = JSON.parse(rawState);
+    expect(parsed.isOpen).toBe(true);
+    expect(parsed.openSubmenus).toContain('sidebar-submenu-1');
+  });
+
+  test('restores remembered state on load', () => {
+    const storageKey = 'sidebar-jlg-state:restored';
+    window.localStorage.setItem(storageKey, JSON.stringify({
+      isOpen: true,
+      scrollTop: 120,
+      openSubmenus: ['sidebar-submenu-1'],
+      clickedCtas: ['cta-demo'],
+    }));
+
+    loadScript({ remember_last_state: '1', state_storage_key: storageKey, active_profile_id: 'restored' });
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+    const submenu = document.getElementById('sidebar-submenu-1');
+    expect(submenu.getAttribute('aria-hidden')).toBe('false');
+    expect(submenu.classList.contains('is-open')).toBe(true);
+    const inner = sidebar.querySelector('.sidebar-inner');
+    expect(inner.scrollTop).toBe(120);
+    const cta = sidebar.querySelector('.menu-cta');
+    expect(cta.classList.contains('menu-cta--clicked')).toBe(true);
+    expect(cta.getAttribute('data-cta-clicked')).toBe('true');
+  });
+
+  test('records CTA interactions when remembering state', () => {
+    const storageKey = 'sidebar-jlg-state:cta';
+    loadScript({ remember_last_state: '1', state_storage_key: storageKey, active_profile_id: 'cta' });
+
+    hamburgerBtn.click();
+    jest.runOnlyPendingTimers();
+
+    const ctaButton = sidebar.querySelector('.menu-cta__button');
+    ctaButton.click();
+
+    const rawState = window.localStorage.getItem(storageKey);
+    expect(rawState).toBeTruthy();
+    const parsed = JSON.parse(rawState);
+    expect(parsed.clickedCtas).toContain('cta-demo');
+    const cta = sidebar.querySelector('.menu-cta');
+    expect(cta.classList.contains('menu-cta--clicked')).toBe(true);
   });
 
   test('updates spotlight hover variables in response to pointer movement', () => {
