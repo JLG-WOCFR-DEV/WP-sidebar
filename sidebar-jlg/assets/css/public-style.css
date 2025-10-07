@@ -788,11 +788,19 @@ body.sidebar-js-enhanced .sidebar-menu .submenu.is-open {
 .hamburger-menu:hover,
 .hamburger-menu:focus,
 .hamburger-menu:focus-visible {
-    background-color: var(--jlg-hover-surface);
-    color: var(--sidebar-text-hover-color);
-    border-radius: var(--jlg-radius-sm);
+    background-color: var(--jlg-hover-surface, color-mix(
+        in srgb,
+        var(--primary-accent-color, #6e56cf) 20%,
+        color-mix(in srgb, var(--sidebar-bg-color, #1b1b1f) 88%, #ffffff 12%) 80%
+    ));
+    color: var(--sidebar-text-hover-color, var(--sidebar-text-color));
+    border-radius: var(--jlg-radius-sm, clamp(0.45rem, calc(var(--border-radius, 16px) * 0.5), 1rem));
     outline: 2px solid transparent;
-    box-shadow: var(--jlg-focus-ring-shadow);
+    box-shadow: var(--jlg-focus-ring-shadow, 0 0 0 3px color-mix(
+        in srgb,
+        var(--jlg-focus-ring, color-mix(in srgb, var(--primary-accent-color, #6e56cf) 58%, #ffffff 42%)) 28%,
+        transparent
+    ));
 }
 .hamburger-icon {
     position: relative;
