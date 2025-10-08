@@ -43,6 +43,9 @@ $_SERVER['HTTPS'] = 'on';
 $assertNormalized('//cdn.example.com/assets/logo.svg', 'https://cdn.example.com/assets/logo.svg', 'Protocol-relative URLs inherit HTTPS when the request is secure');
 
 $resetServer();
+$assertNormalized('https://[2001:DB8::1]:8042/archive', 'https://[2001:db8::1]:8042/archive', 'IPv6 hosts retain brackets, are lowercased and preserve custom ports');
+
+$resetServer();
 
 if ($testsPassed) {
     echo "Normalize URL comparison tests passed.\n";

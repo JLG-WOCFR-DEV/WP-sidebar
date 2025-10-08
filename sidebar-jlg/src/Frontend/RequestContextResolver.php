@@ -93,6 +93,9 @@ class RequestContextResolver
         $query = isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '';
 
         if ($hasScheme && $hasHost) {
+            if ($host !== '' && strpos($host, ':') !== false && $host[0] !== '[') {
+                $host = '[' . $host . ']';
+            }
             $normalized = $scheme . '://' . $host;
 
             if (isset($parts['port']) && $parts['port'] !== null) {
@@ -474,8 +477,10 @@ class RequestContextResolver
 
     private function buildCurrentUrl(): ?string
     {
-        $host = isset($_SERVER['HTTP_HOST']) ? trim((string) $_SERVER['HTTP_HOST']) : '';
-        if ($host === '') {
+        $hostHeader = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
+        $authority = $this->sanitizeHostHeader($hostHeader);
+
+        if ($authority === null) {
             return null;
         }
 
@@ -485,11 +490,98 @@ class RequestContextResolver
         }
 
         $requestUri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
-        if ($requestUri === '') {
-            $requestUri = '/';
+        $requestUri = $this->sanitizeRequestUri($requestUri);
+
+        return $scheme . '://' . $authority . $requestUri;
+    }
+
+    private function sanitizeHostHeader(string $hostHeader): ?string
+    {
+        $hostHeader = trim($hostHeader);
+
+        if ($hostHeader === '') {
+            return null;
         }
 
-        return $scheme . '://' . $host . $requestUri;
+        $hostHeader = preg_replace('~[\x00-\x20\x7F]+~', '', $hostHeader);
+        if (!is_string($hostHeader) || $hostHeader === '') {
+            return null;
+        }
+
+        if (preg_match('~^[A-Za-z0-9._:\\[\\]-]+$~', $hostHeader) !== 1) {
+            return null;
+        }
+
+        if (function_exists('wp_parse_url')) {
+            $parts = wp_parse_url('http://' . $hostHeader);
+        } else {
+            $parts = parse_url('http://' . $hostHeader);
+        }
+
+        if (!is_array($parts) || empty($parts['host'])) {
+            return null;
+        }
+
+        if (isset($parts['user']) || isset($parts['pass']) || isset($parts['path']) || isset($parts['query']) || isset($parts['fragment'])) {
+            return null;
+        }
+
+        $host = strtolower((string) $parts['host']);
+        if ($host === '') {
+            return null;
+        }
+
+        if ($host !== '' && substr($host, -1) === '.') {
+            $host = rtrim($host, '.');
+        }
+
+        if ($host === '') {
+            return null;
+        }
+
+        if ($host[0] === '[' && substr($host, -1) === ']') {
+            $host = substr($host, 1, -1);
+        }
+
+        $isIpv6 = strpos($host, ':') !== false;
+        $authorityHost = $isIpv6 ? '[' . $host . ']' : $host;
+
+        $port = null;
+        if (isset($parts['port'])) {
+            $portCandidate = (int) $parts['port'];
+            if ($portCandidate < 1 || $portCandidate > 65535) {
+                return null;
+            }
+
+            $port = $portCandidate;
+        }
+
+        return $port === null ? $authorityHost : $authorityHost . ':' . $port;
+    }
+
+    private function sanitizeRequestUri(string $requestUri): string
+    {
+        $requestUri = trim($requestUri);
+
+        if ($requestUri === '') {
+            return '/';
+        }
+
+        $requestUri = preg_replace('~[\x00-\x1F\x7F]+~', '', $requestUri);
+        if (!is_string($requestUri) || $requestUri === '') {
+            return '/';
+        }
+
+        if (preg_match('~^[A-Za-z][A-Za-z0-9+.-]*://~', $requestUri) === 1) {
+            $requestUri = '/' . ltrim($requestUri, '/');
+        }
+
+        $firstChar = $requestUri[0];
+        if ($firstChar !== '/' && $firstChar !== '?' && $firstChar !== '#') {
+            $requestUri = '/' . ltrim($requestUri, '/');
+        }
+
+        return $requestUri === '' ? '/' : $requestUri;
     }
 
     private function convertRelativeUrlToAbsolute(string $url): ?string
