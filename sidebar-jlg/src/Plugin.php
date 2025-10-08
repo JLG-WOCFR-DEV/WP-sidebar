@@ -27,6 +27,7 @@ class Plugin
     private MenuCache $cache;
     private SettingsSanitizer $sanitizer;
     private AnalyticsRepository $analytics;
+    private bool $maintenanceCompleted = false;
     private MenuPage $menuPage;
     private ProfileSelector $profileSelector;
     private RequestContextResolver $requestContextResolver;
@@ -83,12 +84,16 @@ class Plugin
 
     public function register(): void
     {
-        $this->maybeInvalidateCacheOnVersionChange();
-
         add_filter('sanitize_option_sidebar_jlg_profiles', [$this->sanitizer, 'sanitize_profiles'], 10, 2);
         add_filter('sanitize_option_sidebar_jlg_active_profile', [$this->sanitizer, 'sanitize_active_profile'], 10, 2);
         add_action('init', [$this, 'loadTextdomain']);
-        add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
+        $isAdminContext = function_exists('is_admin') ? is_admin() : false;
+
+        if ($isAdminContext) {
+            add_action('admin_init', [$this, 'maybeRunMaintenance'], 5);
+            add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
+        }
+        add_action('upgrader_process_complete', [$this, 'handleUpgrade'], 10, 2);
         add_action('update_option_sidebar_jlg_settings', [$this, 'handleSettingsUpdated'], 10, 3);
         add_action('add_option_sidebar_jlg_profiles', [$this, 'handleProfilesOptionChanged'], 10, 2);
         add_action('update_option_sidebar_jlg_profiles', [$this, 'handleProfilesOptionChanged'], 10, 3);
@@ -99,7 +104,6 @@ class Plugin
         add_action('sidebar_jlg_custom_icons_changed', [$this->cache, 'clear'], 10, 0);
         add_action('wp_update_nav_menu', [$this->cache, 'clear'], 10, 0);
 
-        $this->settings->revalidateStoredOptions();
         $this->menuPage->registerHooks();
         $this->renderer->registerHooks();
         $this->ajax->registerHooks();
@@ -269,5 +273,62 @@ class Plugin
         if (function_exists('delete_transient')) {
             delete_transient('sidebar_jlg_activation_error');
         }
+    }
+
+    /**
+     * @param mixed $upgrader
+     * @param mixed $hookExtra
+     */
+    public function handleUpgrade($upgrader = null, $hookExtra = null): void
+    {
+        if (!is_array($hookExtra)) {
+            return;
+        }
+
+        $type = isset($hookExtra['type']) ? (string) $hookExtra['type'] : '';
+
+        if ($type !== 'plugin') {
+            return;
+        }
+
+        $updatedPlugins = [];
+
+        if (!empty($hookExtra['plugins']) && is_array($hookExtra['plugins'])) {
+            $updatedPlugins = array_map('strval', $hookExtra['plugins']);
+        } elseif (!empty($hookExtra['plugin']) && is_string($hookExtra['plugin'])) {
+            $updatedPlugins = [(string) $hookExtra['plugin']];
+        }
+
+        if ($updatedPlugins === []) {
+            return;
+        }
+
+        $pluginBasename = function_exists('plugin_basename')
+            ? plugin_basename($this->pluginFile)
+            : basename($this->pluginFile);
+
+        if (in_array($pluginBasename, $updatedPlugins, true)) {
+            $this->runMaintenanceTasks();
+        }
+    }
+
+    public function maybeRunMaintenance(): void
+    {
+        if ($this->maintenanceCompleted) {
+            return;
+        }
+
+        $this->runMaintenanceTasks();
+    }
+
+    private function runMaintenanceTasks(): void
+    {
+        if ($this->maintenanceCompleted) {
+            return;
+        }
+
+        $this->maintenanceCompleted = true;
+        $this->maybeInvalidateCacheOnVersionChange();
+        $this->settings->revalidateStoredOptions();
     }
 }

@@ -312,6 +312,19 @@ $GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
 $revalidatingPlugin = new SidebarPlugin(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php', SIDEBAR_JLG_VERSION);
 $revalidatingPlugin->register();
 
+if (isset($registeredHooks['admin_init'])) {
+    foreach ($registeredHooks['admin_init'] as $listener) {
+        $callback = $listener['callback'];
+        $acceptedArgs = $listener['accepted_args'];
+
+        if ($acceptedArgs > 0) {
+            call_user_func_array($callback, array_fill(0, $acceptedArgs, null));
+        } else {
+            call_user_func($callback);
+        }
+    }
+}
+
 assertTrue(
     !isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR_default']),
     'Cache transient cleared when revalidation updates corrupted options'
