@@ -329,6 +329,18 @@ assertSame('moderne_dark', $result_style_invalid['style_preset'] ?? null, 'Inval
 assertSame('gradient', $result_style_invalid['bg_color_type'] ?? null, 'Invalid background color type falls back to existing value');
 assertSame('gradient', $result_style_invalid['accent_color_type'] ?? null, 'Invalid accent color type falls back to existing value');
 
+$existing_style_for_presets = array_merge($defaults->all(), [
+    'style_preset' => 'custom',
+]);
+
+$input_valid_shadcn = [
+    'style_preset' => 'shadcn_soft',
+];
+
+$result_style_valid = $styleMethod->invoke($sanitizer, $input_valid_shadcn, $existing_style_for_presets);
+
+assertSame('shadcn_soft', $result_style_valid['style_preset'] ?? null, 'Valid Shadcn preset is accepted');
+
 $existing_style_defaults = array_merge($defaults->all(), [
     'font_color_type' => 'pattern',
     'font_hover_color_type' => 'sparkle',

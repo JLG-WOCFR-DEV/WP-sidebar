@@ -17,7 +17,7 @@ Une extension WordPress qui fournit une sidebar animée et entièrement personna
 - Bibliothèque d'icônes prête à l'emploi (manifest JSON), outils de téléversement sécurisé (limites MIME/taille) et récupération du SVG pour les besoins spécifiques.
 - Outils d'import/export JSON versionnés, remise à zéro contrôlée et sélection directe de contenus WordPress (articles, pages, catégories) grâce aux points d'entrée AJAX dédiés. 
 - Préréglages de style (`style_presets`) comprenant visuels de comparaison avant/après pour accélérer la mise en production.
-- Nouveau preset « Radix Neutrals » inspiré de Radix UI : surfaces superposées, bordures subtiles et accents violets prêts à l’emploi.
+- Nouveaux presets inspirés de Headless UI, Shadcn UI, Bootstrap, Semantic UI, Radix UI et Anime.js pour disposer de palettes et comportements prêts à l’emploi.
 
 ### Personnalisation visuelle avancée
 
