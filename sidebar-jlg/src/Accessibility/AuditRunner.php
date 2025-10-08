@@ -6,6 +6,7 @@ use function __;
 use function abs;
 use function apply_filters;
 use function array_map;
+use function array_unique;
 use function esc_url_raw;
 use function escapeshellarg;
 use function escapeshellcmd;
@@ -40,12 +41,14 @@ use const PHP_OS;
 class AuditRunner
 {
     private string $pluginFile;
+    private string $pluginDir;
     private string $projectRoot;
 
     public function __construct(string $pluginFile)
     {
         $this->pluginFile = $pluginFile;
-        $this->projectRoot = dirname(dirname($pluginFile));
+        $this->pluginDir = dirname($pluginFile);
+        $this->projectRoot = $this->resolveProjectRoot($this->pluginDir);
     }
 
     /**
@@ -65,7 +68,7 @@ class AuditRunner
         $checks[] = [
             'id' => 'project_root',
             'label' => __('Répertoire du plugin accessible', 'sidebar-jlg'),
-            'passed' => is_dir($this->projectRoot),
+            'passed' => is_dir($this->pluginDir),
             'help' => __('Le dossier racine du plugin est introuvable. Vérifiez les permissions du dossier.', 'sidebar-jlg'),
         ];
 
@@ -145,11 +148,11 @@ class AuditRunner
             ];
         }
 
-        $configPath = $this->projectRoot . '/pa11y.config.json';
+        $configPath = $this->findPa11yConfigPath();
         $commandParts = [];
         $commandParts[] = $this->escapeCommand($binary);
 
-        if (is_file($configPath)) {
+        if ($configPath) {
             $commandParts[] = '--config ' . $this->escapeCommand($configPath);
         }
 
@@ -261,6 +264,77 @@ class AuditRunner
         ];
     }
 
+    private function resolveProjectRoot(string $pluginDir): string
+    {
+        $candidates = [$pluginDir];
+
+        $parent = dirname($pluginDir);
+        if ($parent !== '' && $parent !== $pluginDir) {
+            $candidates[] = $parent;
+        }
+
+        $grandParent = dirname($parent);
+        if ($grandParent !== '' && $grandParent !== $parent && $grandParent !== $pluginDir) {
+            $candidates[] = $grandParent;
+        }
+
+        foreach ($candidates as $candidate) {
+            if (is_dir($candidate . '/node_modules/.bin')) {
+                return $candidate;
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate . '/package.json') && is_dir($candidate . '/node_modules')) {
+                return $candidate;
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate . '/pa11y.config.json')) {
+                return $candidate;
+            }
+        }
+
+        return $pluginDir;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getSearchDirectories(): array
+    {
+        $directories = [$this->pluginDir];
+
+        if ($this->projectRoot !== $this->pluginDir) {
+            $directories[] = $this->projectRoot;
+        }
+
+        $parent = dirname($this->pluginDir);
+        if ($parent !== '' && $parent !== $this->pluginDir) {
+            $directories[] = $parent;
+        }
+
+        $projectParent = dirname($this->projectRoot);
+        if ($projectParent !== '' && $projectParent !== $this->projectRoot) {
+            $directories[] = $projectParent;
+        }
+
+        return array_unique($directories);
+    }
+
+    private function findPa11yConfigPath(): ?string
+    {
+        foreach ($this->getSearchDirectories() as $directory) {
+            $configPath = $directory . '/pa11y.config.json';
+            if (is_file($configPath)) {
+                return $configPath;
+            }
+        }
+
+        return null;
+    }
+
     private function escapeCommand(string $value): string
     {
         if (str_contains($value, ' ')) {
@@ -308,15 +382,23 @@ class AuditRunner
 
     private function findLocalPa11yBinary(): ?string
     {
-        $candidates = [
-            $this->projectRoot . '/node_modules/.bin/pa11y',
-            $this->projectRoot . '/node_modules/.bin/pa11y.cmd',
-            $this->projectRoot . '/node_modules/.bin/pa11y.ps1',
-        ];
+        foreach ($this->getSearchDirectories() as $directory) {
+            $base = rtrim($directory, '/\\') . '/node_modules/.bin/pa11y';
+            $candidates = [
+                $base,
+                $base . '.cmd',
+                $base . '.ps1',
+            ];
 
-        foreach ($candidates as $candidate) {
-            if (is_file($candidate) && (is_executable($candidate) || str_contains($candidate, '.cmd') || str_contains($candidate, '.ps1'))) {
-                return $candidate;
+            foreach ($candidates as $candidate) {
+                if (! is_file($candidate)) {
+                    continue;
+                }
+
+                $isWindowsScript = str_contains($candidate, '.cmd') || str_contains($candidate, '.ps1');
+                if ($isWindowsScript || is_executable($candidate)) {
+                    return $candidate;
+                }
             }
         }
 
