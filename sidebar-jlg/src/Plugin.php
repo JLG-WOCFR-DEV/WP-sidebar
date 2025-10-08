@@ -87,7 +87,7 @@ class Plugin
         add_filter('sanitize_option_sidebar_jlg_profiles', [$this->sanitizer, 'sanitize_profiles'], 10, 2);
         add_filter('sanitize_option_sidebar_jlg_active_profile', [$this->sanitizer, 'sanitize_active_profile'], 10, 2);
         add_action('init', [$this, 'loadTextdomain']);
-        $isAdminContext = function_exists('is_admin') ? is_admin() : false;
+        $isAdminContext = !function_exists('is_admin') || is_admin();
 
         if ($isAdminContext) {
             add_action('admin_init', [$this, 'maybeRunMaintenance'], 5);

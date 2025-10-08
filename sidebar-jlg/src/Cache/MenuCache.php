@@ -77,6 +77,8 @@ class MenuCache
             // Clear legacy cache entries that were stored without profile context.
             delete_transient($this->getTransientKey($locale, null));
         }
+
+        $this->removeLocaleFromIndex($locale, $suffix);
     }
 
     public function clear(): void
@@ -109,6 +111,52 @@ class MenuCache
     public function forgetLocaleIndex(): void
     {
         delete_option($this->optionName);
+    }
+
+    private function removeLocaleFromIndex(string $locale, ?string $suffix): void
+    {
+        $normalizedLocale = $this->normalizeLocale($locale);
+        $normalizedSuffix = $this->normalizeSuffixValue($suffix);
+
+        if ($normalizedLocale === '') {
+            return;
+        }
+
+        $existing = get_option($this->optionName, null);
+
+        if ($existing === null) {
+            return;
+        }
+
+        if (!is_array($existing) || $existing === []) {
+            delete_option($this->optionName);
+
+            return;
+        }
+
+        $remaining = [];
+
+        foreach ($existing as $entry) {
+            $parsed = $this->parseLocaleEntry($entry);
+
+            if ($parsed === null) {
+                continue;
+            }
+
+            if ($parsed['locale'] === $normalizedLocale && $parsed['suffix'] === $normalizedSuffix) {
+                continue;
+            }
+
+            $remaining[] = $this->createLocaleEntry($parsed['locale'], $parsed['suffix']);
+        }
+
+        if ($remaining === []) {
+            delete_option($this->optionName);
+
+            return;
+        }
+
+        update_option($this->optionName, $remaining, 'no');
     }
 
     public function rememberLocale(string $locale, ?string $suffix = null): void

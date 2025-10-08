@@ -875,7 +875,6 @@ class SidebarRenderer
             $html = $this->cache->get($currentLocale, $profileId);
         } else {
             $this->cache->delete($currentLocale, $profileId);
-            $this->cache->forgetLocaleIndex();
         }
 
         if (!$cacheEnabled || false === $html) {

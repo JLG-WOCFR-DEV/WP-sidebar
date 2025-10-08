@@ -61,6 +61,20 @@ function renderSidebarHtml(): string
 {
     global $renderer;
 
+    $resetResolver = \Closure::bind(
+        static function (): void {
+            if (self::$sharedRequestContextResolver !== null) {
+                self::$sharedRequestContextResolver->resetCachedContext();
+            }
+        },
+        null,
+        \JLG\Sidebar\Frontend\SidebarRenderer::class
+    );
+
+    if (is_callable($resetResolver)) {
+        $resetResolver();
+    }
+
     $html = $renderer->render();
     assertTrue(is_string($html), 'Sidebar renderer returned HTML during profile cache isolation test');
 
@@ -135,6 +149,82 @@ assertTrue(
     isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_en_US_post-profile']),
     'Post profile transient persists after reuse'
 );
+
+$cache->clear();
+$GLOBALS['wp_test_transients'] = [];
+unset($GLOBALS['wp_test_options']['sidebar_jlg_cached_locales']);
+
+$dynamicSettings = $settingsRepository->getDefaultSettings();
+$dynamicSettings['enable_sidebar'] = true;
+$dynamicSettings['social_icons'] = [];
+$dynamicSettings['menu_items'] = [];
+$dynamicSettings['profiles'] = [
+    [
+        'id' => 'post-profile',
+        'priority' => 10,
+        'conditions' => [
+            'post_types' => ['post'],
+        ],
+        'settings' => [
+            'nav_aria_label' => 'Post Profile Nav',
+            'enable_search' => false,
+        ],
+    ],
+    [
+        'id' => 'page-profile',
+        'priority' => 10,
+        'conditions' => [
+            'post_types' => ['page'],
+        ],
+        'settings' => [
+            'nav_aria_label' => 'Page Profile Nav',
+            'enable_search' => true,
+        ],
+    ],
+];
+
+$settingsRepository->saveOptions($dynamicSettings);
+
+switch_to_locale('en_US');
+
+$setPostContext('post');
+$dynamicPostHtml = renderSidebarHtml();
+$dynamicPostKey = $cache->getTransientKey('en_US', 'post-profile');
+assertTrue(isset($GLOBALS['wp_test_transients'][$dynamicPostKey]), 'Post profile cache stored before dynamic render scenario');
+
+$setPostContext('page');
+$dynamicPageHtml = renderSidebarHtml();
+$dynamicPageKey = $cache->getTransientKey('en_US', 'page-profile');
+assertTrue(!isset($GLOBALS['wp_test_transients'][$dynamicPageKey]), 'Dynamic page profile render skips cache storage');
+
+$cachedLocales = get_option('sidebar_jlg_cached_locales', []);
+$postEntryRetained = false;
+$pageEntryStored = false;
+
+foreach ($cachedLocales as $entry) {
+    if (!is_array($entry)) {
+        continue;
+    }
+
+    $entryLocale = isset($entry['locale']) ? (string) $entry['locale'] : '';
+
+    if ($entryLocale !== 'en_US') {
+        continue;
+    }
+
+    $entrySuffix = $entry['suffix'] ?? null;
+
+    if ($entrySuffix === 'post-profile') {
+        $postEntryRetained = true;
+    }
+
+    if ($entrySuffix === 'page-profile') {
+        $pageEntryStored = true;
+    }
+}
+
+assertTrue($postEntryRetained, 'Locale index retains cached post profile entry after dynamic render');
+assertTrue(!$pageEntryStored, 'Locale index does not persist dynamic page profile entry');
 
 if ($testsPassed) {
     echo "Sidebar profile cache isolation tests passed.\n";
