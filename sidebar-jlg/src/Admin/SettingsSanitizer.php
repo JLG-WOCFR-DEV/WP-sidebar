@@ -56,15 +56,26 @@ class SettingsSanitizer
     private IconLibrary $icons;
 
     /**
-     * @var array<string, string[]>
+     * @var array<string, string[]>|null
      */
-    private array $allowedChoices;
+    private ?array $allowedChoices = null;
 
     public function __construct(DefaultSettings $defaults, IconLibrary $icons)
     {
         $this->defaults = $defaults;
         $this->icons = $icons;
-        $this->allowedChoices = OptionChoices::getAll();
+    }
+
+    /**
+     * @return array<string, string[]>
+     */
+    private function getAllowedChoices(): array
+    {
+        if ($this->allowedChoices === null) {
+            $this->allowedChoices = OptionChoices::getAll();
+        }
+
+        return $this->allowedChoices;
     }
 
     /**
@@ -189,13 +200,13 @@ class SettingsSanitizer
         $sanitized['enable_analytics'] = !empty($input['enable_analytics']);
         $sanitized['layout_style'] = $this->sanitizeChoice(
             $input['layout_style'] ?? null,
-            $this->allowedChoices['layout_style'],
+            $this->getAllowedChoices()['layout_style'],
             $existingOptions['layout_style'] ?? ($defaults['layout_style'] ?? ''),
             $defaults['layout_style'] ?? ''
         );
         $sanitized['sidebar_position'] = $this->sanitizeChoice(
             $input['sidebar_position'] ?? null,
-            $this->allowedChoices['sidebar_position'],
+            $this->getAllowedChoices()['sidebar_position'],
             $existingOptions['sidebar_position'] ?? ($defaults['sidebar_position'] ?? ''),
             $defaults['sidebar_position'] ?? ''
         );
@@ -207,13 +218,13 @@ class SettingsSanitizer
         );
         $sanitized['horizontal_bar_alignment'] = $this->sanitizeChoice(
             $input['horizontal_bar_alignment'] ?? null,
-            $this->allowedChoices['horizontal_bar_alignment'],
+            $this->getAllowedChoices()['horizontal_bar_alignment'],
             $existingOptions['horizontal_bar_alignment'] ?? ($defaults['horizontal_bar_alignment'] ?? ''),
             $defaults['horizontal_bar_alignment'] ?? ''
         );
         $sanitized['horizontal_bar_position'] = $this->sanitizeChoice(
             $input['horizontal_bar_position'] ?? null,
-            $this->allowedChoices['horizontal_bar_position'],
+            $this->getAllowedChoices()['horizontal_bar_position'],
             $existingOptions['horizontal_bar_position'] ?? ($defaults['horizontal_bar_position'] ?? ''),
             $defaults['horizontal_bar_position'] ?? ''
         );
@@ -245,7 +256,7 @@ class SettingsSanitizer
         );
         $sanitized['desktop_behavior'] = $this->sanitizeChoice(
             $input['desktop_behavior'] ?? null,
-            $this->allowedChoices['desktop_behavior'],
+            $this->getAllowedChoices()['desktop_behavior'],
             $existingOptions['desktop_behavior'] ?? ($defaults['desktop_behavior'] ?? ''),
             $defaults['desktop_behavior'] ?? ''
         );
@@ -286,14 +297,14 @@ class SettingsSanitizer
         $sanitized['enable_search'] = !empty($input['enable_search']);
         $sanitized['search_method'] = $this->sanitizeChoice(
             $input['search_method'] ?? null,
-            $this->allowedChoices['search_method'],
+            $this->getAllowedChoices()['search_method'],
             $existingOptions['search_method'] ?? ($defaults['search_method'] ?? ''),
             $defaults['search_method'] ?? ''
         );
         $sanitized['search_shortcode'] = sanitize_text_field($input['search_shortcode'] ?? $existingOptions['search_shortcode']);
         $sanitized['search_alignment'] = $this->sanitizeChoice(
             $input['search_alignment'] ?? null,
-            $this->allowedChoices['search_alignment'],
+            $this->getAllowedChoices()['search_alignment'],
             $existingOptions['search_alignment'] ?? ($defaults['search_alignment'] ?? ''),
             $defaults['search_alignment'] ?? ''
         );
@@ -342,7 +353,7 @@ class SettingsSanitizer
         $sanitized['app_name'] = sanitize_text_field($input['app_name'] ?? $existingOptions['app_name']);
         $sanitized['header_logo_type'] = $this->sanitizeChoice(
             $input['header_logo_type'] ?? null,
-            $this->allowedChoices['header_logo_type'],
+            $this->getAllowedChoices()['header_logo_type'],
             $existingOptions['header_logo_type'] ?? ($defaults['header_logo_type'] ?? ''),
             $defaults['header_logo_type'] ?? ''
         );
@@ -355,13 +366,13 @@ class SettingsSanitizer
         );
         $sanitized['header_alignment_desktop'] = $this->sanitizeChoice(
             $input['header_alignment_desktop'] ?? null,
-            $this->allowedChoices['header_alignment_desktop'],
+            $this->getAllowedChoices()['header_alignment_desktop'],
             $existingOptions['header_alignment_desktop'] ?? ($defaults['header_alignment_desktop'] ?? ''),
             $defaults['header_alignment_desktop'] ?? ''
         );
         $sanitized['header_alignment_mobile'] = $this->sanitizeChoice(
             $input['header_alignment_mobile'] ?? null,
-            $this->allowedChoices['header_alignment_mobile'],
+            $this->getAllowedChoices()['header_alignment_mobile'],
             $existingOptions['header_alignment_mobile'] ?? ($defaults['header_alignment_mobile'] ?? ''),
             $defaults['header_alignment_mobile'] ?? ''
         );
@@ -382,14 +393,14 @@ class SettingsSanitizer
 
         $sanitized['style_preset'] = $this->sanitizeChoice(
             $input['style_preset'] ?? null,
-            $this->allowedChoices['style_preset'],
+            $this->getAllowedChoices()['style_preset'],
             $existingOptions['style_preset'] ?? ($defaults['style_preset'] ?? ''),
             $defaults['style_preset'] ?? ''
         );
 
         $sanitized['bg_color_type'] = $this->sanitizeChoice(
             $input['bg_color_type'] ?? null,
-            $this->allowedChoices['bg_color_type'],
+            $this->getAllowedChoices()['bg_color_type'],
             $existingOptions['bg_color_type'] ?? ($defaults['bg_color_type'] ?? ''),
             $defaults['bg_color_type'] ?? ''
         );
@@ -399,7 +410,7 @@ class SettingsSanitizer
 
         $sanitized['accent_color_type'] = $this->sanitizeChoice(
             $input['accent_color_type'] ?? null,
-            $this->allowedChoices['accent_color_type'],
+            $this->getAllowedChoices()['accent_color_type'],
             $existingOptions['accent_color_type'] ?? ($defaults['accent_color_type'] ?? ''),
             $defaults['accent_color_type'] ?? ''
         );
@@ -415,19 +426,19 @@ class SettingsSanitizer
         );
         $sanitized['font_family'] = $this->sanitizeChoice(
             $input['font_family'] ?? null,
-            $this->allowedChoices['font_family'],
+            $this->getAllowedChoices()['font_family'],
             $existingOptions['font_family'] ?? ($defaults['font_family'] ?? ''),
             $defaults['font_family'] ?? ''
         );
         $sanitized['font_weight'] = $this->sanitizeChoice(
             $input['font_weight'] ?? null,
-            $this->allowedChoices['font_weight'],
+            $this->getAllowedChoices()['font_weight'],
             $existingOptions['font_weight'] ?? ($defaults['font_weight'] ?? ''),
             $defaults['font_weight'] ?? ''
         );
         $sanitized['text_transform'] = $this->sanitizeChoice(
             $input['text_transform'] ?? null,
-            $this->allowedChoices['text_transform'],
+            $this->getAllowedChoices()['text_transform'],
             $existingOptions['text_transform'] ?? ($defaults['text_transform'] ?? ''),
             $defaults['text_transform'] ?? ''
         );
@@ -439,7 +450,7 @@ class SettingsSanitizer
         );
         $sanitized['font_color_type'] = $this->sanitizeChoice(
             $input['font_color_type'] ?? null,
-            $this->allowedChoices['font_color_type'],
+            $this->getAllowedChoices()['font_color_type'],
             $existingOptions['font_color_type'] ?? ($defaults['font_color_type'] ?? ''),
             $defaults['font_color_type'] ?? ''
         );
@@ -449,7 +460,7 @@ class SettingsSanitizer
 
         $sanitized['font_hover_color_type'] = $this->sanitizeChoice(
             $input['font_hover_color_type'] ?? null,
-            $this->allowedChoices['font_hover_color_type'],
+            $this->getAllowedChoices()['font_hover_color_type'],
             $existingOptions['font_hover_color_type'] ?? ($defaults['font_hover_color_type'] ?? ''),
             $defaults['font_hover_color_type'] ?? ''
         );
@@ -479,13 +490,13 @@ class SettingsSanitizer
 
         $sanitized['hover_effect_desktop'] = $this->sanitizeChoice(
             $input['hover_effect_desktop'] ?? null,
-            $this->allowedChoices['hover_effect_desktop'],
+            $this->getAllowedChoices()['hover_effect_desktop'],
             $existingOptions['hover_effect_desktop'] ?? ($defaults['hover_effect_desktop'] ?? ''),
             $defaults['hover_effect_desktop'] ?? ''
         );
         $sanitized['hover_effect_mobile'] = $this->sanitizeChoice(
             $input['hover_effect_mobile'] ?? null,
-            $this->allowedChoices['hover_effect_mobile'],
+            $this->getAllowedChoices()['hover_effect_mobile'],
             $existingOptions['hover_effect_mobile'] ?? ($defaults['hover_effect_mobile'] ?? ''),
             $defaults['hover_effect_mobile'] ?? ''
         );
@@ -497,7 +508,7 @@ class SettingsSanitizer
         );
         $sanitized['animation_type'] = $this->sanitizeChoice(
             $input['animation_type'] ?? null,
-            $this->allowedChoices['animation_type'],
+            $this->getAllowedChoices()['animation_type'],
             $existingOptions['animation_type'] ?? ($defaults['animation_type'] ?? ''),
             $defaults['animation_type'] ?? ''
         );
@@ -525,13 +536,13 @@ class SettingsSanitizer
 
         $sanitized['menu_alignment_desktop'] = $this->sanitizeChoice(
             $input['menu_alignment_desktop'] ?? null,
-            $this->allowedChoices['menu_alignment_desktop'],
+            $this->getAllowedChoices()['menu_alignment_desktop'],
             $existingOptions['menu_alignment_desktop'] ?? ($defaults['menu_alignment_desktop'] ?? ''),
             $defaults['menu_alignment_desktop'] ?? ''
         );
         $sanitized['menu_alignment_mobile'] = $this->sanitizeChoice(
             $input['menu_alignment_mobile'] ?? null,
-            $this->allowedChoices['menu_alignment_mobile'],
+            $this->getAllowedChoices()['menu_alignment_mobile'],
             $existingOptions['menu_alignment_mobile'] ?? ($defaults['menu_alignment_mobile'] ?? ''),
             $defaults['menu_alignment_mobile'] ?? ''
         );
@@ -865,13 +876,13 @@ class SettingsSanitizer
         $sanitized['social_icons'] = $sanitizedSocialIcons;
         $sanitized['social_orientation'] = $this->sanitizeChoice(
             $input['social_orientation'] ?? null,
-            $this->allowedChoices['social_orientation'],
+            $this->getAllowedChoices()['social_orientation'],
             $existingOptions['social_orientation'] ?? ($defaults['social_orientation'] ?? ''),
             $defaults['social_orientation'] ?? ''
         );
         $sanitized['social_position'] = $this->sanitizeChoice(
             $input['social_position'] ?? null,
-            $this->allowedChoices['social_position'],
+            $this->getAllowedChoices()['social_position'],
             $existingOptions['social_position'] ?? ($defaults['social_position'] ?? ''),
             $defaults['social_position'] ?? ''
         );
