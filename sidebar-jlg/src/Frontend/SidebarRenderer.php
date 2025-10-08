@@ -342,7 +342,7 @@ class SidebarRenderer
                 'edge_swipe_enabled' => !empty($options['touch_gestures_edge_swipe']),
                 'close_swipe_enabled' => !empty($options['touch_gestures_close_swipe']),
                 'edge_size' => max(0, min(200, (int) ($options['touch_gestures_edge_size'] ?? 32))),
-                'min_distance' => max(30, min(600, (int) ($options['touch_gestures_min_distance'] ?? 96))),
+                'min_distance' => $this->clampIntegerToStep((int) ($options['touch_gestures_min_distance'] ?? 95), 30, 600, 5),
             ],
             'debug_mode' => (string) ($options['debug_mode'] ?? '0'),
             'sidebar_position' => $this->resolveSidebarPosition($options),
@@ -1687,5 +1687,32 @@ class SidebarRenderer
         $position = \sanitize_key($options['sidebar_position'] ?? '');
 
         return $position === 'right' ? 'right' : 'left';
+    }
+
+    private function clampIntegerToStep(int $value, int $min, int $max, int $step): int
+    {
+        if ($min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+
+        $clamped = max($min, min($max, $value));
+
+        if ($step <= 0) {
+            return $clamped;
+        }
+
+        $offset = $clamped - $min;
+        $rounded = (int) round($offset / $step) * $step;
+        $snapped = $min + $rounded;
+
+        if ($snapped < $min) {
+            return $min;
+        }
+
+        if ($snapped > $max) {
+            return $max;
+        }
+
+        return $snapped;
     }
 }

@@ -385,7 +385,7 @@ class DefaultSettings
             'touch_gestures_edge_swipe' => false,
             'touch_gestures_close_swipe' => true,
             'touch_gestures_edge_size' => 32,
-            'touch_gestures_min_distance' => 96,
+            'touch_gestures_min_distance' => 95,
             // Auto-open helpers triggered by visitor behaviour. Values set to 0 disable the trigger.
             'auto_open_time_delay' => 0,
             'auto_open_scroll_depth' => 0,

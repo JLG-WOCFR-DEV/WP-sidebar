@@ -320,7 +320,7 @@ class SettingsSanitizer
         $edgeSize = $this->sanitizeIntegerOption($input, 'touch_gestures_edge_size', $existingOptions, $defaults);
         $sanitized['touch_gestures_edge_size'] = max(0, min(200, $edgeSize));
         $minDistance = $this->sanitizeIntegerOption($input, 'touch_gestures_min_distance', $existingOptions, $defaults);
-        $sanitized['touch_gestures_min_distance'] = max(30, min(600, $minDistance));
+        $sanitized['touch_gestures_min_distance'] = $this->clampIntegerToStep($minDistance, 30, 600, 5);
         $timeDelay = $this->sanitizeIntegerOption($input, 'auto_open_time_delay', $existingOptions, $defaults);
         $sanitized['auto_open_time_delay'] = max(0, min(600, $timeDelay));
         $scrollDepth = $this->sanitizeIntegerOption($input, 'auto_open_scroll_depth', $existingOptions, $defaults);
@@ -943,6 +943,33 @@ class SettingsSanitizer
         }
 
         return absint($existing);
+    }
+
+    private function clampIntegerToStep(int $value, int $min, int $max, int $step): int
+    {
+        if ($min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+
+        $clamped = max($min, min($max, $value));
+
+        if ($step <= 0) {
+            return $clamped;
+        }
+
+        $offset = $clamped - $min;
+        $rounded = (int) round($offset / $step) * $step;
+        $snapped = $min + $rounded;
+
+        if ($snapped < $min) {
+            return $min;
+        }
+
+        if ($snapped > $max) {
+            return $max;
+        }
+
+        return $snapped;
     }
 
     /**
