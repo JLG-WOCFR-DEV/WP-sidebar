@@ -2,6 +2,23 @@
 
 Cette note recense différents ensembles de composants ("presets") graphiques comparables à Headless UI, Shadcn UI, Radix UI, Bootstrap, Semantic UI ou Anime.js. Ils sont regroupés par typologie afin de faciliter la sélection selon le niveau d'opinion ou d'interactivité souhaité.
 
+## Préréglages codés dans Sidebar JLG
+
+Les presets suivants sont désormais disponibles dans le plugin (`DefaultSettings::STYLE_PRESETS`) et peuvent être appliqués depuis l’onglet **Style & Préréglages**.
+
+| Clé | Inspiration | Intentions visuelles |
+| --- | --- | --- |
+| `headless_minimal` | Headless UI | Fond neutre clair, accent bleu accessible, effets underline centrés. |
+| `shadcn_soft` | Shadcn UI | Gradient sombre velouté, violet vibrant et typographie ronde. |
+| `radix_neutrals` | Radix UI | Superpositions gris anthracite, bordures subtiles et accent violet dégradé. |
+| `bootstrap_classic` | Bootstrap | Fond clair texturé, bleu « primary » et alignement sobre des éléments. |
+| `semantic_fresh` | Semantic UI | Palette sombre chic avec turquoise energisant et hover en tile-slide. |
+| `moderne_dark` | Inspiration éditoriale | Dégradé sombre prononcé, capitales audacieuses et effets underline. |
+| `minimal_light` | Inspiration minimaliste | Blanc poudré, accent bleu, transitions légères. |
+| `retro_warm` | Ambiance rétro | Dégradé orangé/rose, typographie à empattements et boutons arrondis. |
+| `glass_neon` | Glassmorphism | Transparence sombre, accent néon et effet glow. |
+| `anime_neon` | Anime.js | Gradient violet/bleu, effet lumineux marqué et animation scale punchy. |
+
 ## Librairies de composants headless
 
 Ces solutions se concentrent sur la logique d'accessibilité et la gestion des interactions, en laissant la couche visuelle à la charge du projet.

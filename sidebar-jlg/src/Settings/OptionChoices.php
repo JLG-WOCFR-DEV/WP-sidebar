@@ -3,6 +3,7 @@
 namespace JLG\Sidebar\Settings;
 
 use JLG\Sidebar\Settings\TypographyOptions;
+use JLG\Sidebar\Settings\DefaultSettings;
 
 final class OptionChoices
 {
@@ -18,7 +19,6 @@ final class OptionChoices
         'header_logo_type' => ['text', 'image'],
         'header_alignment_desktop' => ['flex-start', 'center', 'flex-end'],
         'header_alignment_mobile' => ['flex-start', 'center', 'flex-end'],
-        'style_preset' => ['custom', 'moderne_dark', 'minimal_light', 'retro_warm', 'glass_neon'],
         'bg_color_type' => ['solid', 'gradient'],
         'accent_color_type' => ['solid', 'gradient'],
         'font_color_type' => ['solid', 'gradient'],
@@ -60,6 +60,11 @@ final class OptionChoices
     public static function getAll(): array
     {
         $choices = self::ALLOWED_CHOICES;
+
+        $choices['style_preset'] = array_values(array_unique(array_merge(
+            ['custom'],
+            array_keys(DefaultSettings::STYLE_PRESETS)
+        )));
 
         $choices['font_family'] = TypographyOptions::getFontFamilyChoices();
         $choices['font_weight'] = TypographyOptions::getFontWeights();
