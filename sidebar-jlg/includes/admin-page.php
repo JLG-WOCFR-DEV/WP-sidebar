@@ -61,6 +61,38 @@ if ( ! function_exists( 'sidebar_jlg_format_local_date' ) ) {
     }
 }
 
+if ( ! function_exists( 'sidebar_jlg_clamp_number_to_step' ) ) {
+    function sidebar_jlg_clamp_number_to_step( $value, int $min, int $max, int $step, int $fallback = 0 ): int {
+        $numeric = is_numeric( $value ) ? (int) round( (float) $value ) : $fallback;
+
+        if ( $min > $max ) {
+            $tmp = $min;
+            $min  = $max;
+            $max  = $tmp;
+        }
+
+        $clamped = max( $min, min( $max, $numeric ) );
+
+        if ( $step <= 0 ) {
+            return $clamped;
+        }
+
+        $offset  = $clamped - $min;
+        $rounded = (int) round( $offset / $step ) * $step;
+        $snapped = $min + $rounded;
+
+        if ( $snapped < $min ) {
+            return $min;
+        }
+
+        if ( $snapped > $max ) {
+            return $max;
+        }
+
+        return $snapped;
+    }
+}
+
 $fontFamilies = TypographyOptions::getFontFamilies();
 $safeFontFamilies = array_filter(
     $fontFamilies,
@@ -497,6 +529,15 @@ $textTransformLabels = [
                         </p>
                         <p>
                             <label for="sidebar-jlg-gesture-min-distance"><?php esc_html_e( 'Distance minimale du geste', 'sidebar-jlg' ); ?></label>
+                            <?php
+                            $gesture_min_distance = sidebar_jlg_clamp_number_to_step(
+                                $options['touch_gestures_min_distance'] ?? ( $defaults['touch_gestures_min_distance'] ?? 95 ),
+                                30,
+                                600,
+                                5,
+                                95
+                            );
+                            ?>
                             <input
                                 type="number"
                                 id="sidebar-jlg-gesture-min-distance"
@@ -505,7 +546,7 @@ $textTransformLabels = [
                                 min="30"
                                 max="600"
                                 step="5"
-                                value="<?php echo esc_attr( (string) (int) ( $options['touch_gestures_min_distance'] ?? $defaults['touch_gestures_min_distance'] ?? 96 ) ); ?>"
+                                value="<?php echo esc_attr( (string) $gesture_min_distance ); ?>"
                             />
                             <span class="description">px</span>
                         </p>
