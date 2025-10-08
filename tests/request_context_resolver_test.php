@@ -4,6 +4,7 @@ declare(strict_types=1);
 use JLG\Sidebar\Frontend\RequestContextResolver;
 
 require __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
 if (!function_exists('get_post_type')) {
     function get_post_type($post = null)
@@ -108,7 +109,7 @@ function assertSame($expected, $actual, string $message): void
     assertTrue($expected === $actual, $message);
 }
 
-$resetEnvironment = static function (): void {
+$resetEnvironment = static function () use ($resolver): void {
     $GLOBALS['test_post_type'] = null;
     $GLOBALS['test_queried_object'] = null;
     $GLOBALS['test_queried_object_id'] = 0;
@@ -121,6 +122,7 @@ $resetEnvironment = static function (): void {
     $_SERVER['HTTP_HOST'] = 'example.com';
     $_SERVER['REQUEST_URI'] = '/';
     unset($_SERVER['HTTPS']);
+    $resolver->resetCachedContext();
 };
 
 // Scenario 1: Standard page request.
@@ -168,7 +170,7 @@ $GLOBALS['test_post_terms'] = [
 $categoryContext = $resolver->resolve();
 assertTrue(in_array(9, $categoryContext['current_category_ids'], true), 'Category context includes queried term ID');
 assertTrue(isset($categoryContext['taxonomies']['category']), 'Category taxonomy present in context');
-assertTrue(in_array('9', $categoryContext['taxonomies']['category'], true), 'Category taxonomy exports numeric term ID');
+assertTrue(in_array(9, $categoryContext['taxonomies']['category'], true), 'Category taxonomy exports numeric term ID');
 assertSame('http://example.com/category/news', $categoryContext['current_url'], 'Category URL normalized without trailing slash');
 
 // Scenario 3: Logged-in mobile user with custom timestamp.
@@ -187,5 +189,30 @@ assertTrue(in_array('subscriber', $userContext['roles'], true), 'Roles include s
 assertSame('fri', $userContext['day_of_week'], 'Friday mapped to abbreviated key');
 assertSame(1365, $userContext['time_of_day_minutes'], '22:45 converted to minutes');
 assertSame('https://example.com/dashboard', $userContext['current_url'], 'HTTPS requests preserved in normalized URL');
+
+// Scenario 4: Host header sanitization with port and mixed casing.
+$resetEnvironment();
+$_SERVER['HTTP_HOST'] = 'Example.COM:8443 ';
+$_SERVER['REQUEST_URI'] = 'account/settings?tab=profile';
+
+$sanitizedHostContext = $resolver->resolve();
+assertSame('http://example.com:8443/account/settings?tab=profile', $sanitizedHostContext['current_url'], 'Host header is trimmed, lowercased and retains a non-standard port');
+
+// Scenario 5: Invalid host header payload results in a null URL.
+$resetEnvironment();
+$_SERVER['HTTP_HOST'] = "bad host\r\nX-Forwarded-Host: attacker.test";
+$_SERVER['REQUEST_URI'] = '/alerts';
+
+$invalidHostContext = $resolver->resolve();
+assertTrue($invalidHostContext['current_url'] === null, 'Malformed host header prevents current URL computation');
+
+// Scenario 6: IPv6 host with explicit port keeps brackets and HTTPS scheme.
+$resetEnvironment();
+$_SERVER['HTTP_HOST'] = '[2001:db8::1]:8443';
+$_SERVER['REQUEST_URI'] = 'reports/latest';
+$_SERVER['HTTPS'] = 'on';
+
+$ipv6Context = $resolver->resolve();
+assertSame('https://[2001:db8::1]:8443/reports/latest', $ipv6Context['current_url'], 'IPv6 hostnames preserve brackets and custom ports');
 
 exit($testsPassed ? 0 : 1);
