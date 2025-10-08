@@ -68,3 +68,17 @@ Outils permettant de composer des interfaces via éditeurs graphiques ou configu
 - **Écosystème** : sélectionner selon le framework (React, Vue, Angular) et la compatibilité avec l'outillage existant (Storybook, Design Tokens, CSS-in-JS).
 
 Ces presets couvrent différents niveaux d'opinion et de personnalisation, offrant une base pour constituer un environnement graphique adapté aux besoins du projet.
+
+## Backlog de presets à produire
+
+- **`astra_modern`** – Palette bleu marine / turquoise adaptée au thème Astra, compatibilité contrastes WCAG AA.
+- **`divi_sleek`** – Dégradé violet/orangé et boutons pill reprenant les conventions Divi (hover souligné, transitions fluides).
+- **`bricks_neutral`** – Tons sable/gris chauds, typographie sans serif et espacement généreux inspirés de Bricks Builder.
+- **`marketing_cta`** – Accent corail, gros CTA arrondi et animations d'entrée progressives pour pages de capture.
+- **`minimal_darkglass`** – Variante sombre inspirée du glassmorphism avec accent cyan, pensée pour les sites SaaS nocturnes.
+
+Chaque preset devra inclure :
+
+1. Un aperçu statique (image ou story) pour l'onglet **Style & Préréglages**.
+2. La liste des variables CSS associées (`STYLE_VARIABLE_MAP`) et les valeurs par défaut.
+3. Les recommandations de contraste (clair/sombre) et la configuration du bouton hamburger.

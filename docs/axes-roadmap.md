@@ -24,6 +24,12 @@ Ce document décline les axes stratégiques identifiés dans le README en lots a
 - **Designer UX/UI** : produit les maquettes haute fidélité, prototypes interactifs et veille à la cohérence du design system.
 - **QA & Accessibilité** : définit les scénarios de tests, entretient la checklist WCAG et prépare les scripts d'automatisation.
 
+## Prochaines étapes (3 prochains sprints)
+
+- **Sprint 1 – Fiabilisation technique** : finaliser la refonte du cache (cf. `AUDIT.md`) et livrer le test `menu_cache_index_management_test.php`. Livrables : hooks d'activation dédiés, schéma d'index granulaire, instrumentation basique.
+- **Sprint 2 – Expérience d'administration** : prototyper la palette de commande et le mode « canvas » décrits dans `docs/comparaison-pro.md`. Livrables : maquettes Figma, proof of concept JS sur le module d'aperçu, plan de migration UI.
+- **Sprint 3 – Accessibilité & intégrations** : industrialiser `npm run audit:accessibility`, intégrer les rappels dans l'UI (checklist contextuelle) et cadrer l'API REST/webhooks pour les métriques (brief technique + endpoints cibles).
+
 ## Cadence de revue
 
 - **Hebdomadaire** : point d'avancement sur les lots en cours, identification des blocages et ajustement des priorités.

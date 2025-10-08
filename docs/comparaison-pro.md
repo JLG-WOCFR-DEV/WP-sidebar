@@ -158,6 +158,14 @@ Le tab « Insights & Analytics » synthétise déjà les totaux, l'historique 7 
 
 **Objectif UX**
 - Transformer les données brutes en storytelling opérationnel qui suggère des actions concrètes.
+
+## 10. Synthèse des chantiers à court terme
+
+- **Éditeur visuel** : prioriser le mode canvas immersif et la palette de commandes pour réduire l'écart d'expérience avec les suites premium.
+- **Scénarios conditionnels** : ajouter des déclencheurs comportementaux (scroll depth, temporisation, sortie) et un A/B testing léger pour se rapprocher des offres marketing.
+- **Accessibilité** : intégrer l'audit Pa11y et afficher des alertes contextuelles lorsque les contrastes ou les raccourcis clavier sont incomplets.
+- **Analytics narratifs** : transformer le tableau Insights en storytelling actionnable (cartes synthèse, recommandations) et préparer des exports automatisables.
+- **Interopérabilité** : cadrer une API REST + webhooks pour exposer les événements clés et faciliter les intégrations (Zapier, Make, CRM).
 - Faciliter la comparaison temporelle sans obliger l'utilisateur à exporter les données.
 
 **Solutions proposées**

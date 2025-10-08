@@ -23,3 +23,10 @@
 ## 6. Nettoyage général recommandé
 - Ajouter des tests de régression autour de la gestion du cache (profil/locale) et de la revalidation pour prévenir les régressions de performance.
 - Documenter les hooks publics (`sidebar_jlg_cache_enabled`, `sidebar_jlg_custom_icons_changed`) afin d'expliciter leurs effets secondaires (invalidation globale).
+
+## 7. Suivi et prochaines actions
+
+- **Hooks & cache** : déplacement des revalidations d'options vers les hooks d'activation/mise à jour prévu pour Q3 2024 (voir `AUDIT.md`).
+- **Test de cache** : implémenter le scénario `tests/menu_cache_index_management_test.php` pour sécuriser l'index des locales avant refactor.
+- **Allègement des dépendances** : retirer `jquery` du `package.json` et actualiser les scripts npm associés.
+- **Documentation publique** : rédiger un guide sur les hooks (`sidebar_jlg_*`) afin d'expliciter les impacts sur le cache et la personnalisation.

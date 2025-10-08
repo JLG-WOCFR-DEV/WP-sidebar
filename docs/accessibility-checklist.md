@@ -25,3 +25,9 @@ Chaque item renvoie vers la documentation officielle du W3C afin de faciliter la
 - Intégrer la checklist aux revues de QA avant chaque release.
 - Compléter l’audit automatisé avec des revues manuelles (lecteurs d’écran, navigation mobile, contraste en conditions réelles).
 - Documenter les écarts éventuels et créer des tickets de suivi lorsque la checklist n’est pas totalement validée.
+
+## Actions en préparation
+
+- Ajouter une alerte proactive dans l'onglet **Accessibilité & WCAG 2.2** lorsque `npm run audit:accessibility` n'a pas été exécuté depuis 30 jours (stockage de l'horodatage côté option).
+- Fournir un modèle de rapport Pa11y (`docs/a11y-report-template.md`, à créer) pour standardiser la remontée des écarts.
+- Étendre les tests manuels à la navigation via lecteurs d'écran (NVDA, VoiceOver) et consigner les résultats dans le référentiel QA (`docs/axes-roadmap.md`).

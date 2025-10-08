@@ -14,3 +14,5 @@
 
 ## Suivi
 - Captures de contrôle prises via la page `docs/demo.html` (voir `docs/demo.html` et artefact `sidebar-demo-fixed.png`) pour documenter l’état visuel post-correctif.
+- Créer un ticket pour factoriser `sidebarSettings` dans `public-script.js` et relier la tâche aux recommandations de la revue d'avril.
+- Ajouter l'exécution du script `npm run audit:accessibility` à la checklist de revue avant merge.

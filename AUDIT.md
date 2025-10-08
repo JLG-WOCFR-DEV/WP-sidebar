@@ -36,3 +36,10 @@ Cette analyse met en évidence des fonctions dont l'implémentation pourrait êt
 4. **Tests manuels** – Activer le mode debug de WordPress (`WP_DEBUG`) puis naviguer sur un environnement de préproduction en surveillant le temps de réponse et le nombre de requêtes SQL pendant l'initialisation du plugin. Comparer les mesures avant/après implémentation des pistes précédentes pour valider le gain de performances.
 
 Ces recommandations fournissent une feuille de route pour rapprocher le plugin des standards observés dans les produits professionnels tout en sécurisant les évolutions grâce à une couverture de tests ciblée.
+
+## Suivi des chantiers
+
+- **Cache & initialisation** : ouverture d'un ticket pour déplacer `maybeInvalidateCacheOnVersionChange()` et `revalidateStoredOptions()` dans des hooks d'activation/mise à jour. L'objectif est de réduire les écritures concurrentes sur `wp_options` et de préparer un cache persistant par profil.
+- **Templates surchargeables** : plan d'action pour introduire un filtre `sidebar_jlg_template_path`, supporter `locate_template()` et encapsuler le buffer de sortie dans un `try/finally`. Cette évolution débloque la personnalisation par thème enfant et sécurise la libération du buffer.
+- **Index de cache granulaire** : spécification d'un stockage `locale => [profil => key]` avec purge différentielle et instrumentation des hits/miss. Un test d'intégration (nouveau `tests/menu_cache_index_management_test.php`) est prêt à valider le comportement.
+- **Observabilité des performances** : étude en cours pour ajouter des métriques (temps de rendu, taille du HTML) et un hook de monitoring. Ces données alimenteront le futur tableau de bord QA évoqué dans `docs/axes-roadmap.md`.
