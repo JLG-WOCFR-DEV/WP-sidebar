@@ -199,18 +199,22 @@ function sanitize_text_field($value)
 
     return trim($value);
 }
-function wp_strip_all_tags($string, $remove_breaks = false): string
-{
-    $string = strip_tags((string) $string);
+if (!function_exists('wp_strip_all_tags')) {
+    function wp_strip_all_tags($string, $remove_breaks = false): string
+    {
+        $string = strip_tags((string) $string);
 
-    if ($remove_breaks) {
-        $string = preg_replace('/[\r\n\t ]+/', ' ', $string);
+        if ($remove_breaks) {
+            $string = preg_replace('/[\r\n\t ]+/', ' ', $string);
+        }
+
+        return trim($string);
     }
-
-    return trim($string);
 }
 function add_menu_page(...$args): void {}
-function register_setting(...$args): void {}
+if (!function_exists('register_setting')) {
+    function register_setting(...$args): void {}
+}
 function esc_attr($value)
 {
     return $value;
