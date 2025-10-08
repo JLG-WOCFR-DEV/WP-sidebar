@@ -170,6 +170,11 @@ class MenuPage
             'schedule_days' => $this->getProfileScheduleDayChoices(),
         ];
 
+        $auditReport = $this->auditRunner->getEnvironmentReport();
+        $auditChecks = isset($auditReport['checks']) && is_array($auditReport['checks'])
+            ? $auditReport['checks']
+            : [];
+
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php', 'relative'),
             'nonce' => wp_create_nonce('jlg_ajax_nonce'),
