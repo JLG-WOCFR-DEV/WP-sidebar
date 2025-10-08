@@ -82,13 +82,7 @@ class MenuPage
                 'sanitize_callback' => [$this->sanitizer, 'sanitize_profiles'],
                 'default' => [],
                 'show_in_rest' => [
-                    'schema' => [
-                        'type' => 'array',
-                        'items' => [
-                            'type' => 'object',
-                            'description' => __('Profil de barre latérale enregistré.', 'sidebar-jlg'),
-                        ],
-                    ],
+                    'schema' => $this->buildProfilesSchema(),
                 ],
             ]
         );
@@ -119,6 +113,138 @@ class MenuPage
                 ],
             ]
         );
+    }
+
+    private function buildProfilesSchema(): array
+    {
+        return [
+            'type' => 'array',
+            'items' => [
+                'type' => 'object',
+                'description' => __('Profil de barre latérale enregistré.', 'sidebar-jlg'),
+                'properties' => [
+                    'id' => [
+                        'type' => 'string',
+                        'description' => __('Identifiant unique du profil.', 'sidebar-jlg'),
+                    ],
+                    'title' => [
+                        'type' => 'string',
+                        'description' => __('Titre du profil affiché dans l’interface d’administration.', 'sidebar-jlg'),
+                    ],
+                    'priority' => [
+                        'type' => 'integer',
+                        'description' => __('Priorité utilisée pour ordonner les profils.', 'sidebar-jlg'),
+                    ],
+                    'enabled' => [
+                        'type' => 'boolean',
+                        'description' => __('Indique si le profil est activé.', 'sidebar-jlg'),
+                    ],
+                    'conditions' => [
+                        'type' => 'object',
+                        'description' => __('Conditions qui déterminent quand le profil est appliqué.', 'sidebar-jlg'),
+                        'properties' => [
+                            'post_types' => [
+                                'type' => 'array',
+                                'description' => __('Types de contenu ciblés.', 'sidebar-jlg'),
+                                'items' => [
+                                    'type' => 'string',
+                                    'description' => __('Identifiant du type de contenu ciblé.', 'sidebar-jlg'),
+                                ],
+                            ],
+                            'content_types' => [
+                                'type' => 'array',
+                                'description' => __('Contenus spécifiques utilisés pour cibler le profil.', 'sidebar-jlg'),
+                                'items' => [
+                                    'type' => 'string',
+                                    'description' => __('Identifiant du contenu ciblé.', 'sidebar-jlg'),
+                                ],
+                            ],
+                            'taxonomies' => [
+                                'type' => 'array',
+                                'description' => __('Règles basées sur les taxonomies.', 'sidebar-jlg'),
+                                'items' => [
+                                    'type' => 'object',
+                                    'description' => __('Association d’une taxonomie et de ses termes.', 'sidebar-jlg'),
+                                    'properties' => [
+                                        'taxonomy' => [
+                                            'type' => 'string',
+                                            'description' => __('Identifiant de la taxonomie ciblée.', 'sidebar-jlg'),
+                                        ],
+                                        'terms' => [
+                                            'type' => 'array',
+                                            'description' => __('Termes de la taxonomie utilisés pour la règle.', 'sidebar-jlg'),
+                                            'items' => [
+                                                'type' => 'string',
+                                                'description' => __('Terme de taxonomie ciblé.', 'sidebar-jlg'),
+                                            ],
+                                        ],
+                                    ],
+                                    'additionalProperties' => true,
+                                ],
+                            ],
+                            'roles' => [
+                                'type' => 'array',
+                                'description' => __('Rôles utilisateurs ciblés.', 'sidebar-jlg'),
+                                'items' => [
+                                    'type' => 'string',
+                                    'description' => __('Identifiant du rôle utilisateur.', 'sidebar-jlg'),
+                                ],
+                            ],
+                            'languages' => [
+                                'type' => 'array',
+                                'description' => __('Codes de langue ciblés.', 'sidebar-jlg'),
+                                'items' => [
+                                    'type' => 'string',
+                                    'description' => __('Code de langue ISO ciblé.', 'sidebar-jlg'),
+                                ],
+                            ],
+                            'devices' => [
+                                'type' => 'array',
+                                'description' => __('Types d’appareils ciblés.', 'sidebar-jlg'),
+                                'items' => [
+                                    'type' => 'string',
+                                    'description' => __('Type d’appareil (desktop ou mobile).', 'sidebar-jlg'),
+                                ],
+                            ],
+                            'logged_in' => [
+                                'type' => 'string',
+                                'description' => __('Statut de connexion des visiteurs ciblés.', 'sidebar-jlg'),
+                            ],
+                            'schedule' => [
+                                'type' => 'object',
+                                'description' => __('Plage horaire durant laquelle le profil est actif.', 'sidebar-jlg'),
+                                'properties' => [
+                                    'start' => [
+                                        'type' => 'string',
+                                        'description' => __('Heure de début au format HH:MM.', 'sidebar-jlg'),
+                                    ],
+                                    'end' => [
+                                        'type' => 'string',
+                                        'description' => __('Heure de fin au format HH:MM.', 'sidebar-jlg'),
+                                    ],
+                                    'days' => [
+                                        'type' => 'array',
+                                        'description' => __('Jours de la semaine où le profil est actif.', 'sidebar-jlg'),
+                                        'items' => [
+                                            'type' => 'string',
+                                            'description' => __('Jour de la semaine ciblé (mon, tue, etc.).', 'sidebar-jlg'),
+                                        ],
+                                    ],
+                                ],
+                                'additionalProperties' => true,
+                            ],
+                        ],
+                        'additionalProperties' => true,
+                    ],
+                    'settings' => [
+                        'type' => 'object',
+                        'description' => __('Réglages personnalisés appliqués lorsque le profil est actif.', 'sidebar-jlg'),
+                        'additionalProperties' => true,
+                    ],
+                ],
+                'additionalProperties' => true,
+            ],
+        ];
     }
 
     public function enqueueAssets(string $hook): void
