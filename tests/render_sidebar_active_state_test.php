@@ -80,6 +80,20 @@ function runSidebarScenario(array $menuItem, callable $configureContext): array
     $menuCache->clear();
     $GLOBALS['wp_test_transients'] = [];
 
+    $resetResolver = \Closure::bind(
+        static function (): void {
+            if (self::$sharedRequestContextResolver !== null) {
+                self::$sharedRequestContextResolver->resetCachedContext();
+            }
+        },
+        null,
+        \JLG\Sidebar\Frontend\SidebarRenderer::class
+    );
+
+    if (is_callable($resetResolver)) {
+        $resetResolver();
+    }
+
     $html = $renderer->render();
     assertTrue(is_string($html), 'Sidebar renderer returned HTML for active state scenario');
     $html = (string) $html;

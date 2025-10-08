@@ -84,6 +84,32 @@ if (!function_exists('register_activation_hook')) {
     }
 }
 
+if (!function_exists('register_setting')) {
+    function register_setting($option_group, $option_name, $args = [])
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_strip_all_tags')) {
+    function wp_strip_all_tags($string)
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        return is_string($string) ? strip_tags($string) : '';
+    }
+}
+
 if (!function_exists('wp_upload_dir')) {
     function wp_upload_dir(): array
     {
