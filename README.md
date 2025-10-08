@@ -158,6 +158,14 @@ Pour atteindre (voire dépasser) le niveau de finition des meilleures suites pro
 11. **Expérience mobile améliorée** : proposer une vue éditeur mobile-first avec prévisualisation tactile simulée, des breakpoints configurables et un mode "split view" pour comparer facilement les rendus desktop/tablette/mobile.
 12. **Marketplace d'extensions** : ouvrir un système d'extensions légères (hooks documentés, manifest JSON) pour que la communauté puisse ajouter des connecteurs (CRM, analytics, marketing automation) et partager leurs composants.
 
+## Travaux en cours et suivis prioritaires
+
+- **Refactorisation du cache et des hooks d'initialisation** : isoler l'invalidation de cache et la revalidation des options dans des hooks d'activation/mise à jour afin d'éviter les écritures répétées sur `wp_options` et les rebuilds globaux des transients. Un suivi détaillé figure dans `AUDIT.md` et `docs/code-review-2024-04.md`.
+- **Évolution de l'aperçu et de l'éditeur** : prototyper un mode « canvas » immersif (plein écran, interactions inline) ainsi qu'une palette de commandes (`Cmd/Ctrl + K`) pour accélérer la navigation dans les réglages. Les spécifications UX/UI sont centralisées dans `docs/comparaison-pro.md` et `docs/axes-roadmap.md`.
+- **Accessibilité automatisée** : compléter la checklist WCAG 2.2 avec un audit Pa11y prêt à l'emploi et des rappels contextualisés dans l'UI. Les actions à mener sont décrites dans `docs/accessibility-checklist.md`.
+- **Nouveaux presets et compatibilités thèmes** : enrichir `DefaultSettings::STYLE_PRESETS` avec des variantes ciblées (Astra, Divi, Bricks) et documenter leur intégration. Un backlog de presets recommandés est maintenu dans `docs/presets-ui.md`.
+- **Observabilité & intégrations externes** : préparer une API REST/webhooks pour exposer les événements d'ouverture/clic et faciliter les raccords avec Zapier/Make. Les dépendances et livrables sont listés dans `docs/axes-roadmap.md`.
+
 ### Feuille de route
 
 Chaque axe dispose d'un lot prioritaire, de prérequis et d'indicateurs associés détaillés dans la feuille de route dédiée : [docs/axes-roadmap.md](docs/axes-roadmap.md).
