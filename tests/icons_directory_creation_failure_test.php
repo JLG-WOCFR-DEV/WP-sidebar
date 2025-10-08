@@ -47,7 +47,8 @@ assertTestTrue(is_callable($activationCallback), 'Activation hook registered');
 ($activationCallback)();
 
 $transient = get_transient('sidebar_jlg_activation_error');
-assertTestTrue(is_string($transient) && $transient !== '', 'Activation error notice is stored in a transient');
+assertTestTrue(is_array($transient), 'Activation error notice is stored in a structured transient');
+assertTestTrue(($transient['code'] ?? '') === 'icons_directory_creation_failed', 'Transient payload includes the directory failure code');
 
 $storedVersion = get_option('sidebar_jlg_plugin_version', null);
 assertTestTrue($storedVersion === null, 'Plugin version option is not updated when the icons directory cannot be created');
