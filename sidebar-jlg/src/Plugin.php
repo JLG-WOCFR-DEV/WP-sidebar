@@ -268,11 +268,47 @@ class Plugin
             return;
         }
 
-        printf('<div class="notice notice-error"><p>%s</p></div>', esc_html($message));
+        $messageText = is_array($message)
+            ? $this->getActivationErrorMessage($message)
+            : (string) $message;
+
+        if ($messageText === '') {
+            return;
+        }
+
+        printf('<div class="notice notice-error"><p>%s</p></div>', esc_html($messageText));
 
         if (function_exists('delete_transient')) {
             delete_transient('sidebar_jlg_activation_error');
         }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function getActivationErrorMessage(array $data): string
+    {
+        $code = isset($data['code']) ? (string) $data['code'] : '';
+        $details = isset($data['details']) && is_string($data['details']) ? $data['details'] : '';
+
+        switch ($code) {
+            case 'uploads_access_error':
+                $message = __('Sidebar JLG n\'a pas pu accéder au dossier uploads. Vérifiez les permissions du dossier uploads puis réactivez le plugin.', 'sidebar-jlg');
+
+                break;
+            case 'icons_directory_creation_failed':
+                $message = __('Sidebar JLG n\'a pas pu créer le dossier d\'icônes. Vérifiez les permissions du dossier uploads puis réactivez le plugin.', 'sidebar-jlg');
+
+                break;
+            default:
+                $message = __('Sidebar JLG a rencontré une erreur lors de l\'activation.', 'sidebar-jlg');
+        }
+
+        if ($details !== '') {
+            $message .= ' ' . sprintf(__('Détails : %s', 'sidebar-jlg'), $details);
+        }
+
+        return $message;
     }
 
     /**
