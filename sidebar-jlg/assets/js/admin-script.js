@@ -5929,24 +5929,26 @@ jQuery(document).ready(function($) {
     });
 
     // --- Builder pour les icônes sociales ---
+    const socialIconStandardKeys = [
+        'facebook_white', 'facebook_black',
+        'x_white', 'x_black',
+        'instagram_white', 'instagram_black',
+        'youtube_white', 'youtube_black',
+        'linkedin_white', 'linkedin_black',
+        'github_white', 'github_black',
+        'tiktok_white', 'tiktok_black',
+        'pinterest_white', 'pinterest_black',
+        'whatsapp_white', 'whatsapp_black',
+        'telegram_white', 'telegram_black'
+    ];
+
+    ensureIconsFetched(socialIconStandardKeys);
+
     function populateStandardIconsDropdown($select, selectedValue) {
         $select.empty();
 
         // Ajouter les icônes standard
-        const socialIcons = [
-            'facebook_white', 'facebook_black',
-            'x_white', 'x_black',
-            'instagram_white', 'instagram_black',
-            'youtube_white', 'youtube_black',
-            'linkedin_white', 'linkedin_black',
-            'github_white', 'github_black',
-            'tiktok_white', 'tiktok_black',
-            'pinterest_white', 'pinterest_black',
-            'whatsapp_white', 'whatsapp_black',
-            'telegram_white', 'telegram_black'
-        ];
-
-        socialIcons.forEach(key => {
+        socialIconStandardKeys.forEach(key => {
             const entry = getIconEntry(key);
             if (entry) {
                 const labelSource = entry.label || key;
@@ -5975,6 +5977,43 @@ jQuery(document).ready(function($) {
         });
     }
 
+    let socialIconPreviewRequestCounter = 0;
+
+    function updateSocialIconPreviewElement($preview, iconKey) {
+        if (!$preview || typeof $preview.html !== 'function') {
+            return;
+        }
+
+        const entry = getIconEntry(iconKey);
+
+        if (!entry) {
+            $preview.empty();
+            return;
+        }
+
+        const resolvedKey = entry.key;
+        const requestId = ++socialIconPreviewRequestCounter;
+        $preview.data('socialIconRequestId', requestId);
+
+        if (iconCache[resolvedKey]) {
+            $preview.html(iconCache[resolvedKey]);
+            return;
+        }
+
+        ensureIconsFetched([resolvedKey]).then(() => {
+            if ($preview.data('socialIconRequestId') !== requestId) {
+                return;
+            }
+
+            const markup = iconCache[resolvedKey];
+            if (markup) {
+                $preview.html(markup);
+            } else {
+                $preview.empty();
+            }
+        });
+    }
+
     createBuilder({
         containerId: 'social-icons-container', 
         templateId: 'social-icon',
@@ -5993,7 +6032,7 @@ jQuery(document).ready(function($) {
             populateStandardIconsDropdown($select, itemData.icon);
 
             const $preview = $itemBox.find('.icon-preview');
-            $preview.html(standardIcons[itemData.icon] || '');
+            updateSocialIconPreviewElement($preview, itemData.icon);
 
             const defaultTitle = getI18nString('socialIconDefaultTitle', 'Nouvelle icône');
             const iconKey = typeof itemData.icon === 'string' ? itemData.icon : '';
@@ -6002,7 +6041,7 @@ jQuery(document).ready(function($) {
 
             $select.on('change', function() {
                 const selectedIconKey = $(this).val();
-                $preview.html(standardIcons[selectedIconKey] || '');
+                updateSocialIconPreviewElement($preview, selectedIconKey);
                 const updatedFallback = typeof selectedIconKey === 'string' && selectedIconKey !== ''
                     ? selectedIconKey.split('_')[0]
                     : defaultTitle;
