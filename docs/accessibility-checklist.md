@@ -24,7 +24,7 @@ Chaque item renvoie vers la documentation officielle du W3C afin de faciliter la
 
 - Intégrer la checklist aux revues de QA avant chaque release.
 - Compléter l’audit automatisé avec des revues manuelles (lecteurs d’écran, navigation mobile, contraste en conditions réelles).
-- Documenter les écarts éventuels et créer des tickets de suivi lorsque la checklist n’est pas totalement validée.
+- Documenter les écarts éventuels via le modèle `docs/a11y-report-template.md` et créer des tickets de suivi lorsque la checklist n’est pas totalement validée.【F:docs/a11y-report-template.md†L1-L41】
 
 ## Actions en préparation
 
