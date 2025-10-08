@@ -35,6 +35,16 @@ if (isset($options['social_orientation']) && is_string($options['social_orientat
     $socialOrientation = $options['social_orientation'];
 }
 
+$socialIcons = [];
+if (!empty($options['social_icons']) && is_array($options['social_icons'])) {
+    $socialIcons = $options['social_icons'];
+}
+
+$socialPosition = '';
+if (isset($options['social_position']) && is_string($options['social_position'])) {
+    $socialPosition = $options['social_position'];
+}
+
 $defaultNavAriaLabel = __('Navigation principale', 'sidebar-jlg');
 $navAriaLabelOption = '';
 if (isset($options['nav_aria_label']) && is_string($options['nav_aria_label'])) {
@@ -250,8 +260,8 @@ ob_start();
     <ul class="<?php echo esc_attr($menuClassAttr); ?>">
         <?php echo $renderMenuNodes($menuNodes, $layoutStyle); ?>
 
-        <?php if (($options['social_position'] ?? '') === 'in-menu' && !empty($options['social_icons']) && is_array($options['social_icons'])) : ?>
-            <?php $menuSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $socialOrientation); ?>
+        <?php if ($socialPosition === 'in-menu' && $socialIcons !== []) : ?>
+            <?php $menuSocialIcons = Templating::renderSocialIcons($socialIcons, $allIcons, $socialOrientation); ?>
             <?php if ($menuSocialIcons !== '') : ?>
                 <li class="menu-separator" aria-hidden="true"><hr></li>
                 <li class="social-icons-wrapper"><?php echo $menuSocialIcons; ?></li>
@@ -261,8 +271,8 @@ ob_start();
 </nav>
 
 <?php
-if ($options['social_position'] === 'footer' && !empty($options['social_icons']) && is_array($options['social_icons'])) {
-    $footerSocialIcons = Templating::renderSocialIcons($options['social_icons'], $allIcons, $socialOrientation);
+if ($socialPosition === 'footer' && $socialIcons !== []) {
+    $footerSocialIcons = Templating::renderSocialIcons($socialIcons, $allIcons, $socialOrientation);
     if ($footerSocialIcons !== '') {
         echo '<div class="sidebar-footer">' . $footerSocialIcons . '</div>';
     }
