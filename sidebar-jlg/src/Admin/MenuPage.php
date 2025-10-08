@@ -86,6 +86,7 @@ class MenuPage
                         'type' => 'array',
                         'items' => [
                             'type' => 'object',
+                            'description' => __('Profil de barre latérale enregistré.', 'sidebar-jlg'),
                         ],
                     ],
                 ],

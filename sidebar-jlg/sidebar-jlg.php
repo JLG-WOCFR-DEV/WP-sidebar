@@ -55,13 +55,12 @@ register_activation_hook(__FILE__, static function () {
         if (function_exists('set_transient')) {
             $expiration = defined('HOUR_IN_SECONDS') ? HOUR_IN_SECONDS : 3600;
 
-            $message = __('Sidebar JLG n\'a pas pu accéder au dossier uploads. Vérifiez les permissions du dossier uploads puis réactivez le plugin.', 'sidebar-jlg');
+            $payload = [
+                'code' => 'uploads_access_error',
+                'details' => is_string($errorMessage) ? $errorMessage : '',
+            ];
 
-            if ($errorMessage !== '') {
-                $message .= ' ' . sprintf(__('Détails : %s', 'sidebar-jlg'), $errorMessage);
-            }
-
-            set_transient('sidebar_jlg_activation_error', $message, $expiration);
+            set_transient('sidebar_jlg_activation_error', $payload, $expiration);
         }
 
         return;
@@ -72,8 +71,6 @@ register_activation_hook(__FILE__, static function () {
         $created = wp_mkdir_p($iconsDir);
 
         if (!$created) {
-            $message = __('Sidebar JLG n\'a pas pu créer le dossier d\'icônes. Vérifiez les permissions du dossier uploads puis réactivez le plugin.', 'sidebar-jlg');
-
             if (function_exists('error_log')) {
                 error_log('[Sidebar JLG] Activation failed: unable to create icons directory.');
             }
@@ -83,7 +80,11 @@ register_activation_hook(__FILE__, static function () {
             }
 
             $expiration = defined('HOUR_IN_SECONDS') ? HOUR_IN_SECONDS : 3600;
-            set_transient('sidebar_jlg_activation_error', $message, $expiration);
+            $payload = [
+                'code' => 'icons_directory_creation_failed',
+                'details' => '',
+            ];
+            set_transient('sidebar_jlg_activation_error', $payload, $expiration);
 
             return;
         }
