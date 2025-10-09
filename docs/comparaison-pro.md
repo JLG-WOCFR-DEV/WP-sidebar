@@ -10,6 +10,17 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 | Personnalisation | Préréglages complets (couleurs, animations, responsive) et CTA enrichis.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L143】【F:sidebar-jlg/includes/sidebar-template.php†L129-L229】 | Variantes guidées par segment + automatisations (A/B, triggers). | Étendre le schéma de réglages aux scénarios comportementaux et à la duplication rapide de variations. |
 | Mobile & interactions | Gestes de base, focus trap, recalcul dynamique des sous-menus.【F:sidebar-jlg/assets/js/public-script.js†L45-L362】 | Micro-interactions haptiques, mémorisation d'état, transitions personnalisables. | Ajouter stockage local, feedback haptique optionnel et choix d'animations par preset. |
 | Accessibilité & QA | Respect des rôles/ARIA et préférence `prefers-reduced-motion`, audit manuel possible via script Pa11y.【F:sidebar-jlg/assets/js/public-script.js†L45-L210】【F:package.json†L8-L16】 | Audit continu (contraste, rapports) et check-lists intégrées. | Fournir des alertes en temps réel et un tableau de bord d'accessibilité embarqué. |
+
+### Résumé visuel dans l'administration
+
+Un module « Comparatif Pro » a été ajouté au-dessus des onglets pour visualiser d'un coup d'œil la situation actuelle face aux suites haut de gamme.【F:sidebar-jlg/includes/admin-page.php†L96-L145】【F:sidebar-jlg/assets/css/admin-style.css†L97-L163】
+
+- **UI & UX** : badge « Atout » pour valoriser l'aperçu multi-breakpoints, les presets et la commande contextuelle tout en rappelant l'objectif canvas/Undo-Redo.
+- **Accessibilité** : badge « En progrès » qui renvoie vers les travaux d'automatisation des audits contrastes/Pa11y.
+- **Fiabilité** : badge « Atout » consacré au cache multi-profils, à la sanitation et au rollback des médias.
+- **Visuel** : badge « En progrès » soulignant la bibliothèque de presets inspirée de Headless UI/Radix/Shadcn et les futures micro-interactions.
+
+Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la feuille de route et s'appuie sur une mise en forme accessible (articles listitem + badges ARIA) afin d'être compréhensible par les lecteurs d'écran.
 | Analytics & gouvernance | Tableau Insights tabulaire, cache menu par profil via transients.【F:sidebar-jlg/includes/admin-page.php†L942-L1099】【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L172】 | Dashboards narratifs, API analytics, suivi des performances par campagne. | Transformer les données en storytelling actionnable et exposer des API/webhooks. |
 
 ## 1. Options & gouvernance produit
