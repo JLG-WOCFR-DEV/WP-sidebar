@@ -2,6 +2,16 @@
 
 Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de barres latérales haut de gamme (Elementor Pro, Max Mega Menu, ConvertBox…). Elle se concentre sur les options, l'UX/UI, la navigation mobile, l'accessibilité et l'intégration WordPress, puis propose des compléments concrets.
 
+### Lecture rapide des écarts clés
+
+| Domaine | Situation actuelle | Standards des suites pro | Gap prioritaire |
+| --- | --- | --- | --- |
+| Configuration | Formulaires tabulaires structurés par onglets avec prévisualisation multi-vues.【F:sidebar-jlg/includes/admin-page.php†L60-L132】【F:sidebar-jlg/includes/admin-page.php†L96-L229】 | Builders visuels en drag & drop avec édition inline et historique d'actions. | Introduire un mode d'édition frontale couplé à un historique Undo/Redo et des panneaux contextuels. |
+| Personnalisation | Préréglages complets (couleurs, animations, responsive) et CTA enrichis.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L143】【F:sidebar-jlg/includes/sidebar-template.php†L129-L229】 | Variantes guidées par segment + automatisations (A/B, triggers). | Étendre le schéma de réglages aux scénarios comportementaux et à la duplication rapide de variations. |
+| Mobile & interactions | Gestes de base, focus trap, recalcul dynamique des sous-menus.【F:sidebar-jlg/assets/js/public-script.js†L45-L362】 | Micro-interactions haptiques, mémorisation d'état, transitions personnalisables. | Ajouter stockage local, feedback haptique optionnel et choix d'animations par preset. |
+| Accessibilité & QA | Respect des rôles/ARIA et préférence `prefers-reduced-motion`, audit manuel possible via script Pa11y.【F:sidebar-jlg/assets/js/public-script.js†L45-L210】【F:package.json†L8-L16】 | Audit continu (contraste, rapports) et check-lists intégrées. | Fournir des alertes en temps réel et un tableau de bord d'accessibilité embarqué. |
+| Analytics & gouvernance | Tableau Insights tabulaire, cache menu par profil via transients.【F:sidebar-jlg/includes/admin-page.php†L942-L1099】【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L172】 | Dashboards narratifs, API analytics, suivi des performances par campagne. | Transformer les données en storytelling actionnable et exposer des API/webhooks. |
+
 ## 1. Options & gouvernance produit
 
 **Forces actuelles**
@@ -28,6 +38,7 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 - Les formulaires sont très denses : un grand tableau de réglages par onglet sans regroupement visuel secondaire, ce qui fatigue lors des longues sessions. Introduire des blocs accordéon, des presets contextuels ou un moteur de recherche interne simplifierait la navigation.
 - Les statuts et comparaisons de versions d'options ne sont pas surfacés (pas d'historique, pas de rollback visuel). Ajouter un diff visuel (avant/après) et des métadonnées d'auteur alignerait l'expérience sur les suites pro orientées équipe.
 - Les notifications sont centralisées via un conteneur vierge `#sidebar-jlg-js-notices` sans design dédié. Prévoir un système de toast/progression renforcerait le feedback utilisateur.【F:sidebar-jlg/includes/admin-page.php†L48-L52】
+- Ajouter un mode « brouillon » des réglages pour préparer des campagnes sans publier immédiatement : stocker des ensembles d'options dans la base (`post_meta` ou CPT dédié) puis les pousser côté front lorsqu'ils sont validés, à l'image des environnements de staging proposés par ConvertBox.
 
 ## 3. Navigation mobile & interactions
 
@@ -42,6 +53,7 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 - Les gestes restent limités à un swipe latéral : pas de feedback haptique, de détection d'intention (tirage du bord vers l'intérieur pour annuler) ni d'indicateurs visuels contextuels. Ajouter des vibrations optionnelles (`navigator.vibrate`), un retour visuel progressif et des seuils adaptatifs selon le preset permettrait d'égaler les offres mobiles premium.
 - Pas de logique de persistance d'état (sidebar ré-ouverte au rechargement, souvenir du dernier sous-menu) ni de délai configurable d'autoclose. Introduire un stockage local léger (localStorage/sessionStorage) et des timers optionnels alignerait l'expérience sur les produits pro.
 - La gestion du bouton hamburger reste unique : pas de variantes (icônes animées, badges d'alerte, positionnement contextuel). Prévoir un sélecteur d'icônes animées et un système d'état (ex. badge pour promotions) améliorerait la perception.
+- Créer une couche de télémétrie front (temps passé ouvert, interactions gestuelles) alimentant le module Insights pour rapprocher la finesse d'analyse des plateformes marketing.
 
 ## 4. Accessibilité
 
@@ -55,6 +67,7 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 - Aucune vérification automatique du contraste ni rapport d'accessibilité n'est exposé. Intégrer un audit rapide (Lighthouse/pa11y) dans l'onglet Outils ou afficher des alertes en temps réel aiderait les utilisateurs moins experts.
 - Les options ne prévoient pas de mode « texte large », de bascule thème clair/sombre ou de gabarits compatibles lecteurs d'écran (ex. ordre de tabulation custom). Ajouter ces contrôles dans `DefaultSettings::all` et l'UI rapprocherait le niveau de conformité des solutions certifiées WCAG.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L149-L200】
 - La documentation d'accessibilité dans le back-office est absente (pas de check-list, pas de rappels ARIA). Un encart d'aide et des tests unitaires dédiés renforceraient la posture pro.
+- Automatiser la génération d'un rapport Pa11y/Lighthouse après chaque sauvegarde via une action asynchrone (`wp_cron` ou Action Scheduler) puis afficher les résultats dans l'onglet Outils afin d'éviter les audits manuels ponctuels.
 
 ## 5. Apparence WordPress & éditeur visuel
 
@@ -68,6 +81,7 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 - Aucun bloc ou modèle ne permet d'assembler la sidebar complète dans l'éditeur visuel (seul le module de recherche est disponible). Créer un bloc « Sidebar complète » avec prévisualisation live ou des patterns Gutenberg alignerait le plugin sur les éditeurs modernes.【F:sidebar-jlg/assets/js/blocks/sidebar-search.js†L1-L145】
 - Les styles d'éditeur se limitent au composant de recherche ; les préréglages de la sidebar ne sont pas reflétés dans l'éditeur de site (pas de CSS généré côté Gutenberg). Étendre les feuilles `sidebar-search-editor.scss` et injecter les variables de thème renforcerait la parité visuelle.【F:sidebar-jlg/assets/css/sidebar-search-editor.scss†L1-L90】
 - Le mode aperçu ne se connecte pas au front-end en contexte multi-langue/profil (pas de switch direct entre profils). Ajouter une palette de contextes (profil actif, langue, rôle) dans l'UI offrirait une vision réaliste, comparable aux suites pro.
+- Offrir un « mode maquette » Gutenberg : synchroniser les préréglages `DefaultSettings::STYLE_PRESETS` avec des variations de block patterns pour prévisualiser la sidebar complète dans l'éditeur de site.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L143】
 
 ## 6. Performance & maintenance
 
@@ -79,8 +93,12 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 **Écarts & pistes**
 
 - La distribution reste monolithique (un couple `public-style.css` / `public-script.js` sans dépendances ni découpage conditionnel), ce qui pénalise les projets qui visent des scores Core Web Vitals serrés. Un bundler (Vite, esbuild) pourrait produire des variantes minifiées, charger paresseusement les modules optionnels (effets, animations) et exposer un mode « performance » dans les réglages.【F:sidebar-jlg/src/Frontend/SidebarRenderer.php†L311-L344】
-- Le cache par transient utilise une expiration fixe de 24 h et un `clear()` global qui vide tous les profils/locales. Ajouter une purge différentielle (invalidation par profil/localisation), un pré-chargement à l'activation et une instrumentation (statistiques de hit/miss) alignerait la maintenance sur les offres pro orientées équipe.【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L107】
+- Le cache par transient utilise une expiration fixe de 24 h et un `clear()` global qui vide tous les profils/locales. Ajouter une purge différentielle (invalidation par profil/localisation), un pré-chargement à l'activation et une instrumentation (statistiques de hit/miss) alignerait la maintenance sur les offres pro orientées équipe.【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L135】
 - Aucun test automatisé n'analyse la taille/scope des assets générés ; intégrer un audit de bundle et des seuils d'alerte dans la CI garantirait la dérive maîtrisée après chaque version.
+- Les transients sont purgés globalement sans ciblage fin : `delete_transient` est appelé par identifiant mais sans suivi différentiel des profils/langues, ce qui limite les purges intelligentes sur gros catalogues.【F:sidebar-jlg/src/Cache/MenuCache.php†L63-L135】 Définir un index par profil et locale puis une purge différentielle rapprocherait la maintenance des solutions pro.
+- Aucun pré-chargement n'est déclenché après modification majeure ; les entrées du cache ne sont créées qu'à la première requête. Ajouter un « warmup » (cron ou action asynchrone) après sauvegarde éviterait les pics de latence observés dans les suites pro.
+- Les scripts publics et admin ne sont pas audités automatiquement (pas de mesure de bundle ou d'éligibilité HTTP/2 push). Intégrer un rapport Lighthouse/Bundle Analyzer dans la CI mettrait Sidebar JLG au niveau des solutions premium en matière de suivi de performance.
+- Mettre en place une instrumentation simple (compteur hit/miss, durée de génération) stockée dans les transients ou via une table dédiée fournirait des insights pour le futur dashboard observabilité.
 
 ## 7. Interopérabilité & écosystème
 
@@ -92,6 +110,7 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 
 - Les hooks exposés restent cantonnés à `wp_ajax_*` côté authentifié : aucune déclinaison REST ou `wp_ajax_nopriv_*` ne permet d'intégrer la sidebar dans des architectures headless ou des parcours personnalisés. Fournir une API REST (ou GraphQL) avec schéma documenté et permissions granulaires élargirait l'écosystème (connecteurs CRM, automatisations marketing).【F:sidebar-jlg/src/Ajax/Endpoints.php†L50-L159】
 - Aucun SDK ni documentation de Webhooks n'est proposé pour relier des suites analytiques ou des outils d'orchestration (Zapier, Make). Publier une feuille de route publique, un espace développeur et des exemples d'intégration aiderait à rivaliser avec les plateformes pro à forte communauté.
+- Cartographier les dépendances WordPress existantes (hooks, CPT, options) et publier un schéma d'extension clarifie les points d'ancrage pour les agences, à l'image des « Developer Resources » d'Elementor.
 
 ## 8. Synthèse UI/UX & design
 
