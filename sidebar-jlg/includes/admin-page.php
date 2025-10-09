@@ -165,6 +165,55 @@ $textTransformLabels = [
         <div class="sidebar-jlg-preview__viewport" aria-label="<?php esc_attr_e( 'Aperçu de la sidebar', 'sidebar-jlg' ); ?>"></div>
     </div>
 
+    <div class="sidebar-jlg-command-bar" data-sidebar-command-bar>
+        <div class="sidebar-jlg-command-bar__search" role="search">
+            <label class="sidebar-jlg-command-bar__search-label" for="sidebar-jlg-settings-search">
+                <span class="screen-reader-text"><?php esc_html_e( 'Rechercher un réglage', 'sidebar-jlg' ); ?></span>
+                <span class="sidebar-jlg-command-bar__search-icon dashicons dashicons-search" aria-hidden="true"></span>
+            </label>
+            <input
+                type="search"
+                id="sidebar-jlg-settings-search"
+                class="regular-text"
+                placeholder="<?php esc_attr_e( 'Rechercher un réglage ou un mot-clé…', 'sidebar-jlg' ); ?>"
+                data-sidebar-settings-search
+                aria-describedby="sidebar-jlg-settings-search-status"
+            />
+            <button type="button" class="button button-secondary" data-sidebar-search-clear>
+                <?php esc_html_e( 'Effacer', 'sidebar-jlg' ); ?>
+            </button>
+        </div>
+        <p id="sidebar-jlg-settings-search-status" class="sidebar-jlg-command-bar__status" aria-live="polite"></p>
+        <div class="sidebar-jlg-command-bar__guided" data-sidebar-guided>
+            <button
+                type="button"
+                class="button button-primary"
+                data-sidebar-guided-toggle
+                data-label-enable="<?php esc_attr_e( 'Activer le parcours guidé', 'sidebar-jlg' ); ?>"
+                data-label-disable="<?php esc_attr_e( 'Terminer le parcours guidé', 'sidebar-jlg' ); ?>"
+            >
+                <?php esc_html_e( 'Activer le parcours guidé', 'sidebar-jlg' ); ?>
+            </button>
+            <div class="sidebar-jlg-guided-controls" data-sidebar-guided-controls hidden>
+                <span class="sidebar-jlg-guided-controls__progress" data-sidebar-guided-progress>
+                    <?php esc_html_e( 'Étape 1 sur 1', 'sidebar-jlg' ); ?>
+                </span>
+                <span class="sidebar-jlg-guided-controls__title" data-sidebar-guided-title></span>
+                <div class="sidebar-jlg-guided-controls__actions">
+                    <button type="button" class="button" data-sidebar-guided-prev disabled>
+                        <?php esc_html_e( 'Précédent', 'sidebar-jlg' ); ?>
+                    </button>
+                    <button type="button" class="button button-primary" data-sidebar-guided-next>
+                        <?php esc_html_e( 'Suivant', 'sidebar-jlg' ); ?>
+                    </button>
+                    <button type="button" class="button button-link" data-sidebar-guided-exit>
+                        <?php esc_html_e( 'Quitter', 'sidebar-jlg' ); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <form action="options.php" method="post" id="sidebar-jlg-form">
         <?php
         settings_fields( 'sidebar_jlg_options_group' );
@@ -248,7 +297,16 @@ $textTransformLabels = [
             </nav>
 
             <div class="sidebar-jlg-accordion" data-sidebar-section-group>
-                <details id="sidebar-jlg-section-activation" class="sidebar-jlg-section" open>
+                <details
+                    id="sidebar-jlg-section-activation"
+                    class="sidebar-jlg-section"
+                    open
+                    data-sidebar-filterable
+                    data-sidebar-filter-label="<?php esc_attr_e( 'Activation & Observabilité', 'sidebar-jlg' ); ?>"
+                    data-sidebar-filter-keywords="<?php echo esc_attr( implode( ' ', [ __( 'activation', 'sidebar-jlg' ), __( 'analytics', 'sidebar-jlg' ), __( 'suivi', 'sidebar-jlg' ) ] ) ); ?>"
+                    data-sidebar-guided-step
+                    data-sidebar-guided-title="<?php esc_attr_e( 'Activation & Observabilité', 'sidebar-jlg' ); ?>"
+                >
                     <summary class="sidebar-jlg-section__summary">
                         <span class="sidebar-jlg-section__title"><?php esc_html_e( 'Activation & Observabilité', 'sidebar-jlg' ); ?></span>
                         <span class="sidebar-jlg-section__description"><?php esc_html_e( 'Activez la sidebar et pilotez la mesure des interactions.', 'sidebar-jlg' ); ?></span>
@@ -281,7 +339,15 @@ $textTransformLabels = [
                     </div>
                 </details>
 
-                <details id="sidebar-jlg-section-layout" class="sidebar-jlg-section">
+                <details
+                    id="sidebar-jlg-section-layout"
+                    class="sidebar-jlg-section"
+                    data-sidebar-filterable
+                    data-sidebar-filter-label="<?php esc_attr_e( 'Mise en page & dimensions', 'sidebar-jlg' ); ?>"
+                    data-sidebar-filter-keywords="<?php echo esc_attr( implode( ' ', [ __( 'mise en page', 'sidebar-jlg' ), __( 'dimensions', 'sidebar-jlg' ), __( 'flottant', 'sidebar-jlg' ) ] ) ); ?>"
+                    data-sidebar-guided-step
+                    data-sidebar-guided-title="<?php esc_attr_e( 'Mise en page & dimensions', 'sidebar-jlg' ); ?>"
+                >
                     <summary class="sidebar-jlg-section__summary">
                         <span class="sidebar-jlg-section__title"><?php esc_html_e( 'Mise en page & dimensions', 'sidebar-jlg' ); ?></span>
                         <span class="sidebar-jlg-section__description"><?php esc_html_e( 'Choisissez le comportement visuel par appareil.', 'sidebar-jlg' ); ?></span>
@@ -300,63 +366,73 @@ $textTransformLabels = [
                                     </p>
                                     <div class="floating-options-field" style="<?php echo $options['layout_style'] === 'floating' ? '' : 'display:none;'; ?>">
                                         <?php $floatingMargin = $dimensionValues['floating_vertical_margin']; ?>
-                                        <p>
-                                            <label><?php esc_html_e( 'Marge verticale', 'sidebar-jlg' ); ?></label>
-                                            <div
-                                                class="sidebar-jlg-unit-control"
-                                                data-sidebar-unit-control
-                                                data-setting-name="sidebar_jlg_settings[floating_vertical_margin]"
-                                                data-label="<?php esc_attr_e( 'Marge verticale', 'sidebar-jlg' ); ?>"
-                                                data-help="<?php esc_attr_e( 'Définit la distance entre la sidebar flottante et le bord de l’écran.', 'sidebar-jlg' ); ?>"
-                                                data-error-message="<?php esc_attr_e( 'La marge verticale ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                                data-default-value="<?php echo esc_attr( $defaults['floating_vertical_margin']['value'] ?? '4' ); ?>"
-                                                data-default-unit="<?php echo esc_attr( $defaults['floating_vertical_margin']['unit'] ?? 'rem' ); ?>"
-                                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['floating_vertical_margin'] ) ); ?>"
-                                            >
-                                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[floating_vertical_margin][value]" value="<?php echo esc_attr( $floatingMargin['value'] ); ?>" />
-                                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[floating_vertical_margin][unit]" value="<?php echo esc_attr( $floatingMargin['unit'] ); ?>" />
-                                            </div>
-                                            <em class="description"><?php esc_html_e( 'Ex: 4rem, 15px', 'sidebar-jlg' ); ?></em>
-                                        </p>
                                         <?php $borderRadius = $dimensionValues['border_radius']; ?>
-                                        <p>
-                                            <label><?php esc_html_e( 'Arrondi des coins', 'sidebar-jlg' ); ?></label>
-                                            <div
-                                                class="sidebar-jlg-unit-control"
-                                                data-sidebar-unit-control
-                                                data-setting-name="sidebar_jlg_settings[border_radius]"
-                                                data-label="<?php esc_attr_e( 'Arrondi des coins', 'sidebar-jlg' ); ?>"
-                                                data-help="<?php esc_attr_e( 'Contrôle la courbure des angles de la sidebar.', 'sidebar-jlg' ); ?>"
-                                                data-error-message="<?php esc_attr_e( 'L’arrondi ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                                data-default-value="<?php echo esc_attr( $defaults['border_radius']['value'] ?? '12' ); ?>"
-                                                data-default-unit="<?php echo esc_attr( $defaults['border_radius']['unit'] ?? 'px' ); ?>"
-                                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['border_radius'] ) ); ?>"
-                                            >
-                                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[border_radius][value]" value="<?php echo esc_attr( $borderRadius['value'] ); ?>" />
-                                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[border_radius][unit]" value="<?php echo esc_attr( $borderRadius['unit'] ); ?>" />
+                                        <div class="sidebar-jlg-dimension-grid" data-sidebar-dimension-grid>
+                                            <div class="sidebar-jlg-dimension-grid__item">
+                                                <span class="sidebar-jlg-dimension-grid__label"><?php esc_html_e( 'Marge verticale', 'sidebar-jlg' ); ?></span>
+                                                <div class="sidebar-jlg-dimension-grid__control">
+                                                    <div
+                                                        class="sidebar-jlg-unit-control"
+                                                        data-sidebar-unit-control
+                                                        data-setting-name="sidebar_jlg_settings[floating_vertical_margin]"
+                                                        data-label="<?php esc_attr_e( 'Marge verticale', 'sidebar-jlg' ); ?>"
+                                                        data-help="<?php esc_attr_e( 'Définit la distance entre la sidebar flottante et le bord de l’écran.', 'sidebar-jlg' ); ?>"
+                                                        data-error-message="<?php esc_attr_e( 'La marge verticale ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                                        data-default-value="<?php echo esc_attr( $defaults['floating_vertical_margin']['value'] ?? '4' ); ?>"
+                                                        data-default-unit="<?php echo esc_attr( $defaults['floating_vertical_margin']['unit'] ?? 'rem' ); ?>"
+                                                        data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['floating_vertical_margin'] ) ); ?>"
+                                                    >
+                                                        <input type="hidden" data-dimension-value name="sidebar_jlg_settings[floating_vertical_margin][value]" value="<?php echo esc_attr( $floatingMargin['value'] ); ?>" />
+                                                        <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[floating_vertical_margin][unit]" value="<?php echo esc_attr( $floatingMargin['unit'] ); ?>" />
+                                                    </div>
+                                                </div>
+                                                <p class="description sidebar-jlg-dimension-grid__description"><?php esc_html_e( 'Ex: 4rem, 15px', 'sidebar-jlg' ); ?></p>
                                             </div>
-                                        </p>
+                                            <div class="sidebar-jlg-dimension-grid__item">
+                                                <span class="sidebar-jlg-dimension-grid__label"><?php esc_html_e( 'Arrondi des coins', 'sidebar-jlg' ); ?></span>
+                                                <div class="sidebar-jlg-dimension-grid__control">
+                                                    <div
+                                                        class="sidebar-jlg-unit-control"
+                                                        data-sidebar-unit-control
+                                                        data-setting-name="sidebar_jlg_settings[border_radius]"
+                                                        data-label="<?php esc_attr_e( 'Arrondi des coins', 'sidebar-jlg' ); ?>"
+                                                        data-help="<?php esc_attr_e( 'Contrôle la courbure des angles de la sidebar.', 'sidebar-jlg' ); ?>"
+                                                        data-error-message="<?php esc_attr_e( 'L’arrondi ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                                        data-default-value="<?php echo esc_attr( $defaults['border_radius']['value'] ?? '12' ); ?>"
+                                                        data-default-unit="<?php echo esc_attr( $defaults['border_radius']['unit'] ?? 'px' ); ?>"
+                                                        data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['border_radius'] ) ); ?>"
+                                                    >
+                                                        <input type="hidden" data-dimension-value name="sidebar_jlg_settings[border_radius][value]" value="<?php echo esc_attr( $borderRadius['value'] ); ?>" />
+                                                        <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[border_radius][unit]" value="<?php echo esc_attr( $borderRadius['unit'] ); ?>" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="horizontal-options-field" style="<?php echo $options['layout_style'] === 'horizontal-bar' ? '' : 'display:none;'; ?>">
                                         <?php $horizontalHeight = $dimensionValues['horizontal_bar_height']; ?>
-                                        <p>
-                                            <label><?php esc_html_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?></label>
-                                            <div
-                                                class="sidebar-jlg-unit-control"
-                                                data-sidebar-unit-control
-                                                data-setting-name="sidebar_jlg_settings[horizontal_bar_height]"
-                                                data-label="<?php esc_attr_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?>"
-                                                data-help="<?php esc_attr_e( 'Détermine la hauteur de la barre horizontale.', 'sidebar-jlg' ); ?>"
-                                                data-error-message="<?php esc_attr_e( 'La hauteur de barre ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                                data-default-value="<?php echo esc_attr( $defaults['horizontal_bar_height']['value'] ?? '4' ); ?>"
-                                                data-default-unit="<?php echo esc_attr( $defaults['horizontal_bar_height']['unit'] ?? 'rem' ); ?>"
-                                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['horizontal_bar_height'] ) ); ?>"
-                                            >
-                                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[horizontal_bar_height][value]" value="<?php echo esc_attr( $horizontalHeight['value'] ); ?>" />
-                                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[horizontal_bar_height][unit]" value="<?php echo esc_attr( $horizontalHeight['unit'] ); ?>" />
+                                        <div class="sidebar-jlg-dimension-grid" data-sidebar-dimension-grid>
+                                            <div class="sidebar-jlg-dimension-grid__item">
+                                                <span class="sidebar-jlg-dimension-grid__label"><?php esc_html_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?></span>
+                                                <div class="sidebar-jlg-dimension-grid__control">
+                                                    <div
+                                                        class="sidebar-jlg-unit-control"
+                                                        data-sidebar-unit-control
+                                                        data-setting-name="sidebar_jlg_settings[horizontal_bar_height]"
+                                                        data-label="<?php esc_attr_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?>"
+                                                        data-help="<?php esc_attr_e( 'Détermine la hauteur de la barre horizontale.', 'sidebar-jlg' ); ?>"
+                                                        data-error-message="<?php esc_attr_e( 'La hauteur de barre ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                                        data-default-value="<?php echo esc_attr( $defaults['horizontal_bar_height']['value'] ?? '4' ); ?>"
+                                                        data-default-unit="<?php echo esc_attr( $defaults['horizontal_bar_height']['unit'] ?? 'rem' ); ?>"
+                                                        data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['horizontal_bar_height'] ) ); ?>"
+                                                    >
+                                                        <input type="hidden" data-dimension-value name="sidebar_jlg_settings[horizontal_bar_height][value]" value="<?php echo esc_attr( $horizontalHeight['value'] ); ?>" />
+                                                        <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[horizontal_bar_height][unit]" value="<?php echo esc_attr( $horizontalHeight['unit'] ); ?>" />
+                                                    </div>
+                                                </div>
+                                                <p class="description sidebar-jlg-dimension-grid__description"><?php esc_html_e( 'Utilisez des unités CSS (ex : 4rem, 72px).', 'sidebar-jlg' ); ?></p>
                                             </div>
-                                            <em class="description"><?php esc_html_e( 'Utilisez des unités CSS (ex : 4rem, 72px).', 'sidebar-jlg' ); ?></em>
-                                        </p>
+                                        </div>
                                         <p>
                                             <label><?php esc_html_e( 'Position sur l\'écran', 'sidebar-jlg' ); ?></label>
                                             <select name="sidebar_jlg_settings[horizontal_bar_position]">
@@ -522,7 +598,15 @@ $textTransformLabels = [
                     </div>
                 </details>
 
-                <details id="sidebar-jlg-section-interactions" class="sidebar-jlg-section">
+                <details
+                    id="sidebar-jlg-section-interactions"
+                    class="sidebar-jlg-section"
+                    data-sidebar-filterable
+                    data-sidebar-filter-label="<?php esc_attr_e( 'Interactions & déclencheurs', 'sidebar-jlg' ); ?>"
+                    data-sidebar-filter-keywords="<?php echo esc_attr( implode( ' ', [ __( 'gestes', 'sidebar-jlg' ), __( 'déclencheurs', 'sidebar-jlg' ), __( 'comportement', 'sidebar-jlg' ) ] ) ); ?>"
+                    data-sidebar-guided-step
+                    data-sidebar-guided-title="<?php esc_attr_e( 'Interactions & déclencheurs', 'sidebar-jlg' ); ?>"
+                >
                     <summary class="sidebar-jlg-section__summary">
                         <span class="sidebar-jlg-section__title"><?php esc_html_e( 'Interactions & déclencheurs', 'sidebar-jlg' ); ?></span>
                         <span class="sidebar-jlg-section__description"><?php esc_html_e( 'Contrôlez la fermeture, la mémoire et les ouvertures automatiques.', 'sidebar-jlg' ); ?></span>
@@ -636,7 +720,15 @@ $textTransformLabels = [
                     </div>
                 </details>
 
-                <details id="sidebar-jlg-section-accessibility" class="sidebar-jlg-section">
+                <details
+                    id="sidebar-jlg-section-accessibility"
+                    class="sidebar-jlg-section"
+                    data-sidebar-filterable
+                    data-sidebar-filter-label="<?php esc_attr_e( 'Accessibilité & recherche', 'sidebar-jlg' ); ?>"
+                    data-sidebar-filter-keywords="<?php echo esc_attr( implode( ' ', [ __( 'accessibilité', 'sidebar-jlg' ), __( 'recherche', 'sidebar-jlg' ), __( 'aria', 'sidebar-jlg' ) ] ) ); ?>"
+                    data-sidebar-guided-step
+                    data-sidebar-guided-title="<?php esc_attr_e( 'Accessibilité & recherche', 'sidebar-jlg' ); ?>"
+                >
                     <summary class="sidebar-jlg-section__summary">
                         <span class="sidebar-jlg-section__title"><?php esc_html_e( 'Accessibilité & recherche', 'sidebar-jlg' ); ?></span>
                         <span class="sidebar-jlg-section__description"><?php esc_html_e( 'Libellés inclusifs et options de recherche.', 'sidebar-jlg' ); ?></span>
