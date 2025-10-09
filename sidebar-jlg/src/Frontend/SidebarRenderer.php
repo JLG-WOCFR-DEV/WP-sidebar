@@ -322,10 +322,37 @@ class SidebarRenderer
             wp_add_inline_style('sidebar-jlg-public-css', $dynamicStyles);
         }
 
+        $scriptDependencies = [];
+
+        if (!empty($options['enable_analytics'])) {
+            wp_register_script(
+                'sidebar-jlg-public-analytics',
+                plugin_dir_url($this->pluginFile) . 'assets/js/public-analytics.js',
+                [],
+                $this->version,
+                true
+            );
+
+            wp_localize_script(
+                'sidebar-jlg-public-analytics',
+                'sidebarAnalyticsConfig',
+                [
+                    'endpoint' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('jlg_track_event'),
+                    'action' => 'jlg_track_event',
+                    'profileId' => isset($profile['id']) ? (string) $profile['id'] : 'default',
+                    'profile_is_fallback' => !empty($profile['is_fallback']),
+                ]
+            );
+
+            wp_enqueue_script('sidebar-jlg-public-analytics');
+            $scriptDependencies[] = 'sidebar-jlg-public-analytics';
+        }
+
         wp_enqueue_script(
             'sidebar-jlg-public-js',
             plugin_dir_url($this->pluginFile) . 'assets/js/public-script.js',
-            [],
+            $scriptDependencies,
             $this->version,
             true
         );

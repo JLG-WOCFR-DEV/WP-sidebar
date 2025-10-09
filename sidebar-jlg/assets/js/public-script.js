@@ -53,7 +53,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         : null;
 
-    const seenCtaElements = analyticsConfig
+    const analyticsFactory = typeof window.sidebarJLGAnalyticsFactory === 'function'
+        ? window.sidebarJLGAnalyticsFactory
+        : null;
+
+    const analyticsAdapter = analyticsConfig && analyticsFactory
+        ? analyticsFactory(analyticsConfig)
+        : null;
+
+    const analyticsEnabled = !!(analyticsAdapter && analyticsAdapter.enabled);
+
+    const seenCtaElements = analyticsEnabled
         ? (typeof WeakSet === 'function' ? new WeakSet() : new Set())
         : null;
 
@@ -318,72 +328,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function createFormBody(params) {
-        if (typeof URLSearchParams === 'function') {
-            const searchParams = new URLSearchParams();
-            Object.keys(params).forEach((key) => {
-                if (typeof params[key] !== 'undefined') {
-                    searchParams.append(key, params[key]);
-                }
-            });
-            return searchParams.toString();
-        }
-
-        const encoded = [];
-        Object.keys(params).forEach((key) => {
-            if (typeof params[key] === 'undefined') {
-                return;
-            }
-            encoded.push(encodeURIComponent(key) + '=' + encodeURIComponent(params[key]));
-        });
-        return encoded.join('&');
-    }
-
     function dispatchAnalytics(eventType, context = {}) {
-        if (!analyticsConfig) {
+        if (!analyticsEnabled || !analyticsAdapter || typeof analyticsAdapter.dispatch !== 'function') {
             return;
         }
 
-        let encodedContext = '';
-        if (context && typeof context === 'object') {
-            try {
-                encodedContext = JSON.stringify(context);
-            } catch (error) {
-                encodedContext = '';
-            }
-        }
-
-        const body = createFormBody({
-            action: analyticsConfig.action,
-            nonce: analyticsConfig.nonce,
-            event_type: eventType,
-            profile_id: analyticsConfig.profileId,
-            is_fallback: analyticsConfig.isFallback === '1' ? '1' : '0',
-            context: encodedContext === '' ? undefined : encodedContext,
-        });
-
-        const supportsBeacon = typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function';
-        if (supportsBeacon) {
-            try {
-                const blob = new Blob([body], { type: 'application/x-www-form-urlencoded' });
-                navigator.sendBeacon(analyticsConfig.endpoint, blob);
-                return;
-            } catch (error) {
-                // Fallback to fetch below when sendBeacon is unavailable or fails.
-            }
-        }
-
-        if (typeof fetch === 'function') {
-            fetch(analyticsConfig.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                },
-                body,
-                keepalive: true,
-                credentials: 'same-origin',
-            }).catch(() => {});
-        }
+        analyticsAdapter.dispatch(eventType, context);
     }
 
     function getCtaLabel(element, fallbackIndex) {
@@ -405,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function markCtaView(element, overrideLabel) {
-        if (!analyticsConfig || !seenCtaElements || !element) {
+        if (!analyticsEnabled || !seenCtaElements || !element) {
             return;
         }
 
@@ -624,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.classList.add('sidebar-js-enhanced');
 
     let ctaObserver = null;
-    if (analyticsConfig) {
+    if (analyticsEnabled) {
         const ctaBlocks = Array.from(sidebar.querySelectorAll('.menu-cta[data-cta-analytics]'));
         if (ctaBlocks.length) {
             ctaBlocks.forEach((element, index) => {
@@ -1351,23 +1301,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (link.classList && link.classList.contains('menu-cta__button')) {
             const ctaWrapper = link.closest('.menu-cta');
             if (ctaWrapper) {
-                if (analyticsConfig) {
+                if (analyticsEnabled) {
                     markCtaView(ctaWrapper);
                 }
                 markCtaAsClicked(ctaWrapper);
             }
-            if (analyticsConfig) {
+            if (analyticsEnabled) {
                 dispatchAnalytics('cta_click', { target: 'cta_button' });
             }
             return;
         }
 
-        if (analyticsConfig && link.closest('.social-icons')) {
+        if (analyticsEnabled && link.closest('.social-icons')) {
             dispatchAnalytics('menu_link_click', { target: 'social_link' });
             return;
         }
 
-        if (analyticsConfig && link.closest('.sidebar-menu')) {
+        if (analyticsEnabled && link.closest('.sidebar-menu')) {
             dispatchAnalytics('menu_link_click', { target: 'menu_link' });
         }
     }, true);

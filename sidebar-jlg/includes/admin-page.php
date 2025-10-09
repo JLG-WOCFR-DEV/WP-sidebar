@@ -228,419 +228,480 @@ $textTransformLabels = [
             : esc_url( home_url( '/' ) );
         ?>
 
-        <!-- Onglet Général -->
         <div id="tab-general" class="tab-content active" role="tabpanel" aria-labelledby="tab-general-tab" aria-hidden="false">
-            <table class="form-table">
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Activation', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <label class="jlg-switch">
-                            <input type="checkbox" name="sidebar_jlg_settings[enable_sidebar]" value="1" <?php checked( $options['enable_sidebar'], 1 ); ?> />
-                            <span class="jlg-slider"></span>
-                        </label>
-                        <p class="description"><?php esc_html_e( 'Active ou désactive complètement la sidebar sur votre site.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Insights & Analytics', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <label class="jlg-switch">
-                            <input type="checkbox" name="sidebar_jlg_settings[enable_analytics]" value="1" <?php checked( ! empty( $options['enable_analytics'] ) ); ?> />
-                            <span class="jlg-slider"></span>
-                        </label>
-                        <p class="description"><?php esc_html_e( 'Collecte les ouvertures, clics de navigation et interactions CTA pour alimenter le tableau de bord Analytics.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Style d\'affichage (Desktop)', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <p>
-                            <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="full" <?php checked($options['layout_style'], 'full'); ?>> <?php esc_html_e('Pleine hauteur', 'sidebar-jlg'); ?></label>
-                            <br>
-                            <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="floating" <?php checked($options['layout_style'], 'floating'); ?>> <?php esc_html_e('Flottant', 'sidebar-jlg'); ?></label>
-                            <br>
-                            <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="horizontal-bar" <?php checked($options['layout_style'], 'horizontal-bar'); ?>> <?php esc_html_e('Barre horizontale', 'sidebar-jlg'); ?></label>
-                        </p>
-                        <div class="floating-options-field" style="<?php echo $options['layout_style'] === 'floating' ? '' : 'display:none;'; ?>">
-                            <?php $floatingMargin = $dimensionValues['floating_vertical_margin']; ?>
-                            <p>
-                                <label><?php esc_html_e( 'Marge verticale', 'sidebar-jlg' ); ?></label>
-                                <div
-                                    class="sidebar-jlg-unit-control"
-                                    data-sidebar-unit-control
-                                    data-setting-name="sidebar_jlg_settings[floating_vertical_margin]"
-                                    data-label="<?php esc_attr_e( 'Marge verticale', 'sidebar-jlg' ); ?>"
-                                    data-help="<?php esc_attr_e( 'Définit la distance entre la sidebar flottante et le bord de l’écran.', 'sidebar-jlg' ); ?>"
-                                    data-error-message="<?php esc_attr_e( 'La marge verticale ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                    data-default-value="<?php echo esc_attr( $defaults['floating_vertical_margin']['value'] ?? '4' ); ?>"
-                                    data-default-unit="<?php echo esc_attr( $defaults['floating_vertical_margin']['unit'] ?? 'rem' ); ?>"
-                                    data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['floating_vertical_margin'] ) ); ?>"
-                                >
-                                    <input type="hidden" data-dimension-value name="sidebar_jlg_settings[floating_vertical_margin][value]" value="<?php echo esc_attr( $floatingMargin['value'] ); ?>" />
-                                    <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[floating_vertical_margin][unit]" value="<?php echo esc_attr( $floatingMargin['unit'] ); ?>" />
-                                </div>
-                                <em class="description"><?php esc_html_e( 'Ex: 4rem, 15px', 'sidebar-jlg' ); ?></em>
-                            </p>
-                            <?php $borderRadius = $dimensionValues['border_radius']; ?>
-                            <p>
-                                <label><?php esc_html_e( 'Arrondi des coins', 'sidebar-jlg' ); ?></label>
-                                <div
-                                    class="sidebar-jlg-unit-control"
-                                    data-sidebar-unit-control
-                                    data-setting-name="sidebar_jlg_settings[border_radius]"
-                                    data-label="<?php esc_attr_e( 'Arrondi des coins', 'sidebar-jlg' ); ?>"
-                                    data-help="<?php esc_attr_e( 'Contrôle la courbure des angles de la sidebar.', 'sidebar-jlg' ); ?>"
-                                    data-error-message="<?php esc_attr_e( 'L’arrondi ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                    data-default-value="<?php echo esc_attr( $defaults['border_radius']['value'] ?? '12' ); ?>"
-                                    data-default-unit="<?php echo esc_attr( $defaults['border_radius']['unit'] ?? 'px' ); ?>"
-                                    data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['border_radius'] ) ); ?>"
-                                >
-                                    <input type="hidden" data-dimension-value name="sidebar_jlg_settings[border_radius][value]" value="<?php echo esc_attr( $borderRadius['value'] ); ?>" />
-                                    <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[border_radius][unit]" value="<?php echo esc_attr( $borderRadius['unit'] ); ?>" />
-                                </div>
-                                <em class="description"><?php esc_html_e( 'Ex: 12px, 1rem', 'sidebar-jlg' ); ?></em>
-                            </p>
-                            <p><label><?php esc_html_e( 'Épaisseur de la bordure', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[border_width]" value="<?php echo esc_attr( $options['border_width'] ); ?>" class="small-text"/> px</p>
-                            <p><label><?php esc_html_e( 'Couleur de la bordure', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[border_color]" value="<?php echo esc_attr( $options['border_color'] ); ?>" class="color-picker-rgba"/></p>
-                        </div>
-                        <div class="horizontal-options-field" style="<?php echo $options['layout_style'] === 'horizontal-bar' ? '' : 'display:none;'; ?>">
-                            <?php $horizontalHeight = $dimensionValues['horizontal_bar_height']; ?>
-                            <p>
-                                <label><?php esc_html_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?></label>
-                                <div
-                                    class="sidebar-jlg-unit-control"
-                                    data-sidebar-unit-control
-                                    data-setting-name="sidebar_jlg_settings[horizontal_bar_height]"
-                                    data-label="<?php esc_attr_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?>"
-                                    data-help="<?php esc_attr_e( 'Détermine la hauteur de la barre horizontale.', 'sidebar-jlg' ); ?>"
-                                    data-error-message="<?php esc_attr_e( 'La hauteur de barre ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                    data-default-value="<?php echo esc_attr( $defaults['horizontal_bar_height']['value'] ?? '4' ); ?>"
-                                    data-default-unit="<?php echo esc_attr( $defaults['horizontal_bar_height']['unit'] ?? 'rem' ); ?>"
-                                    data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['horizontal_bar_height'] ) ); ?>"
-                                >
-                                    <input type="hidden" data-dimension-value name="sidebar_jlg_settings[horizontal_bar_height][value]" value="<?php echo esc_attr( $horizontalHeight['value'] ); ?>" />
-                                    <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[horizontal_bar_height][unit]" value="<?php echo esc_attr( $horizontalHeight['unit'] ); ?>" />
-                                </div>
-                                <em class="description"><?php esc_html_e( 'Utilisez des unités CSS (ex : 4rem, 72px).', 'sidebar-jlg' ); ?></em>
-                            </p>
-                            <p>
-                                <label><?php esc_html_e( 'Position sur l\'écran', 'sidebar-jlg' ); ?></label>
-                                <select name="sidebar_jlg_settings[horizontal_bar_position]">
-                                    <option value="top" <?php selected($options['horizontal_bar_position'], 'top'); ?>><?php esc_html_e('En haut (Top)', 'sidebar-jlg'); ?></option>
-                                    <option value="bottom" <?php selected($options['horizontal_bar_position'], 'bottom'); ?>><?php esc_html_e('En bas (Bottom)', 'sidebar-jlg'); ?></option>
-                                </select>
-                            </p>
-                            <p>
-                                <label><?php esc_html_e( 'Alignement du contenu', 'sidebar-jlg' ); ?></label>
-                                <select name="sidebar_jlg_settings[horizontal_bar_alignment]">
-                                    <option value="flex-start" <?php selected($options['horizontal_bar_alignment'], 'flex-start'); ?>><?php esc_html_e('Aligné à gauche', 'sidebar-jlg'); ?></option>
-                                    <option value="center" <?php selected($options['horizontal_bar_alignment'], 'center'); ?>><?php esc_html_e('Centré', 'sidebar-jlg'); ?></option>
-                                    <option value="flex-end" <?php selected($options['horizontal_bar_alignment'], 'flex-end'); ?>><?php esc_html_e('Aligné à droite', 'sidebar-jlg'); ?></option>
-                                    <option value="space-between" <?php selected($options['horizontal_bar_alignment'], 'space-between'); ?>><?php esc_html_e('Espacé (Space-between)', 'sidebar-jlg'); ?></option>
-                                </select>
-                            </p>
-                            <p>
-                                <label><input type="checkbox" name="sidebar_jlg_settings[horizontal_bar_sticky]" value="1" <?php checked( ! empty( $options['horizontal_bar_sticky'] ) ); ?>> <?php esc_html_e( 'Rendre la barre collante (reste visible en scrollant)', 'sidebar-jlg' ); ?></label>
-                            </p>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Orientation', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <p>
-                            <label><input type="radio" name="sidebar_jlg_settings[sidebar_position]" value="left" <?php checked($options['sidebar_position'], 'left'); ?>> <?php esc_html_e( 'Alignée à gauche', 'sidebar-jlg' ); ?></label>
-                            <br>
-                            <label><input type="radio" name="sidebar_jlg_settings[sidebar_position]" value="right" <?php checked($options['sidebar_position'], 'right'); ?>> <?php esc_html_e( 'Alignée à droite', 'sidebar-jlg' ); ?></label>
-                        </p>
-                        <p class="description"><?php esc_html_e( 'Choisissez le côté d\'affichage de la sidebar et du bouton hamburger.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Comportement sur Desktop', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <select name="sidebar_jlg_settings[desktop_behavior]" class="desktop-behavior-select">
-                            <option value="push" <?php selected($options['desktop_behavior'], 'push'); ?>><?php esc_html_e('Pousser le contenu (Push)', 'sidebar-jlg'); ?></option>
-                            <option value="overlay" <?php selected($options['desktop_behavior'], 'overlay'); ?>><?php esc_html_e('Superposer au contenu (Overlay)', 'sidebar-jlg'); ?></option>
-                        </select>
-                        <p class="description"><?php esc_html_e('Choisissez si la sidebar pousse le contenu de votre site ou passe par-dessus.', 'sidebar-jlg'); ?></p>
-                        <?php $contentMargin = $dimensionValues['content_margin']; ?>
-                        <div class="push-option-field" style="<?php echo $options['desktop_behavior'] === 'push' ? '' : 'display:none;'; ?>">
-                            <label><?php esc_html_e( 'Marge de sécurité du contenu', 'sidebar-jlg' ); ?></label>
-                            <div
-                                class="sidebar-jlg-unit-control"
-                                data-sidebar-unit-control
-                                data-setting-name="sidebar_jlg_settings[content_margin]"
-                                data-label="<?php esc_attr_e( 'Marge de sécurité du contenu', 'sidebar-jlg' ); ?>"
-                                data-help="<?php esc_attr_e( 'Évite que la sidebar ne chevauche votre mise en page.', 'sidebar-jlg' ); ?>"
-                                data-error-message="<?php esc_attr_e( 'La marge de contenu ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                data-default-value="<?php echo esc_attr( $defaults['content_margin']['value'] ?? '2' ); ?>"
-                                data-default-unit="<?php echo esc_attr( $defaults['content_margin']['unit'] ?? 'rem' ); ?>"
-                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['content_margin'] ) ); ?>"
-                            >
-                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[content_margin][value]" value="<?php echo esc_attr( $contentMargin['value'] ); ?>" />
-                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[content_margin][unit]" value="<?php echo esc_attr( $contentMargin['unit'] ); ?>" />
-                            </div>
-                            <em class="description"><?php esc_html_e( 'Espace entre la sidebar et le contenu (ex: 2rem, 30px).', 'sidebar-jlg' ); ?></em>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Fond de superposition', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <p><label><?php esc_html_e( 'Couleur', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[overlay_color]" value="<?php echo esc_attr( $options['overlay_color'] ); ?>" class="color-picker-rgba"/></p>
-                        <div class="sidebar-jlg-range-field">
-                            <label><?php esc_html_e( 'Opacité', 'sidebar-jlg' ); ?></label>
-                            <div
-                                class="sidebar-jlg-range-control"
-                                data-sidebar-range-control
-                                data-setting-name="sidebar_jlg_settings[overlay_opacity]"
-                                data-label="<?php esc_attr_e( 'Opacité de la superposition', 'sidebar-jlg' ); ?>"
-                                data-help="<?php esc_attr_e( '0 = totalement transparent, 1 = totalement opaque.', 'sidebar-jlg' ); ?>"
-                                data-error-message="<?php esc_attr_e( 'L’opacité doit rester comprise entre 0 et 1.', 'sidebar-jlg' ); ?>"
-                                data-min="0"
-                                data-max="1"
-                                data-step="0.05"
-                            >
-                                <input type="hidden" data-range-value name="sidebar_jlg_settings[overlay_opacity]" value="<?php echo esc_attr( $options['overlay_opacity'] ); ?>" />
-                            </div>
-                        </div>
-                        <p class="description"><?php esc_html_e( 'Ajuste le fond affiché derrière la sidebar en mode overlay.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Dimensions', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <p><label><?php esc_html_e( 'Largeur (Desktop)', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[width_desktop]" value="<?php echo esc_attr( $options['width_desktop'] ); ?>" class="small-text"/> px</p>
-                        <p><label><?php esc_html_e( 'Largeur (Tablette)', 'sidebar-jlg' ); ?></label> <input type="number" name="sidebar_jlg_settings[width_tablet]" value="<?php echo esc_attr( $options['width_tablet'] ); ?>" class="small-text"/> px <em class="description"><?php esc_html_e( 'Appliquée entre 768px et 992px.', 'sidebar-jlg' ); ?></em></p>
-                        <p>
-                            <label><?php esc_html_e( 'Largeur (Mobile)', 'sidebar-jlg' ); ?></label>
-                            <input type="text" name="sidebar_jlg_settings[width_mobile]" value="<?php echo esc_attr( $options['width_mobile'] ); ?>" class="small-text" />
-                            <em class="description"><?php esc_html_e( '100 % par défaut pour couvrir l’écran. Accepte toute valeur CSS (320px, 85%, calc(100% - 2rem)…) appliquée sous 768px.', 'sidebar-jlg' ); ?></em>
-                        </p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Bouton Hamburger (Mobile)', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <?php $hamburgerOffset = $dimensionValues['hamburger_top_position']; ?>
-                        <p>
-                            <label><?php esc_html_e( 'Position verticale', 'sidebar-jlg' ); ?></label>
-                            <div
-                                class="sidebar-jlg-unit-control"
-                                data-sidebar-unit-control
-                                data-setting-name="sidebar_jlg_settings[hamburger_top_position]"
-                                data-label="<?php esc_attr_e( 'Position verticale', 'sidebar-jlg' ); ?>"
-                                data-help="<?php esc_attr_e( 'Contrôle l’emplacement du bouton hamburger sur l’axe vertical.', 'sidebar-jlg' ); ?>"
-                                data-error-message="<?php esc_attr_e( 'La position verticale ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                data-default-value="<?php echo esc_attr( $defaults['hamburger_top_position']['value'] ?? '4' ); ?>"
-                                data-default-unit="<?php echo esc_attr( $defaults['hamburger_top_position']['unit'] ?? 'rem' ); ?>"
-                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['hamburger_top_position'] ) ); ?>"
-                            >
-                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[hamburger_top_position][value]" value="<?php echo esc_attr( $hamburgerOffset['value'] ); ?>" />
-                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_top_position][unit]" value="<?php echo esc_attr( $hamburgerOffset['unit'] ); ?>" />
-                            </div>
-                            <em class="description"><?php esc_html_e( 'Unités CSS (ex: 4rem, 15px).', 'sidebar-jlg' ); ?></em>
-                        </p>
-                        <?php $hamburgerInlineOffset = $dimensionValues['hamburger_horizontal_offset']; ?>
-                        <p>
-                            <label><?php esc_html_e( 'Décalage horizontal', 'sidebar-jlg' ); ?></label>
-                            <div
-                                class="sidebar-jlg-unit-control"
-                                data-sidebar-unit-control
-                                data-setting-name="sidebar_jlg_settings[hamburger_horizontal_offset]"
-                                data-label="<?php esc_attr_e( 'Décalage horizontal', 'sidebar-jlg' ); ?>"
-                                data-help="<?php esc_attr_e( 'Définit la distance entre le bord de l’écran et le bouton hamburger.', 'sidebar-jlg' ); ?>"
-                                data-error-message="<?php esc_attr_e( 'Le décalage horizontal ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                data-default-value="<?php echo esc_attr( $defaults['hamburger_horizontal_offset']['value'] ?? '15' ); ?>"
-                                data-default-unit="<?php echo esc_attr( $defaults['hamburger_horizontal_offset']['unit'] ?? 'px' ); ?>"
-                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['hamburger_horizontal_offset'] ) ); ?>"
-                            >
-                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[hamburger_horizontal_offset][value]" value="<?php echo esc_attr( $hamburgerInlineOffset['value'] ); ?>" />
-                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_horizontal_offset][unit]" value="<?php echo esc_attr( $hamburgerInlineOffset['unit'] ); ?>" />
-                            </div>
-                            <em class="description"><?php esc_html_e( 'Unités CSS (ex: 15px, 2rem).', 'sidebar-jlg' ); ?></em>
-                        </p>
-                        <?php $hamburgerSize = $dimensionValues['hamburger_size']; ?>
-                        <p>
-                            <label><?php esc_html_e( 'Taille du bouton', 'sidebar-jlg' ); ?></label>
-                            <div
-                                class="sidebar-jlg-unit-control"
-                                data-sidebar-unit-control
-                                data-setting-name="sidebar_jlg_settings[hamburger_size]"
-                                data-label="<?php esc_attr_e( 'Taille du bouton', 'sidebar-jlg' ); ?>"
-                                data-help="<?php esc_attr_e( 'Contrôle la largeur et la hauteur du bouton hamburger.', 'sidebar-jlg' ); ?>"
-                                data-error-message="<?php esc_attr_e( 'La taille du bouton ne peut pas être vide.', 'sidebar-jlg' ); ?>"
-                                data-default-value="<?php echo esc_attr( $defaults['hamburger_size']['value'] ?? '50' ); ?>"
-                                data-default-unit="<?php echo esc_attr( $defaults['hamburger_size']['unit'] ?? 'px' ); ?>"
-                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['hamburger_size'] ) ); ?>"
-                            >
-                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[hamburger_size][value]" value="<?php echo esc_attr( $hamburgerSize['value'] ); ?>" />
-                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_size][unit]" value="<?php echo esc_attr( $hamburgerSize['unit'] ); ?>" />
-                            </div>
-                            <em class="description"><?php esc_html_e( 'Unités CSS (ex: 50px, 3rem).', 'sidebar-jlg' ); ?></em>
-                        </p>
-                        <p><label><?php esc_html_e( 'Couleur des barres', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[hamburger_color]" value="<?php echo esc_attr( $options['hamburger_color'] ); ?>" class="color-picker-rgba"/> <em class="description"><?php esc_html_e( 'Utilisez une couleur contrastée pour les barres du bouton.', 'sidebar-jlg' ); ?></em></p>
-                        <p><label><input type="checkbox" name="sidebar_jlg_settings[show_close_button]" value="1" <?php checked( $options['show_close_button'], 1 ); ?> /> <?php esc_html_e( 'Afficher le bouton de fermeture (X) dans la sidebar.', 'sidebar-jlg' ); ?></label></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Fermeture automatique', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <label><input type="checkbox" name="sidebar_jlg_settings[close_on_link_click]" value="1" <?php checked( $options['close_on_link_click'], 1 ); ?> /> <?php esc_html_e( 'Fermer automatiquement la sidebar après un clic sur un lien ou une icône sociale.', 'sidebar-jlg' ); ?></label>
-                        <p class="description"><?php esc_html_e( 'Recommandé sur mobile pour éviter qu\'elle reste ouverte après la navigation.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Mémoire de session', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <label><input type="checkbox" name="sidebar_jlg_settings[remember_last_state]" value="1" <?php checked( $options['remember_last_state'], 1 ); ?> /> <?php esc_html_e( 'Rouvrir la sidebar comme à la dernière visite (état, sous-menus, position de défilement).', 'sidebar-jlg' ); ?></label>
-                        <p class="description"><?php esc_html_e( 'Utilise le stockage local du navigateur pour restaurer les sous-menus ouverts, la position de scroll et les CTA consultés.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Gestes tactiles', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <p>
-                            <label>
-                                <input type="checkbox" name="sidebar_jlg_settings[touch_gestures_edge_swipe]" value="1" <?php checked( ! empty( $options['touch_gestures_edge_swipe'] ), 1 ); ?> />
-                                <?php esc_html_e( 'Autoriser l’ouverture en glissant depuis le bord (mobile).', 'sidebar-jlg' ); ?>
-                            </label>
-                        </p>
-                        <p>
-                            <label>
-                                <input type="checkbox" name="sidebar_jlg_settings[touch_gestures_close_swipe]" value="1" <?php checked( ! empty( $options['touch_gestures_close_swipe'] ), 1 ); ?> />
-                                <?php esc_html_e( 'Permettre la fermeture en glissant la sidebar vers l’extérieur.', 'sidebar-jlg' ); ?>
-                            </label>
-                        </p>
-                        <p>
-                            <label for="sidebar-jlg-gesture-edge-size"><?php esc_html_e( 'Largeur de la zone active', 'sidebar-jlg' ); ?></label>
-                            <input
-                                type="number"
-                                id="sidebar-jlg-gesture-edge-size"
-                                name="sidebar_jlg_settings[touch_gestures_edge_size]"
-                                class="small-text"
-                                min="0"
-                                max="200"
-                                step="1"
-                                value="<?php echo esc_attr( (string) (int) ( $options['touch_gestures_edge_size'] ?? $defaults['touch_gestures_edge_size'] ?? 32 ) ); ?>"
-                            />
-                            <span class="description">px</span>
-                        </p>
-                        <p>
-                            <label for="sidebar-jlg-gesture-min-distance"><?php esc_html_e( 'Distance minimale du geste', 'sidebar-jlg' ); ?></label>
-                            <?php
-                            $gesture_min_distance = sidebar_jlg_clamp_number_to_step(
-                                $options['touch_gestures_min_distance'] ?? ( $defaults['touch_gestures_min_distance'] ?? 95 ),
-                                30,
-                                600,
-                                5,
-                                95
-                            );
-                            ?>
-                            <input
-                                type="number"
-                                id="sidebar-jlg-gesture-min-distance"
-                                name="sidebar_jlg_settings[touch_gestures_min_distance]"
-                                class="small-text"
-                                min="30"
-                                max="600"
-                                step="5"
-                                value="<?php echo esc_attr( (string) $gesture_min_distance ); ?>"
-                            />
-                            <span class="description">px</span>
-                        </p>
-                        <p class="description"><?php esc_html_e( 'Ajoute des gestes type « swipe » comparables aux barres latérales professionnelles. Les paramètres ne s’appliquent que sous 992px de large.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Déclencheurs comportementaux', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <p>
-                            <label for="sidebar-jlg-auto-open-delay"><?php esc_html_e( 'Ouvrir automatiquement après (secondes)', 'sidebar-jlg' ); ?></label>
-                            <input
-                                type="number"
-                                id="sidebar-jlg-auto-open-delay"
-                                name="sidebar_jlg_settings[auto_open_time_delay]"
-                                min="0"
-                                max="600"
-                                step="1"
-                                value="<?php echo esc_attr( (string) (int) ( $options['auto_open_time_delay'] ?? 0 ) ); ?>"
-                                class="small-text"
-                            />
-                        </p>
-                        <p>
-                            <label for="sidebar-jlg-auto-open-scroll"><?php esc_html_e( 'Ouvrir après un pourcentage de scroll', 'sidebar-jlg' ); ?></label>
-                            <input
-                                type="number"
-                                id="sidebar-jlg-auto-open-scroll"
-                                name="sidebar_jlg_settings[auto_open_scroll_depth]"
-                                min="0"
-                                max="100"
-                                step="5"
-                                value="<?php echo esc_attr( (string) (int) ( $options['auto_open_scroll_depth'] ?? 0 ) ); ?>"
-                                class="small-text"
-                            />
-                            <span class="description" style="margin-left: 0.5rem;">%</span>
-                        </p>
-                        <p class="description"><?php esc_html_e( 'Définissez 0 pour désactiver un déclencheur. La sidebar ne se rouvrira pas automatiquement si l’utilisateur l’a refermée manuellement.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Libellé ARIA de la navigation', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <input type="text" class="regular-text" name="sidebar_jlg_settings[nav_aria_label]" value="<?php echo esc_attr( $options['nav_aria_label'] ?? '' ); ?>" />
-                        <p class="description"><?php esc_html_e( 'Définit le texte de l’attribut aria-label du bloc de navigation pour les lecteurs d’écran.', 'sidebar-jlg' ); ?></p>
-                        <p class="description"><?php esc_html_e( 'Laissez vide pour utiliser automatiquement la traduction fournie par le plugin.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Libellés du bouton de sous-menu', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <p>
-                            <label for="sidebar-jlg-toggle-open-label"><?php esc_html_e( 'Texte lorsque le sous-menu est fermé', 'sidebar-jlg' ); ?></label>
-                            <input type="text" id="sidebar-jlg-toggle-open-label" name="sidebar_jlg_settings[toggle_open_label]" value="<?php echo esc_attr( $options['toggle_open_label'] ?? '' ); ?>" class="regular-text" />
-                        </p>
-                        <p>
-                            <label for="sidebar-jlg-toggle-close-label"><?php esc_html_e( 'Texte lorsque le sous-menu est ouvert', 'sidebar-jlg' ); ?></label>
-                            <input type="text" id="sidebar-jlg-toggle-close-label" name="sidebar_jlg_settings[toggle_close_label]" value="<?php echo esc_attr( $options['toggle_close_label'] ?? '' ); ?>" class="regular-text" />
-                        </p>
-                        <p class="description"><?php esc_html_e( 'Ces textes alimentent les attributs aria-label et la mention pour les lecteurs d’écran. Laissez vide pour conserver les libellés traduits par défaut.', 'sidebar-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Barre de recherche', 'sidebar-jlg' ); ?></th>
-                    <td>
-                        <label><input type="checkbox" name="sidebar_jlg_settings[enable_search]" value="1" <?php checked( $options['enable_search'], 1 ); ?> /> <?php esc_html_e( 'Activer la barre de recherche.', 'sidebar-jlg' ); ?></label>
-                        <div class="search-options-wrapper" style="<?php echo $options['enable_search'] ? '' : 'display:none;'; ?>">
-                            <p>
-                                <label><?php esc_html_e( 'Méthode d\'intégration :', 'sidebar-jlg' ); ?></label>
-                                <select name="sidebar_jlg_settings[search_method]" class="search-method-select">
-                                    <option value="default" <?php selected($options['search_method'], 'default'); ?>><?php esc_html_e('Recherche WordPress par défaut', 'sidebar-jlg'); ?></option>
-                                    <option value="shortcode" <?php selected($options['search_method'], 'shortcode'); ?>><?php esc_html_e('Shortcode personnalisé', 'sidebar-jlg'); ?></option>
-                                    <option value="hook" <?php selected($options['search_method'], 'hook'); ?>><?php esc_html_e('Hook PHP (avancé)', 'sidebar-jlg'); ?></option>
-                                </select>
-                            </p>
-                            <p class="search-method-field search-shortcode-field" style="display:none;">
-                                <label><?php esc_html_e( 'Shortcode :', 'sidebar-jlg' ); ?></label>
-                                <input type="text" name="sidebar_jlg_settings[search_shortcode]" value="<?php echo esc_attr( $options['search_shortcode'] ); ?>" class="regular-text" placeholder="[mon_shortcode_recherche]"/>
-                            </p>
-                             <p class="search-method-field search-hook-field" style="display:none;">
-                                <span class="description"><?php esc_html_e( 'Pour les moteurs de recherche complexes, ajoutez ce code à votre fichier `functions.php` :', 'sidebar-jlg' ); ?></span><br>
-                                <code>add_action('jlg_sidebar_search_area', function() { /* Votre code PHP ici */ });</code>
-                            </p>
-                            <p>
-                                <label><?php esc_html_e( 'Alignement de la recherche', 'sidebar-jlg' ); ?></label>
-                                <select name="sidebar_jlg_settings[search_alignment]">
-                                    <option value="flex-start" <?php selected($options['search_alignment'], 'flex-start'); ?>><?php esc_html_e('Gauche', 'sidebar-jlg'); ?></option>
-                                    <option value="center" <?php selected($options['search_alignment'], 'center'); ?>><?php esc_html_e('Centré', 'sidebar-jlg'); ?></option>
-                                    <option value="flex-end" <?php selected($options['search_alignment'], 'flex-end'); ?>><?php esc_html_e('Droite', 'sidebar-jlg'); ?></option>
-                                </select>
-                            </p>
-                        </div>
-                    </td>
-                </tr>
-            </table>
+            <div class="sidebar-jlg-quickstart" role="complementary" aria-label="<?php esc_attr_e( 'Assistant de configuration', 'sidebar-jlg' ); ?>">
+                <h2 class="sidebar-jlg-quickstart__title"><?php esc_html_e( 'Démarrage express', 'sidebar-jlg' ); ?></h2>
+                <p class="sidebar-jlg-quickstart__intro"><?php esc_html_e( 'Passez en revue les étapes clés pour aligner votre sidebar avec une expérience produit professionnelle.', 'sidebar-jlg' ); ?></p>
+                <ol class="sidebar-jlg-quickstart__list">
+                    <li><?php esc_html_e( 'Activez la sidebar et, si besoin, la collecte analytics pour suivre les interactions.', 'sidebar-jlg' ); ?></li>
+                    <li><?php esc_html_e( 'Choisissez un mode d’affichage (flottant, pleine hauteur ou barre horizontale) adapté à votre mise en page.', 'sidebar-jlg' ); ?></li>
+                    <li><?php esc_html_e( 'Affinez les comportements côté utilisateur : fermeture automatique, mémorisation, gestes tactiles et déclencheurs.', 'sidebar-jlg' ); ?></li>
+                    <li><?php esc_html_e( 'Peaufinez l’accessibilité : libellés ARIA, textes des sous-menus et barre de recherche.', 'sidebar-jlg' ); ?></li>
+                </ol>
+            </div>
+
+            <nav class="sidebar-jlg-section-nav" data-sidebar-section-nav aria-label="<?php esc_attr_e( 'Accès rapide aux sections', 'sidebar-jlg' ); ?>">
+                <button type="button" class="button button-secondary" data-sidebar-section-target="sidebar-jlg-section-activation"><?php esc_html_e( 'Activation & Observabilité', 'sidebar-jlg' ); ?></button>
+                <button type="button" class="button button-secondary" data-sidebar-section-target="sidebar-jlg-section-layout"><?php esc_html_e( 'Mise en page & dimensions', 'sidebar-jlg' ); ?></button>
+                <button type="button" class="button button-secondary" data-sidebar-section-target="sidebar-jlg-section-interactions"><?php esc_html_e( 'Interactions & déclencheurs', 'sidebar-jlg' ); ?></button>
+                <button type="button" class="button button-secondary" data-sidebar-section-target="sidebar-jlg-section-accessibility"><?php esc_html_e( 'Accessibilité & recherche', 'sidebar-jlg' ); ?></button>
+            </nav>
+
+            <div class="sidebar-jlg-accordion" data-sidebar-section-group>
+                <details id="sidebar-jlg-section-activation" class="sidebar-jlg-section" open>
+                    <summary class="sidebar-jlg-section__summary">
+                        <span class="sidebar-jlg-section__title"><?php esc_html_e( 'Activation & Observabilité', 'sidebar-jlg' ); ?></span>
+                        <span class="sidebar-jlg-section__description"><?php esc_html_e( 'Activez la sidebar et pilotez la mesure des interactions.', 'sidebar-jlg' ); ?></span>
+                    </summary>
+                    <div class="sidebar-jlg-section__body">
+                        <table class="form-table sidebar-jlg-form-table">
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Activation', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <?php $activationDescriptionId = 'sidebar-jlg-enable-sidebar-help'; ?>
+                                    <label class="jlg-switch">
+                                        <input type="checkbox" name="sidebar_jlg_settings[enable_sidebar]" value="1" aria-describedby="<?php echo esc_attr( $activationDescriptionId ); ?>" <?php checked( $options['enable_sidebar'], 1 ); ?> />
+                                        <span class="jlg-slider"></span>
+                                    </label>
+                                    <p id="<?php echo esc_attr( $activationDescriptionId ); ?>" class="description"><?php esc_html_e( 'Active ou désactive complètement la sidebar sur votre site.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Insights & Analytics', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <?php $analyticsDescriptionId = 'sidebar-jlg-analytics-help'; ?>
+                                    <label class="jlg-switch">
+                                        <input type="checkbox" name="sidebar_jlg_settings[enable_analytics]" value="1" aria-describedby="<?php echo esc_attr( $analyticsDescriptionId ); ?>" <?php checked( ! empty( $options['enable_analytics'] ) ); ?> />
+                                        <span class="jlg-slider"></span>
+                                    </label>
+                                    <p id="<?php echo esc_attr( $analyticsDescriptionId ); ?>" class="description"><?php esc_html_e( 'Collecte les ouvertures, clics de navigation et interactions CTA pour alimenter le tableau de bord Analytics.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </details>
+
+                <details id="sidebar-jlg-section-layout" class="sidebar-jlg-section">
+                    <summary class="sidebar-jlg-section__summary">
+                        <span class="sidebar-jlg-section__title"><?php esc_html_e( 'Mise en page & dimensions', 'sidebar-jlg' ); ?></span>
+                        <span class="sidebar-jlg-section__description"><?php esc_html_e( 'Choisissez le comportement visuel par appareil.', 'sidebar-jlg' ); ?></span>
+                    </summary>
+                    <div class="sidebar-jlg-section__body">
+                        <table class="form-table sidebar-jlg-form-table">
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Style d\'affichage (Desktop)', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <p>
+                                        <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="full" <?php checked($options['layout_style'], 'full'); ?>> <?php esc_html_e('Pleine hauteur', 'sidebar-jlg'); ?></label>
+                                        <br>
+                                        <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="floating" <?php checked($options['layout_style'], 'floating'); ?>> <?php esc_html_e('Flottant', 'sidebar-jlg'); ?></label>
+                                        <br>
+                                        <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="horizontal-bar" <?php checked($options['layout_style'], 'horizontal-bar'); ?>> <?php esc_html_e('Barre horizontale', 'sidebar-jlg'); ?></label>
+                                    </p>
+                                    <div class="floating-options-field" style="<?php echo $options['layout_style'] === 'floating' ? '' : 'display:none;'; ?>">
+                                        <?php $floatingMargin = $dimensionValues['floating_vertical_margin']; ?>
+                                        <p>
+                                            <label><?php esc_html_e( 'Marge verticale', 'sidebar-jlg' ); ?></label>
+                                            <div
+                                                class="sidebar-jlg-unit-control"
+                                                data-sidebar-unit-control
+                                                data-setting-name="sidebar_jlg_settings[floating_vertical_margin]"
+                                                data-label="<?php esc_attr_e( 'Marge verticale', 'sidebar-jlg' ); ?>"
+                                                data-help="<?php esc_attr_e( 'Définit la distance entre la sidebar flottante et le bord de l’écran.', 'sidebar-jlg' ); ?>"
+                                                data-error-message="<?php esc_attr_e( 'La marge verticale ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                                data-default-value="<?php echo esc_attr( $defaults['floating_vertical_margin']['value'] ?? '4' ); ?>"
+                                                data-default-unit="<?php echo esc_attr( $defaults['floating_vertical_margin']['unit'] ?? 'rem' ); ?>"
+                                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['floating_vertical_margin'] ) ); ?>"
+                                            >
+                                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[floating_vertical_margin][value]" value="<?php echo esc_attr( $floatingMargin['value'] ); ?>" />
+                                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[floating_vertical_margin][unit]" value="<?php echo esc_attr( $floatingMargin['unit'] ); ?>" />
+                                            </div>
+                                            <em class="description"><?php esc_html_e( 'Ex: 4rem, 15px', 'sidebar-jlg' ); ?></em>
+                                        </p>
+                                        <?php $borderRadius = $dimensionValues['border_radius']; ?>
+                                        <p>
+                                            <label><?php esc_html_e( 'Arrondi des coins', 'sidebar-jlg' ); ?></label>
+                                            <div
+                                                class="sidebar-jlg-unit-control"
+                                                data-sidebar-unit-control
+                                                data-setting-name="sidebar_jlg_settings[border_radius]"
+                                                data-label="<?php esc_attr_e( 'Arrondi des coins', 'sidebar-jlg' ); ?>"
+                                                data-help="<?php esc_attr_e( 'Contrôle la courbure des angles de la sidebar.', 'sidebar-jlg' ); ?>"
+                                                data-error-message="<?php esc_attr_e( 'L’arrondi ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                                data-default-value="<?php echo esc_attr( $defaults['border_radius']['value'] ?? '12' ); ?>"
+                                                data-default-unit="<?php echo esc_attr( $defaults['border_radius']['unit'] ?? 'px' ); ?>"
+                                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['border_radius'] ) ); ?>"
+                                            >
+                                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[border_radius][value]" value="<?php echo esc_attr( $borderRadius['value'] ); ?>" />
+                                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[border_radius][unit]" value="<?php echo esc_attr( $borderRadius['unit'] ); ?>" />
+                                            </div>
+                                        </p>
+                                    </div>
+                                    <div class="horizontal-options-field" style="<?php echo $options['layout_style'] === 'horizontal-bar' ? '' : 'display:none;'; ?>">
+                                        <?php $horizontalHeight = $dimensionValues['horizontal_bar_height']; ?>
+                                        <p>
+                                            <label><?php esc_html_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?></label>
+                                            <div
+                                                class="sidebar-jlg-unit-control"
+                                                data-sidebar-unit-control
+                                                data-setting-name="sidebar_jlg_settings[horizontal_bar_height]"
+                                                data-label="<?php esc_attr_e( 'Hauteur de la barre', 'sidebar-jlg' ); ?>"
+                                                data-help="<?php esc_attr_e( 'Détermine la hauteur de la barre horizontale.', 'sidebar-jlg' ); ?>"
+                                                data-error-message="<?php esc_attr_e( 'La hauteur de barre ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                                data-default-value="<?php echo esc_attr( $defaults['horizontal_bar_height']['value'] ?? '4' ); ?>"
+                                                data-default-unit="<?php echo esc_attr( $defaults['horizontal_bar_height']['unit'] ?? 'rem' ); ?>"
+                                                data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['horizontal_bar_height'] ) ); ?>"
+                                            >
+                                                <input type="hidden" data-dimension-value name="sidebar_jlg_settings[horizontal_bar_height][value]" value="<?php echo esc_attr( $horizontalHeight['value'] ); ?>" />
+                                                <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[horizontal_bar_height][unit]" value="<?php echo esc_attr( $horizontalHeight['unit'] ); ?>" />
+                                            </div>
+                                            <em class="description"><?php esc_html_e( 'Utilisez des unités CSS (ex : 4rem, 72px).', 'sidebar-jlg' ); ?></em>
+                                        </p>
+                                        <p>
+                                            <label><?php esc_html_e( 'Position sur l\'écran', 'sidebar-jlg' ); ?></label>
+                                            <select name="sidebar_jlg_settings[horizontal_bar_position]">
+                                                <option value="top" <?php selected($options['horizontal_bar_position'], 'top'); ?>><?php esc_html_e('En haut (Top)', 'sidebar-jlg'); ?></option>
+                                                <option value="bottom" <?php selected($options['horizontal_bar_position'], 'bottom'); ?>><?php esc_html_e('En bas (Bottom)', 'sidebar-jlg'); ?></option>
+                                            </select>
+                                        </p>
+                                        <p>
+                                            <label><?php esc_html_e( 'Alignement du contenu', 'sidebar-jlg' ); ?></label>
+                                            <select name="sidebar_jlg_settings[horizontal_bar_alignment]">
+                                                <option value="flex-start" <?php selected($options['horizontal_bar_alignment'], 'flex-start'); ?>><?php esc_html_e('Aligné à gauche', 'sidebar-jlg'); ?></option>
+                                                <option value="center" <?php selected($options['horizontal_bar_alignment'], 'center'); ?>><?php esc_html_e('Centré', 'sidebar-jlg'); ?></option>
+                                                <option value="flex-end" <?php selected($options['horizontal_bar_alignment'], 'flex-end'); ?>><?php esc_html_e('Aligné à droite', 'sidebar-jlg'); ?></option>
+                                                <option value="space-between" <?php selected($options['horizontal_bar_alignment'], 'space-between'); ?>><?php esc_html_e('Espacé (Space-between)', 'sidebar-jlg'); ?></option>
+                                            </select>
+                                        </p>
+                                        <p>
+                                            <label><input type="checkbox" name="sidebar_jlg_settings[horizontal_bar_sticky]" value="1" <?php checked( ! empty( $options['horizontal_bar_sticky'] ) ); ?>> <?php esc_html_e( 'Rendre la barre collante (reste visible en scrollant)', 'sidebar-jlg' ); ?></label>
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Orientation', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <p>
+                                        <label><input type="radio" name="sidebar_jlg_settings[sidebar_position]" value="left" <?php checked($options['sidebar_position'], 'left'); ?>> <?php esc_html_e( 'Alignée à gauche', 'sidebar-jlg' ); ?></label>
+                                        <br>
+                                        <label><input type="radio" name="sidebar_jlg_settings[sidebar_position]" value="right" <?php checked($options['sidebar_position'], 'right'); ?>> <?php esc_html_e( 'Alignée à droite', 'sidebar-jlg' ); ?></label>
+                                    </p>
+                                    <p class="description"><?php esc_html_e( 'Choisissez le côté d\'affichage de la sidebar et du bouton hamburger.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Comportement sur Desktop', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <select name="sidebar_jlg_settings[desktop_behavior]" class="desktop-behavior-select">
+                                        <option value="push" <?php selected($options['desktop_behavior'], 'push'); ?>><?php esc_html_e('Pousser le contenu (Push)', 'sidebar-jlg'); ?></option>
+                                        <option value="overlay" <?php selected($options['desktop_behavior'], 'overlay'); ?>><?php esc_html_e('Superposer au contenu (Overlay)', 'sidebar-jlg'); ?></option>
+                                    </select>
+                                    <p class="description"><?php esc_html_e('Choisissez si la sidebar pousse le contenu de votre site ou passe par-dessus.', 'sidebar-jlg'); ?></p>
+                                    <?php $contentMargin = $dimensionValues['content_margin']; ?>
+                                    <div class="push-option-field" style="<?php echo $options['desktop_behavior'] === 'push' ? '' : 'display:none;'; ?>">
+                                        <label><?php esc_html_e( 'Marge de sécurité du contenu', 'sidebar-jlg' ); ?></label>
+                                        <div
+                                            class="sidebar-jlg-unit-control"
+                                            data-sidebar-unit-control
+                                            data-setting-name="sidebar_jlg_settings[content_margin]"
+                                            data-label="<?php esc_attr_e( 'Marge de sécurité du contenu', 'sidebar-jlg' ); ?>"
+                                            data-help="<?php esc_attr_e( 'Évite que la sidebar ne chevauche votre mise en page.', 'sidebar-jlg' ); ?>"
+                                            data-error-message="<?php esc_attr_e( 'La marge de contenu ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                            data-default-value="<?php echo esc_attr( $defaults['content_margin']['value'] ?? '2' ); ?>"
+                                            data-default-unit="<?php echo esc_attr( $defaults['content_margin']['unit'] ?? 'rem' ); ?>"
+                                            data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['content_margin'] ) ); ?>"
+                                        >
+                                            <input type="hidden" data-dimension-value name="sidebar_jlg_settings[content_margin][value]" value="<?php echo esc_attr( $contentMargin['value'] ); ?>" />
+                                            <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[content_margin][unit]" value="<?php echo esc_attr( $contentMargin['unit'] ); ?>" />
+                                        </div>
+                                        <em class="description"><?php esc_html_e( 'Espace entre la sidebar et le contenu (ex: 2rem, 30px).', 'sidebar-jlg' ); ?></em>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Fond de superposition', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <p><label><?php esc_html_e( 'Couleur', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[overlay_color]" value="<?php echo esc_attr( $options['overlay_color'] ); ?>" class="color-picker-rgba"/></p>
+                                    <div class="sidebar-jlg-range-field">
+                                        <label><?php esc_html_e( 'Opacité', 'sidebar-jlg' ); ?></label>
+                                        <div
+                                            class="sidebar-jlg-range-control"
+                                            data-sidebar-range-control
+                                            data-setting-name="sidebar_jlg_settings[overlay_opacity]"
+                                            data-label="<?php esc_attr_e( 'Opacité de la superposition', 'sidebar-jlg' ); ?>"
+                                            data-help="<?php esc_attr_e( '0 = totalement transparent, 1 = totalement opaque.', 'sidebar-jlg' ); ?>"
+                                            data-error-message="<?php esc_attr_e( 'L’opacité doit rester comprise entre 0 et 1.', 'sidebar-jlg' ); ?>"
+                                            data-min="0"
+                                            data-max="1"
+                                            data-step="0.05"
+                                        >
+                                            <input type="hidden" data-range-value name="sidebar_jlg_settings[overlay_opacity]" value="<?php echo esc_attr( $options['overlay_opacity'] ); ?>" />
+                                        </div>
+                                    </div>
+                                    <p class="description"><?php esc_html_e( 'Ajuste le fond affiché derrière la sidebar en mode overlay.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Dimensions', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <p><label for="sidebar-jlg-width-desktop"><?php esc_html_e( 'Largeur (Desktop)', 'sidebar-jlg' ); ?></label> <input type="number" id="sidebar-jlg-width-desktop" name="sidebar_jlg_settings[width_desktop]" value="<?php echo esc_attr( $options['width_desktop'] ); ?>" class="small-text"/> <span class="description">px</span></p>
+                                    <p><label for="sidebar-jlg-width-tablet"><?php esc_html_e( 'Largeur (Tablette)', 'sidebar-jlg' ); ?></label> <input type="number" id="sidebar-jlg-width-tablet" name="sidebar_jlg_settings[width_tablet]" value="<?php echo esc_attr( $options['width_tablet'] ); ?>" class="small-text"/> <span class="description">px</span> <em class="description"><?php esc_html_e( 'Appliquée entre 768px et 992px.', 'sidebar-jlg' ); ?></em></p>
+                                    <p>
+                                        <label for="sidebar-jlg-width-mobile"><?php esc_html_e( 'Largeur (Mobile)', 'sidebar-jlg' ); ?></label>
+                                        <input type="text" id="sidebar-jlg-width-mobile" name="sidebar_jlg_settings[width_mobile]" value="<?php echo esc_attr( $options['width_mobile'] ); ?>" class="small-text" />
+                                        <em class="description"><?php esc_html_e( '100 % par défaut pour couvrir l’écran. Accepte toute valeur CSS (320px, 85%, calc(100% - 2rem)…).', 'sidebar-jlg' ); ?></em>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Bouton Hamburger (Mobile)', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <?php $hamburgerOffset = $dimensionValues['hamburger_top_position']; ?>
+                                    <p>
+                                        <label><?php esc_html_e( 'Position verticale', 'sidebar-jlg' ); ?></label>
+                                        <div
+                                            class="sidebar-jlg-unit-control"
+                                            data-sidebar-unit-control
+                                            data-setting-name="sidebar_jlg_settings[hamburger_top_position]"
+                                            data-label="<?php esc_attr_e( 'Position verticale', 'sidebar-jlg' ); ?>"
+                                            data-help="<?php esc_attr_e( 'Contrôle l’emplacement du bouton hamburger sur l’axe vertical.', 'sidebar-jlg' ); ?>"
+                                            data-error-message="<?php esc_attr_e( 'La position verticale ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                            data-default-value="<?php echo esc_attr( $defaults['hamburger_top_position']['value'] ?? '4' ); ?>"
+                                            data-default-unit="<?php echo esc_attr( $defaults['hamburger_top_position']['unit'] ?? 'rem' ); ?>"
+                                            data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['hamburger_top_position'] ) ); ?>"
+                                        >
+                                            <input type="hidden" data-dimension-value name="sidebar_jlg_settings[hamburger_top_position][value]" value="<?php echo esc_attr( $hamburgerOffset['value'] ); ?>" />
+                                            <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_top_position][unit]" value="<?php echo esc_attr( $hamburgerOffset['unit'] ); ?>" />
+                                        </div>
+                                        <em class="description"><?php esc_html_e( 'Unités CSS (ex: 4rem, 15px).', 'sidebar-jlg' ); ?></em>
+                                    </p>
+                                    <?php $hamburgerInlineOffset = $dimensionValues['hamburger_horizontal_offset']; ?>
+                                    <p>
+                                        <label><?php esc_html_e( 'Décalage horizontal', 'sidebar-jlg' ); ?></label>
+                                        <div
+                                            class="sidebar-jlg-unit-control"
+                                            data-sidebar-unit-control
+                                            data-setting-name="sidebar_jlg_settings[hamburger_horizontal_offset]"
+                                            data-label="<?php esc_attr_e( 'Décalage horizontal', 'sidebar-jlg' ); ?>"
+                                            data-help="<?php esc_attr_e( 'Définit la distance entre le bord de l’écran et le bouton hamburger.', 'sidebar-jlg' ); ?>"
+                                            data-error-message="<?php esc_attr_e( 'Le décalage horizontal ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                            data-default-value="<?php echo esc_attr( $defaults['hamburger_horizontal_offset']['value'] ?? '15' ); ?>"
+                                            data-default-unit="<?php echo esc_attr( $defaults['hamburger_horizontal_offset']['unit'] ?? 'px' ); ?>"
+                                            data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['hamburger_horizontal_offset'] ) ); ?>"
+                                        >
+                                            <input type="hidden" data-dimension-value name="sidebar_jlg_settings[hamburger_horizontal_offset][value]" value="<?php echo esc_attr( $hamburgerInlineOffset['value'] ); ?>" />
+                                            <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_horizontal_offset][unit]" value="<?php echo esc_attr( $hamburgerInlineOffset['unit'] ); ?>" />
+                                        </div>
+                                        <em class="description"><?php esc_html_e( 'Unités CSS (ex: 15px, 2rem).', 'sidebar-jlg' ); ?></em>
+                                    </p>
+                                    <?php $hamburgerSize = $dimensionValues['hamburger_size']; ?>
+                                    <p>
+                                        <label><?php esc_html_e( 'Taille du bouton', 'sidebar-jlg' ); ?></label>
+                                        <div
+                                            class="sidebar-jlg-unit-control"
+                                            data-sidebar-unit-control
+                                            data-setting-name="sidebar_jlg_settings[hamburger_size]"
+                                            data-label="<?php esc_attr_e( 'Taille du bouton', 'sidebar-jlg' ); ?>"
+                                            data-help="<?php esc_attr_e( 'Contrôle la largeur et la hauteur du bouton hamburger.', 'sidebar-jlg' ); ?>"
+                                            data-error-message="<?php esc_attr_e( 'La taille du bouton ne peut pas être vide.', 'sidebar-jlg' ); ?>"
+                                            data-default-value="<?php echo esc_attr( $defaults['hamburger_size']['value'] ?? '50' ); ?>"
+                                            data-default-unit="<?php echo esc_attr( $defaults['hamburger_size']['unit'] ?? 'px' ); ?>"
+                                            data-allowed-units="<?php echo esc_attr( wp_json_encode( $dimensionUnits['hamburger_size'] ) ); ?>"
+                                        >
+                                            <input type="hidden" data-dimension-value name="sidebar_jlg_settings[hamburger_size][value]" value="<?php echo esc_attr( $hamburgerSize['value'] ); ?>" />
+                                            <input type="hidden" data-dimension-unit name="sidebar_jlg_settings[hamburger_size][unit]" value="<?php echo esc_attr( $hamburgerSize['unit'] ); ?>" />
+                                        </div>
+                                        <em class="description"><?php esc_html_e( 'Unités CSS (ex: 50px, 3rem).', 'sidebar-jlg' ); ?></em>
+                                    </p>
+                                    <p><label><?php esc_html_e( 'Couleur des barres', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[hamburger_color]" value="<?php echo esc_attr( $options['hamburger_color'] ); ?>" class="color-picker-rgba"/> <em class="description"><?php esc_html_e( 'Utilisez une couleur contrastée pour les barres du bouton.', 'sidebar-jlg' ); ?></em></p>
+                                    <p><label><input type="checkbox" name="sidebar_jlg_settings[show_close_button]" value="1" <?php checked( $options['show_close_button'], 1 ); ?> /> <?php esc_html_e( 'Afficher le bouton de fermeture (X) dans la sidebar.', 'sidebar-jlg' ); ?></label></p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </details>
+
+                <details id="sidebar-jlg-section-interactions" class="sidebar-jlg-section">
+                    <summary class="sidebar-jlg-section__summary">
+                        <span class="sidebar-jlg-section__title"><?php esc_html_e( 'Interactions & déclencheurs', 'sidebar-jlg' ); ?></span>
+                        <span class="sidebar-jlg-section__description"><?php esc_html_e( 'Contrôlez la fermeture, la mémoire et les ouvertures automatiques.', 'sidebar-jlg' ); ?></span>
+                    </summary>
+                    <div class="sidebar-jlg-section__body">
+                        <table class="form-table sidebar-jlg-form-table">
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Fermeture automatique', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <?php $closeDescriptionId = 'sidebar-jlg-close-on-click'; ?>
+                                    <label><input type="checkbox" name="sidebar_jlg_settings[close_on_link_click]" value="1" aria-describedby="<?php echo esc_attr( $closeDescriptionId ); ?>" <?php checked( $options['close_on_link_click'], 1 ); ?> /> <?php esc_html_e( 'Fermer automatiquement la sidebar après un clic sur un lien ou une icône sociale.', 'sidebar-jlg' ); ?></label>
+                                    <p id="<?php echo esc_attr( $closeDescriptionId ); ?>" class="description"><?php esc_html_e( 'Recommandé sur mobile pour éviter qu’elle reste ouverte après la navigation.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Mémoire de session', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <label><input type="checkbox" name="sidebar_jlg_settings[remember_last_state]" value="1" <?php checked( $options['remember_last_state'], 1 ); ?> /> <?php esc_html_e( 'Rouvrir la sidebar comme à la dernière visite (état, sous-menus, position de défilement).', 'sidebar-jlg' ); ?></label>
+                                    <p class="description"><?php esc_html_e( 'Utilise le stockage local du navigateur pour restaurer les sous-menus ouverts, la position de scroll et les CTA consultés.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Gestes tactiles', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <p>
+                                        <label>
+                                            <input type="checkbox" name="sidebar_jlg_settings[touch_gestures_edge_swipe]" value="1" <?php checked( ! empty( $options['touch_gestures_edge_swipe'] ), 1 ); ?> />
+                                            <?php esc_html_e( 'Autoriser l’ouverture en glissant depuis le bord (mobile).', 'sidebar-jlg' ); ?>
+                                        </label>
+                                    </p>
+                                    <p>
+                                        <label>
+                                            <input type="checkbox" name="sidebar_jlg_settings[touch_gestures_close_swipe]" value="1" <?php checked( ! empty( $options['touch_gestures_close_swipe'] ), 1 ); ?> />
+                                            <?php esc_html_e( 'Permettre la fermeture en glissant la sidebar vers l’extérieur.', 'sidebar-jlg' ); ?>
+                                        </label>
+                                    </p>
+                                    <p>
+                                        <label for="sidebar-jlg-gesture-edge-size"><?php esc_html_e( 'Largeur de la zone active', 'sidebar-jlg' ); ?></label>
+                                        <input
+                                            type="number"
+                                            id="sidebar-jlg-gesture-edge-size"
+                                            name="sidebar_jlg_settings[touch_gestures_edge_size]"
+                                            class="small-text"
+                                            min="0"
+                                            max="200"
+                                            step="1"
+                                            value="<?php echo esc_attr( (string) (int) ( $options['touch_gestures_edge_size'] ?? $defaults['touch_gestures_edge_size'] ?? 32 ) ); ?>"
+                                        />
+                                        <span class="description">px</span>
+                                    </p>
+                                    <p>
+                                        <label for="sidebar-jlg-gesture-min-distance"><?php esc_html_e( 'Distance minimale du geste', 'sidebar-jlg' ); ?></label>
+                                        <?php
+                                        $gesture_min_distance = sidebar_jlg_clamp_number_to_step(
+                                            $options['touch_gestures_min_distance'] ?? ( $defaults['touch_gestures_min_distance'] ?? 95 ),
+                                            30,
+                                            600,
+                                            5,
+                                            95
+                                        );
+                                        ?>
+                                        <input
+                                            type="number"
+                                            id="sidebar-jlg-gesture-min-distance"
+                                            name="sidebar_jlg_settings[touch_gestures_min_distance]"
+                                            class="small-text"
+                                            min="30"
+                                            max="600"
+                                            step="5"
+                                            value="<?php echo esc_attr( (string) $gesture_min_distance ); ?>"
+                                        />
+                                        <span class="description">px</span>
+                                    </p>
+                                    <p class="description"><?php esc_html_e( 'Ajoute des gestes type « swipe » comparables aux barres latérales professionnelles. Les paramètres ne s’appliquent que sous 992px de large.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Déclencheurs comportementaux', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <p>
+                                        <label for="sidebar-jlg-auto-open-delay"><?php esc_html_e( 'Ouvrir automatiquement après (secondes)', 'sidebar-jlg' ); ?></label>
+                                        <input
+                                            type="number"
+                                            id="sidebar-jlg-auto-open-delay"
+                                            name="sidebar_jlg_settings[auto_open_time_delay]"
+                                            min="0"
+                                            max="600"
+                                            step="1"
+                                            value="<?php echo esc_attr( (string) (int) ( $options['auto_open_time_delay'] ?? 0 ) ); ?>"
+                                            class="small-text"
+                                        />
+                                    </p>
+                                    <p>
+                                        <label for="sidebar-jlg-auto-open-scroll"><?php esc_html_e( 'Ouvrir après un pourcentage de scroll', 'sidebar-jlg' ); ?></label>
+                                        <input
+                                            type="number"
+                                            id="sidebar-jlg-auto-open-scroll"
+                                            name="sidebar_jlg_settings[auto_open_scroll_depth]"
+                                            min="0"
+                                            max="100"
+                                            step="5"
+                                            value="<?php echo esc_attr( (string) (int) ( $options['auto_open_scroll_depth'] ?? 0 ) ); ?>"
+                                            class="small-text"
+                                        />
+                                        <span class="description" style="margin-left: 0.5rem;">%</span>
+                                    </p>
+                                    <p class="description"><?php esc_html_e( 'Définissez 0 pour désactiver un déclencheur. La sidebar ne se rouvrira pas automatiquement si l’utilisateur l’a refermée manuellement.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </details>
+
+                <details id="sidebar-jlg-section-accessibility" class="sidebar-jlg-section">
+                    <summary class="sidebar-jlg-section__summary">
+                        <span class="sidebar-jlg-section__title"><?php esc_html_e( 'Accessibilité & recherche', 'sidebar-jlg' ); ?></span>
+                        <span class="sidebar-jlg-section__description"><?php esc_html_e( 'Libellés inclusifs et options de recherche.', 'sidebar-jlg' ); ?></span>
+                    </summary>
+                    <div class="sidebar-jlg-section__body">
+                        <table class="form-table sidebar-jlg-form-table">
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Libellé ARIA de la navigation', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <?php $ariaHelpId = 'sidebar-jlg-nav-aria-help'; ?>
+                                    <input type="text" class="regular-text" name="sidebar_jlg_settings[nav_aria_label]" aria-describedby="<?php echo esc_attr( $ariaHelpId ); ?>" value="<?php echo esc_attr( $options['nav_aria_label'] ?? '' ); ?>" />
+                                    <p id="<?php echo esc_attr( $ariaHelpId ); ?>" class="description"><?php esc_html_e( 'Définit le texte de l’attribut aria-label du bloc de navigation pour les lecteurs d’écran.', 'sidebar-jlg' ); ?></p>
+                                    <p class="description"><?php esc_html_e( 'Laissez vide pour utiliser automatiquement la traduction fournie par le plugin.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Libellés du bouton de sous-menu', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <p>
+                                        <label for="sidebar-jlg-toggle-open-label"><?php esc_html_e( 'Texte lorsque le sous-menu est fermé', 'sidebar-jlg' ); ?></label>
+                                        <input type="text" id="sidebar-jlg-toggle-open-label" name="sidebar_jlg_settings[toggle_open_label]" value="<?php echo esc_attr( $options['toggle_open_label'] ?? '' ); ?>" class="regular-text" />
+                                    </p>
+                                    <p>
+                                        <label for="sidebar-jlg-toggle-close-label"><?php esc_html_e( 'Texte lorsque le sous-menu est ouvert', 'sidebar-jlg' ); ?></label>
+                                        <input type="text" id="sidebar-jlg-toggle-close-label" name="sidebar_jlg_settings[toggle_close_label]" value="<?php echo esc_attr( $options['toggle_close_label'] ?? '' ); ?>" class="regular-text" />
+                                    </p>
+                                    <p class="description"><?php esc_html_e( 'Ces textes alimentent les attributs aria-label et la mention pour les lecteurs d’écran. Laissez vide pour conserver les libellés traduits par défaut.', 'sidebar-jlg' ); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Barre de recherche', 'sidebar-jlg' ); ?></th>
+                                <td>
+                                    <label><input type="checkbox" name="sidebar_jlg_settings[enable_search]" value="1" <?php checked( $options['enable_search'], 1 ); ?> /> <?php esc_html_e( 'Activer la barre de recherche.', 'sidebar-jlg' ); ?></label>
+                                    <div class="search-options-wrapper" style="<?php echo $options['enable_search'] ? '' : 'display:none;'; ?>">
+                                        <p>
+                                            <label><?php esc_html_e( 'Méthode d\'intégration :', 'sidebar-jlg' ); ?></label>
+                                            <select name="sidebar_jlg_settings[search_method]" class="search-method-select">
+                                                <option value="default" <?php selected($options['search_method'], 'default'); ?>><?php esc_html_e('Recherche WordPress par défaut', 'sidebar-jlg'); ?></option>
+                                                <option value="shortcode" <?php selected($options['search_method'], 'shortcode'); ?>><?php esc_html_e('Shortcode personnalisé', 'sidebar-jlg'); ?></option>
+                                                <option value="hook" <?php selected($options['search_method'], 'hook'); ?>><?php esc_html_e('Hook PHP (avancé)', 'sidebar-jlg'); ?></option>
+                                            </select>
+                                        </p>
+                                        <p class="search-method-field search-shortcode-field" style="display:none;">
+                                            <label for="sidebar-jlg-search-shortcode"><?php esc_html_e( 'Shortcode :', 'sidebar-jlg' ); ?></label>
+                                            <input type="text" id="sidebar-jlg-search-shortcode" name="sidebar_jlg_settings[search_shortcode]" value="<?php echo esc_attr( $options['search_shortcode'] ); ?>" class="regular-text" placeholder="[mon_shortcode_recherche]"/>
+                                        </p>
+                                        <p class="search-method-field search-hook-field" style="display:none;">
+                                            <span class="description"><?php esc_html_e( 'Pour les moteurs de recherche complexes, ajoutez ce code à votre fichier `functions.php` :', 'sidebar-jlg' ); ?></span><br>
+                                            <code>add_action('jlg_sidebar_search_area', function() { /* Votre code PHP ici */ });</code>
+                                        </p>
+                                        <p>
+                                            <label for="sidebar-jlg-search-alignment"><?php esc_html_e( 'Alignement de la recherche', 'sidebar-jlg' ); ?></label>
+                                            <select id="sidebar-jlg-search-alignment" name="sidebar_jlg_settings[search_alignment]">
+                                                <option value="flex-start" <?php selected($options['search_alignment'], 'flex-start'); ?>><?php esc_html_e('Gauche', 'sidebar-jlg'); ?></option>
+                                                <option value="center" <?php selected($options['search_alignment'], 'center'); ?>><?php esc_html_e('Centré', 'sidebar-jlg'); ?></option>
+                                                <option value="flex-end" <?php selected($options['search_alignment'], 'flex-end'); ?>><?php esc_html_e('Droite', 'sidebar-jlg'); ?></option>
+                                            </select>
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </details>
+            </div>
         </div>
         
         <!-- Onglet Style & Préréglages -->
@@ -652,6 +713,14 @@ $textTransformLabels = [
                         <input type="hidden" name="sidebar_jlg_settings[style_preset]" id="sidebar-jlg-style-preset" value="<?php echo esc_attr( $options['style_preset'] ?? 'custom' ); ?>" disabled>
                         <div id="sidebar-jlg-style-presets" class="sidebar-jlg-style-presets" data-selected-preset="<?php echo esc_attr( $options['style_preset'] ?? 'custom' ); ?>">
                             <p class="description"><?php esc_html_e( 'Choisissez un préréglage pour remplir automatiquement les couleurs, la typographie et les effets.', 'sidebar-jlg' ); ?></p>
+                            <div class="sidebar-jlg-style-presets__quick" data-style-preset-quick>
+                                <p class="sidebar-jlg-style-presets__quick-text"><?php esc_html_e( 'Prêts à l’emploi :', 'sidebar-jlg' ); ?></p>
+                                <div class="sidebar-jlg-style-presets__quick-actions">
+                                    <button type="button" class="button button-secondary" data-style-preset-trigger="headless_minimal"><?php esc_html_e( 'SaaS clair', 'sidebar-jlg' ); ?></button>
+                                    <button type="button" class="button button-secondary" data-style-preset-trigger="shadcn_soft"><?php esc_html_e( 'Sombre premium', 'sidebar-jlg' ); ?></button>
+                                    <button type="button" class="button button-secondary" data-style-preset-trigger="bootstrap_classic"><?php esc_html_e( 'Corporate', 'sidebar-jlg' ); ?></button>
+                                </div>
+                            </div>
                             <div class="sidebar-jlg-style-presets__grid" data-style-preset-grid>
                                 <p class="sidebar-jlg-style-presets__placeholder"><?php esc_html_e( 'Chargement des préréglages…', 'sidebar-jlg' ); ?></p>
                             </div>
@@ -832,6 +901,12 @@ $textTransformLabels = [
              </table>
         </div>
 
+        <!-- Onglet Contenu du Menu -->
+        <div id="tab-menu" class="tab-content" role="tabpanel" aria-labelledby="tab-menu-tab" aria-hidden="true" hidden>
+            <h2><?php esc_html_e('Construire le menu', 'sidebar-jlg'); ?></h2>
+            <p class="description"><?php esc_html_e('Ajoutez, organisez et supprimez les éléments de votre menu. Glissez-déposez pour réorganiser.', 'sidebar-jlg'); ?></p>
+            <div id="menu-items-container"></div>
+            <button type="button" class="button button-primary" id="add-menu-item"><?php esc_html_e('Ajouter un élément', 'sidebar-jlg'); ?></button>
         <!-- Onglet Contenu du Menu -->
         <div id="tab-menu" class="tab-content" role="tabpanel" aria-labelledby="tab-menu-tab" aria-hidden="true" hidden>
             <h2><?php esc_html_e('Construire le menu', 'sidebar-jlg'); ?></h2>
