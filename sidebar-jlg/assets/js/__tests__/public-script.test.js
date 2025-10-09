@@ -535,6 +535,50 @@ describe('public-script.js', () => {
     expect(document.body.classList.contains('sidebar-open')).toBe(true);
   });
 
+  test('auto opens when exit intent is detected', () => {
+    loadScript({ behavior_triggers: { time_delay: 0, scroll_depth: 0, exit_intent: true } });
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+
+    const exitEvent = new MouseEvent('mouseout', {
+      bubbles: true,
+      cancelable: true,
+      clientY: -5,
+      relatedTarget: null,
+    });
+
+    document.dispatchEvent(exitEvent);
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+  });
+
+  test('auto opens after the configured inactivity delay', () => {
+    loadScript({ behavior_triggers: { time_delay: 0, scroll_depth: 0, inactivity_delay: 10 } });
+
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+
+    jest.advanceTimersByTime(9500);
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+
+    jest.advanceTimersByTime(600);
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+  });
+
+  test('inactivity delay resets after user interaction', () => {
+    loadScript({ behavior_triggers: { time_delay: 0, scroll_depth: 0, inactivity_delay: 8 } });
+
+    jest.advanceTimersByTime(7000);
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+
+    document.dispatchEvent(new Event('mousemove'));
+
+    jest.advanceTimersByTime(7000);
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+
+    jest.advanceTimersByTime(2000);
+    expect(document.body.classList.contains('sidebar-open')).toBe(true);
+  });
+
   test('auto opens once the scroll threshold is reached', () => {
     const htmlElement = document.documentElement;
     const originalScrollHeight = Object.getOwnPropertyDescriptor(htmlElement, 'scrollHeight');

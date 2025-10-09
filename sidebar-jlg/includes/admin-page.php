@@ -759,6 +759,26 @@ $textTransformLabels = [
                                         />
                                         <span class="description" style="margin-left: 0.5rem;">%</span>
                                     </p>
+                                    <p>
+                                        <label>
+                                            <input type="checkbox" name="sidebar_jlg_settings[auto_open_exit_intent]" value="1" <?php checked( ! empty( $options['auto_open_exit_intent'] ) ); ?> />
+                                            <?php esc_html_e( 'Déclencher lorsque le curseur quitte la fenêtre (exit intent).', 'sidebar-jlg' ); ?>
+                                        </label>
+                                        <span class="description"><?php esc_html_e( 'Idéal pour relancer les visiteurs desktop hésitants. Ignoré sur les terminaux tactiles.', 'sidebar-jlg' ); ?></span>
+                                    </p>
+                                    <p>
+                                        <label for="sidebar-jlg-auto-open-inactivity"><?php esc_html_e( 'Ouvrir après inactivité (secondes)', 'sidebar-jlg' ); ?></label>
+                                        <input
+                                            type="number"
+                                            id="sidebar-jlg-auto-open-inactivity"
+                                            name="sidebar_jlg_settings[auto_open_inactivity_delay]"
+                                            min="0"
+                                            max="1800"
+                                            step="5"
+                                            value="<?php echo esc_attr( (string) (int) ( $options['auto_open_inactivity_delay'] ?? 0 ) ); ?>"
+                                            class="small-text"
+                                        />
+                                    </p>
                                     <p class="description"><?php esc_html_e( 'Définissez 0 pour désactiver un déclencheur. La sidebar ne se rouvrira pas automatiquement si l’utilisateur l’a refermée manuellement.', 'sidebar-jlg' ); ?></p>
                                 </td>
                             </tr>

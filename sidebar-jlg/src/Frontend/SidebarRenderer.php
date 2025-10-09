@@ -364,6 +364,8 @@ class SidebarRenderer
             'behavior_triggers' => [
                 'time_delay' => max(0, min(600, (int) ($options['auto_open_time_delay'] ?? 0))),
                 'scroll_depth' => max(0, min(100, (int) ($options['auto_open_scroll_depth'] ?? 0))),
+                'exit_intent' => !empty($options['auto_open_exit_intent']),
+                'inactivity_delay' => max(0, min(1800, (int) ($options['auto_open_inactivity_delay'] ?? 0))),
             ],
             'touch_gestures' => [
                 'edge_swipe_enabled' => !empty($options['touch_gestures_edge_swipe']),

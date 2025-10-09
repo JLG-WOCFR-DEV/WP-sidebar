@@ -325,6 +325,14 @@ class SettingsSanitizer
         $sanitized['auto_open_time_delay'] = max(0, min(600, $timeDelay));
         $scrollDepth = $this->sanitizeIntegerOption($input, 'auto_open_scroll_depth', $existingOptions, $defaults);
         $sanitized['auto_open_scroll_depth'] = max(0, min(100, $scrollDepth));
+        $sanitized['auto_open_exit_intent'] = !empty($input['auto_open_exit_intent']);
+        $inactivityDelay = $this->sanitizeIntegerOption(
+            $input,
+            'auto_open_inactivity_delay',
+            $existingOptions,
+            $defaults
+        );
+        $sanitized['auto_open_inactivity_delay'] = max(0, min(1800, $inactivityDelay));
         $sanitized['nav_aria_label'] = sanitize_text_field($input['nav_aria_label'] ?? $existingOptions['nav_aria_label']);
         $sanitized['toggle_open_label'] = sanitize_text_field($input['toggle_open_label'] ?? $existingOptions['toggle_open_label']);
         $sanitized['toggle_close_label'] = sanitize_text_field($input['toggle_close_label'] ?? $existingOptions['toggle_close_label']);

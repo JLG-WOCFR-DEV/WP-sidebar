@@ -389,6 +389,8 @@ class DefaultSettings
             // Auto-open helpers triggered by visitor behaviour. Values set to 0 disable the trigger.
             'auto_open_time_delay' => 0,
             'auto_open_scroll_depth' => 0,
+            'auto_open_exit_intent' => false,
+            'auto_open_inactivity_delay' => 0,
             'nav_aria_label'   => '',
             'toggle_open_label'  => '',
             'toggle_close_label' => '',

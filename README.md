@@ -13,7 +13,7 @@ Une extension WordPress qui fournit une sidebar animée et entièrement personna
 
 - Page de configuration unique avec regroupement logique des réglages (contenu, styles, comportements) et champs spécialisés : color picker natif, sélection d'icônes, tri et drag & drop des éléments de menu. 
 - Prévisualisation embarquée de la sidebar, synchronisée via AJAX (`jlg_render_preview`) pour valider instantanément les variations graphiques et la sélection de profil actif.
-- Déclencheurs comportementaux directement configurables (timer, profondeur de scroll) pour ouvrir automatiquement la sidebar sans recourir au code.
+- Déclencheurs comportementaux directement configurables (timer, profondeur de scroll, exit intent, inactivité) pour ouvrir automatiquement la sidebar sans recourir au code.
 - Bibliothèque d'icônes prête à l'emploi (manifest JSON), outils de téléversement sécurisé (limites MIME/taille) et récupération du SVG pour les besoins spécifiques.
 - Outils d'import/export JSON versionnés, remise à zéro contrôlée et sélection directe de contenus WordPress (articles, pages, catégories) grâce aux points d'entrée AJAX dédiés. 
 - Préréglages de style (`style_presets`) comprenant visuels de comparaison avant/après pour accélérer la mise en production.
