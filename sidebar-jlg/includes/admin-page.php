@@ -167,7 +167,17 @@ $textTransformLabels = [
     settings_errors( 'sidebar_jlg_messages' );
     ?>
 
-    <div id="sidebar-jlg-js-notices" class="sidebar-jlg-aria-notices" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div
+        id="sidebar-jlg-js-notices"
+        class="sidebar-jlg-aria-notices"
+        role="region"
+        aria-live="polite"
+        aria-atomic="false"
+        aria-relevant="additions"
+        aria-label="<?php esc_attr_e( 'Notifications Sidebar JLG', 'sidebar-jlg' ); ?>"
+        data-sidebar-notices="0"
+        aria-hidden="true"
+    ></div>
 
     <p><?php esc_html_e( 'Personnalisez l\'apparence et le comportement de votre sidebar.', 'sidebar-jlg' ); ?></p>
     <p><b><?php esc_html_e( 'Nouveau :', 'sidebar-jlg' ); ?></b> <?php printf( esc_html__( 'Ajoutez vos propres icônes SVG dans le dossier %1$s. Elles apparaîtront dans les listes de sélection !', 'sidebar-jlg' ), '<code>/wp-content/uploads/sidebar-jlg/icons/</code>' ); ?></p>

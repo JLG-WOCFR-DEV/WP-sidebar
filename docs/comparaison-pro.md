@@ -49,7 +49,7 @@ Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la f
 
 - Les formulaires sont très denses : un grand tableau de réglages par onglet sans regroupement visuel secondaire, ce qui fatigue lors des longues sessions. Introduire des blocs accordéon, des presets contextuels ou un moteur de recherche interne simplifierait la navigation.
 - Les statuts et comparaisons de versions d'options ne sont pas surfacés (pas d'historique, pas de rollback visuel). Ajouter un diff visuel (avant/après) et des métadonnées d'auteur alignerait l'expérience sur les suites pro orientées équipe.
-- Les notifications sont centralisées via un conteneur vierge `#sidebar-jlg-js-notices` sans design dédié. Prévoir un système de toast/progression renforcerait le feedback utilisateur.【F:sidebar-jlg/includes/admin-page.php†L48-L52】
+- Les notifications sont désormais gérées via un centre de toasts accessible (ARIA live, temporisation pausable, actions contextuelles) aligné sur les standards pro, tout en conservant des améliorations possibles pour la personnalisation par marque.【F:sidebar-jlg/includes/admin-page.php†L170-L180】【F:sidebar-jlg/assets/js/admin-script.js†L2800-L3074】【F:sidebar-jlg/assets/css/admin-style.css†L1-L166】
 - Ajouter un mode « brouillon » des réglages pour préparer des campagnes sans publier immédiatement : stocker des ensembles d'options dans la base (`post_meta` ou CPT dédié) puis les pousser côté front lorsqu'ils sont validés, à l'image des environnements de staging proposés par ConvertBox.
 
 ## 3. Navigation mobile & interactions

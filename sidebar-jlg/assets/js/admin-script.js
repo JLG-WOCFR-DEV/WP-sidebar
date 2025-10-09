@@ -2797,7 +2797,7 @@ jQuery(document).ready(function($) {
         });
     }
 
-    function renderNotice(type, message) {
+    function renderNotice(type, message, extraOptions) {
         const container = $('#sidebar-jlg-js-notices');
         const $target = container.length ? container : $('.sidebar-jlg-admin-wrap');
 
@@ -2805,36 +2805,283 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        const typeClasses = {
-            success: 'notice-success',
-            error: 'notice-error',
-            warning: 'notice-warning',
-            info: 'notice-info'
+        const baseOptions = {
+            autoDismiss: true,
+            dismissDelay: 8000,
+            maxVisible: 3,
+            actions: [],
+            message: '',
         };
 
-        const noticeClass = typeClasses[type] || typeClasses.info;
+        let resolvedMessage = typeof message === 'string' ? message : '';
+        let options = $.extend(true, {}, baseOptions);
+
+        if (message && typeof message === 'object' && !Array.isArray(message)) {
+            options = $.extend(true, options, message);
+            if (typeof message.message === 'string') {
+                resolvedMessage = message.message;
+            }
+        }
+
+        if (extraOptions && typeof extraOptions === 'object') {
+            options = $.extend(true, options, extraOptions);
+        }
+
+        if (typeof options.message === 'string' && options.message) {
+            resolvedMessage = options.message;
+        }
+
+        options.message = resolvedMessage;
+
+        const hasExplicitAutoDismiss = (
+            message && typeof message === 'object' && !Array.isArray(message) && Object.prototype.hasOwnProperty.call(message, 'autoDismiss')
+        ) || (
+            extraOptions && typeof extraOptions === 'object' && Object.prototype.hasOwnProperty.call(extraOptions, 'autoDismiss')
+        );
+
+        const tone = typeof type === 'string' ? type.toLowerCase() : 'info';
+        const toneClassMap = {
+            success: 'sidebar-jlg-toast--success',
+            error: 'sidebar-jlg-toast--error',
+            warning: 'sidebar-jlg-toast--warning',
+            info: 'sidebar-jlg-toast--info'
+        };
+
+        const iconMap = {
+            success: '✓',
+            error: '!',
+            warning: '!',
+            info: 'i'
+        };
+
+        const toneLabels = {
+            success: getI18nString('noticeToneSuccess', 'Succès'),
+            error: getI18nString('noticeToneError', 'Erreur'),
+            warning: getI18nString('noticeToneWarning', 'Avertissement'),
+            info: getI18nString('noticeToneInfo', 'Information'),
+        };
+
+        const toneClass = toneClassMap[tone] || toneClassMap.info;
+        const iconLabel = iconMap[tone] || iconMap.info;
+        const toneLabel = toneLabels[tone] || toneLabels.info;
         const dismissText = getI18nString('dismissNotice', 'Ignorer cette notification.');
 
-        const $notice = $('<div/>', {
-            class: `notice ${noticeClass} is-dismissible sidebar-jlg-notice`
+        if (tone === 'error' && !hasExplicitAutoDismiss) {
+            options.autoDismiss = false;
+        }
+
+        const noticeId = `sidebar-jlg-toast-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const $notice = $('<section/>', {
+            class: `sidebar-jlg-toast ${toneClass}`,
+            id: noticeId,
+            role: 'status',
+            'aria-live': 'polite',
+            'data-sidebar-toast': 'true',
+            'data-autodismiss': options.autoDismiss ? 'true' : 'false',
         });
 
-        const $message = $('<p/>');
-        $message.text(message || '');
-        $notice.append($message);
+        const $icon = $('<span/>', {
+            class: 'sidebar-jlg-toast__icon',
+            'aria-hidden': 'true',
+        }).text(iconLabel);
 
-        const $dismissButton = $('<button type="button" class="notice-dismiss"></button>');
-        const $dismissScreenReader = $('<span class="screen-reader-text"></span>');
-        $dismissScreenReader.text(dismissText);
-        $dismissButton.append($dismissScreenReader);
-        $notice.append($dismissButton);
+        const $body = $('<div/>', { class: 'sidebar-jlg-toast__body' });
+        const $message = $('<p/>', { class: 'sidebar-jlg-toast__message' });
+        $message.text(resolvedMessage || '');
 
-        $target.find('.sidebar-jlg-notice').remove();
+        const $meta = $('<div/>', { class: 'sidebar-jlg-toast__meta' });
+        const $toneSr = $('<span/>', { class: 'screen-reader-text sidebar-jlg-toast__tone' });
+        $toneSr.text(toneLabel);
+
+        const actions = Array.isArray(options.actions) ? options.actions : [];
+        if (actions.length) {
+            const $actions = $('<div/>', { class: 'sidebar-jlg-toast__actions' });
+            actions.forEach((action) => {
+                if (!action || typeof action !== 'object' || typeof action.label !== 'string') {
+                    return;
+                }
+
+                const isLink = typeof action.href === 'string' && action.href;
+                const elementTag = isLink ? '<a/>' : '<button/>';
+                const baseAttributes = {
+                    class: 'sidebar-jlg-toast__action',
+                };
+
+                if (isLink) {
+                    baseAttributes.href = action.href;
+                    if (action.target) {
+                        baseAttributes.target = action.target;
+                    }
+                    if (action.rel) {
+                        baseAttributes.rel = action.rel;
+                    }
+                } else {
+                    baseAttributes.type = 'button';
+                }
+
+                const $action = $(elementTag, baseAttributes);
+                $action.text(action.label);
+
+                if (!isLink && typeof action.onClick === 'function') {
+                    $action.on('click', (event) => {
+                        event.preventDefault();
+                        action.onClick.call(event.currentTarget, event, { id: noticeId, remove: () => removeNotice($notice, $target) });
+                    });
+                }
+
+                if (typeof action.description === 'string' && action.description) {
+                    $action.attr('aria-label', `${action.label}. ${action.description}`);
+                }
+
+                $actions.append($action);
+            });
+
+            if ($actions.children().length) {
+                $meta.append($actions);
+            }
+        }
+
+        $body.append($toneSr).append($message);
+        if ($meta.children().length) {
+            $body.append($meta);
+        }
+
+        const $close = $('<button/>', {
+            type: 'button',
+            class: 'sidebar-jlg-toast__close',
+            'aria-label': dismissText,
+        });
+
+        const $closeSr = $('<span/>', { class: 'screen-reader-text' });
+        $closeSr.text(dismissText);
+        $close.append($closeSr);
+
+        const $progress = $('<div/>', { class: 'sidebar-jlg-toast__progress' });
+        const $progressBar = $('<div/>', { class: 'sidebar-jlg-toast__progress-bar' });
+        $progress.append($progressBar);
+
+        $notice.append($icon, $body, $close, $progress);
+
+        const removeNotice = (currentNotice, host = $target) => {
+            if (!currentNotice || !currentNotice.length || currentNotice.hasClass('is-leaving')) {
+                return;
+            }
+
+            currentNotice.addClass('is-leaving');
+
+            setTimeout(() => {
+                currentNotice.remove();
+                updateNoticeCounter(host);
+            }, 220);
+        };
+
+        const updateNoticeCounter = (host = $target) => {
+            const count = host.find('[data-sidebar-toast]').length;
+
+            if (host.is('.sidebar-jlg-aria-notices')) {
+                host.attr('data-sidebar-notices', String(count));
+
+                if (count <= 0) {
+                    host.attr('aria-hidden', 'true');
+                } else {
+                    host.removeAttr('aria-hidden');
+                }
+            }
+        };
+
+        const maxVisible = Number.isFinite(options.maxVisible) && options.maxVisible > 0
+            ? Math.floor(options.maxVisible)
+            : baseOptions.maxVisible;
+
         $target.prepend($notice);
+        updateNoticeCounter($target);
 
-        $notice.on('click', '.notice-dismiss', function() {
-            $notice.remove();
+        const existing = $target.find('[data-sidebar-toast]');
+        if (existing.length > maxVisible) {
+            existing.slice(maxVisible).each(function() {
+                removeNotice($(this), $target);
+            });
+        }
+
+        const closeNotice = () => removeNotice($notice, $target);
+
+        $close.on('click', (event) => {
+            event.preventDefault();
+            closeNotice();
         });
+
+        let remaining = Math.max(1500, parseInt(options.dismissDelay, 10) || baseOptions.dismissDelay);
+        let timerId = null;
+        let timerStart = null;
+
+        const startTimer = () => {
+            if (!options.autoDismiss || timerId !== null) {
+                return;
+            }
+
+            timerStart = Date.now();
+            timerId = window.setTimeout(() => {
+                timerId = null;
+                closeNotice();
+            }, remaining);
+
+            if ($progressBar.length) {
+                $progressBar.css('animation-duration', `${remaining}ms`);
+                $progressBar.css('animation-play-state', 'running');
+            }
+        };
+
+        const pauseTimer = () => {
+            if (!options.autoDismiss || timerId === null) {
+                return;
+            }
+
+            clearTimeout(timerId);
+            timerId = null;
+
+            if (timerStart !== null) {
+                remaining -= Date.now() - timerStart;
+            }
+
+            if ($progressBar.length) {
+                $progressBar.css('animation-play-state', 'paused');
+            }
+        };
+
+        const resumeTimer = () => {
+            if (!options.autoDismiss) {
+                return;
+            }
+
+            if ($notice.is(':hover') || $notice.is(':focus-within')) {
+                return;
+            }
+
+            if (remaining <= 0) {
+                closeNotice();
+                return;
+            }
+
+            startTimer();
+        };
+
+        if (options.autoDismiss) {
+            $progressBar.css('animation-duration', `${remaining}ms`);
+            $progressBar.css('animation-play-state', 'paused');
+
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(startTimer);
+            } else {
+                startTimer();
+            }
+
+            $notice.on('mouseenter focusin', pauseTimer);
+            $notice.on('mouseleave focusout', () => {
+                setTimeout(resumeTimer, 10);
+            });
+        } else {
+            $progressBar.css('animation', 'none');
+        }
     }
 
     function getResponseMessage(response, fallback) {
