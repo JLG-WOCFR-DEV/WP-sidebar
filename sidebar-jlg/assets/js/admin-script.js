@@ -1838,6 +1838,7 @@ jQuery(document).ready(function($) {
 
     const compareControls = setupPreviewCompare(previewModule);
     initializeStylePresets(compareControls);
+    initializeSectionNavigation();
 
     if (typeof window !== 'undefined') {
         window.SidebarJLGPreview = previewModule;
@@ -2305,17 +2306,33 @@ jQuery(document).ready(function($) {
             ...normalizedPresets,
         ];
 
+        const presetByKey = {};
+
         presetsToRender.forEach((preset) => {
             const card = createCardElement(preset);
             if (preset.key === 'custom') {
                 customCardElement = card;
             }
             grid.appendChild(card);
+            presetByKey[preset.key] = preset;
         });
 
         const initialKey = hiddenInput.value && hiddenInput.value !== '' ? hiddenInput.value : 'custom';
         markActiveCard(initialKey);
         updateCustomCardPreview();
+
+        const quickContainer = container.querySelector('[data-style-preset-quick]');
+        if (quickContainer) {
+            quickContainer.querySelectorAll('[data-style-preset-trigger]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const key = (button.getAttribute('data-style-preset-trigger') || '').trim();
+                    const preset = key && presetByKey[key] ? presetByKey[key] : presetByKey.custom;
+                    if (preset) {
+                        handlePresetSelection(preset);
+                    }
+                });
+            });
+        }
 
         const styleTab = document.getElementById('tab-presets');
         if (styleTab) {
@@ -2409,13 +2426,195 @@ jQuery(document).ready(function($) {
         }
     }
 
-    function initializeUnitControls() {
-        if (!window.wp || !wp.element || !wp.components || !wp.components.UnitControl) {
+    function createFallbackUnitControl(container, config) {
+        const {
+            valueInput,
+            unitInput,
+            label,
+            helpText,
+            errorMessage,
+            allowedUnits,
+            initialDimension,
+            defaultDimension,
+            defaultUnit,
+        } = config;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sidebar-jlg-unit-control__fallback';
+
+        const baseName = (container.dataset.settingName || valueInput.name || 'sidebar-unit')
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]+/g, '-');
+        const uniqueSuffix = Math.random().toString(36).slice(2, 8);
+        const fieldId = `${baseName || 'sidebar-unit'}-${uniqueSuffix}`;
+        const valueId = `${fieldId}-value`;
+        const unitId = `${fieldId}-unit`;
+        const helpId = `${fieldId}-help`;
+        const feedbackId = `${fieldId}-feedback`;
+
+        const labelElement = document.createElement('label');
+        labelElement.className = 'sidebar-jlg-unit-control__fallback-label';
+        labelElement.setAttribute('for', valueId);
+        labelElement.textContent = label || '';
+        wrapper.appendChild(labelElement);
+
+        const controls = document.createElement('div');
+        controls.className = 'sidebar-jlg-unit-control__fallback-controls';
+
+        const visibleInput = document.createElement('input');
+        visibleInput.type = 'number';
+        visibleInput.className = 'sidebar-jlg-unit-control__fallback-input';
+        visibleInput.id = valueId;
+        visibleInput.step = '0.1';
+
+        const units = (allowedUnits && allowedUnits.length)
+            ? allowedUnits
+            : [initialDimension.unit || defaultDimension.unit || defaultUnit || 'px'];
+
+        const select = document.createElement('select');
+        select.className = 'sidebar-jlg-unit-control__fallback-select';
+        select.id = unitId;
+
+        units.forEach((unit) => {
+            const option = document.createElement('option');
+            option.value = unit;
+            option.textContent = unit;
+            select.appendChild(option);
+        });
+
+        const initialValue = initialDimension.value !== ''
+            ? initialDimension.value
+            : (defaultDimension.value !== '' ? defaultDimension.value : '0');
+
+        visibleInput.value = initialValue;
+        valueInput.value = normalizeNumericString(initialValue);
+        const resolvedUnit = initialDimension.unit || defaultDimension.unit || defaultUnit || units[0];
+        select.value = resolvedUnit;
+        unitInput.value = resolvedUnit;
+
+        const describedBy = [];
+
+        const helpElement = document.createElement('p');
+        helpElement.className = 'description';
+        helpElement.id = helpId;
+        helpElement.textContent = helpText || '';
+        if (helpElement.textContent !== '') {
+            describedBy.push(helpId);
+        }
+
+        const feedbackElement = document.createElement('p');
+        feedbackElement.className = 'sidebar-jlg-unit-control__fallback-feedback';
+        feedbackElement.id = feedbackId;
+        feedbackElement.setAttribute('aria-live', 'polite');
+        feedbackElement.textContent = '';
+        if (errorMessage) {
+            describedBy.push(feedbackId);
+        }
+
+        if (describedBy.length) {
+            const attr = describedBy.join(' ');
+            visibleInput.setAttribute('aria-describedby', attr);
+            select.setAttribute('aria-describedby', attr);
+        }
+
+        const updateFeedback = (message) => {
+            feedbackElement.textContent = message || '';
+        };
+
+        visibleInput.addEventListener('input', () => {
+            const normalized = normalizeNumericString(visibleInput.value);
+            if (normalized === '') {
+                valueInput.value = '';
+                updateFeedback(errorMessage || helpText || '');
+            } else {
+                valueInput.value = normalized;
+                updateFeedback('');
+            }
+            triggerFieldUpdate(valueInput);
+        });
+
+        visibleInput.addEventListener('blur', () => {
+            if (valueInput.value === '') {
+                const fallbackValue = defaultDimension.value !== '' ? defaultDimension.value : '0';
+                valueInput.value = fallbackValue;
+                visibleInput.value = fallbackValue;
+                updateFeedback('');
+                triggerFieldUpdate(valueInput);
+            }
+        });
+
+        select.addEventListener('change', () => {
+            const nextUnit = select.value;
+            unitInput.value = nextUnit;
+            triggerFieldUpdate(unitInput);
+        });
+
+        controls.appendChild(visibleInput);
+        controls.appendChild(select);
+        wrapper.appendChild(controls);
+
+        if (helpElement.textContent !== '') {
+            wrapper.appendChild(helpElement);
+        }
+
+        if (errorMessage) {
+            wrapper.appendChild(feedbackElement);
+        }
+
+        container.appendChild(wrapper);
+    }
+
+    function initializeSectionNavigation() {
+        const nav = document.querySelector('[data-sidebar-section-nav]');
+        if (!nav) {
             return;
         }
 
-        const { createElement, useMemo, useState } = wp.element;
-        const { UnitControl } = wp.components;
+        nav.querySelectorAll('[data-sidebar-section-target]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetId = button.getAttribute('data-sidebar-section-target');
+                if (!targetId) {
+                    return;
+                }
+
+                const section = document.getElementById(targetId);
+                if (!section) {
+                    return;
+                }
+
+                if (section.tagName && section.tagName.toLowerCase() === 'details' && !section.open) {
+                    section.open = true;
+                }
+
+                try {
+                    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } catch (error) {
+                    section.scrollIntoView();
+                }
+
+                const summary = section.querySelector('summary');
+                if (summary && typeof summary.focus === 'function') {
+                    try {
+                        summary.focus({ preventScroll: true });
+                    } catch (error) {
+                        summary.focus();
+                    }
+                }
+            });
+        });
+    }
+
+    function initializeUnitControls() {
+        const hasUnitControl = !!(window.wp && wp.element && wp.components && wp.components.UnitControl);
+        let createElement;
+        let useMemo;
+        let useState;
+        let UnitControl;
+
+        if (hasUnitControl) {
+            ({ createElement, useMemo, useState } = wp.element);
+            ({ UnitControl } = wp.components);
+        }
 
         document.querySelectorAll('[data-sidebar-unit-control]').forEach((container) => {
             const valueInput = container.querySelector('input[data-dimension-value]');
@@ -2443,6 +2642,21 @@ jQuery(document).ready(function($) {
                 defaultUnit,
                 allowedUnits
             );
+
+            if (!hasUnitControl) {
+                createFallbackUnitControl(container, {
+                    valueInput,
+                    unitInput,
+                    label,
+                    helpText,
+                    errorMessage,
+                    allowedUnits,
+                    initialDimension,
+                    defaultDimension,
+                    defaultUnit,
+                });
+                return;
+            }
 
             const UnitField = () => {
                 const [currentValue, setCurrentValue] = useState(initialDimension.value);
