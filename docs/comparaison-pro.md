@@ -10,6 +10,17 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 | Personnalisation | Préréglages complets (couleurs, animations, responsive) et CTA enrichis.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L143】【F:sidebar-jlg/includes/sidebar-template.php†L129-L229】 | Variantes guidées par segment + automatisations (A/B, triggers). | Étendre le schéma de réglages aux scénarios comportementaux et à la duplication rapide de variations. |
 | Mobile & interactions | Gestes de base, focus trap, recalcul dynamique des sous-menus.【F:sidebar-jlg/assets/js/public-script.js†L45-L362】 | Micro-interactions haptiques, mémorisation d'état, transitions personnalisables. | Ajouter stockage local, feedback haptique optionnel et choix d'animations par preset. |
 | Accessibilité & QA | Respect des rôles/ARIA et préférence `prefers-reduced-motion`, audit manuel possible via script Pa11y.【F:sidebar-jlg/assets/js/public-script.js†L45-L210】【F:package.json†L8-L16】 | Audit continu (contraste, rapports) et check-lists intégrées. | Fournir des alertes en temps réel et un tableau de bord d'accessibilité embarqué. |
+
+### Résumé visuel dans l'administration
+
+Un module « Comparatif Pro » a été ajouté au-dessus des onglets pour visualiser d'un coup d'œil la situation actuelle face aux suites haut de gamme.【F:sidebar-jlg/includes/admin-page.php†L96-L145】【F:sidebar-jlg/assets/css/admin-style.css†L97-L163】
+
+- **UI & UX** : badge « Atout » pour valoriser l'aperçu multi-breakpoints, les presets et la commande contextuelle tout en rappelant l'objectif canvas/Undo-Redo.
+- **Accessibilité** : badge « En progrès » qui renvoie vers les travaux d'automatisation des audits contrastes/Pa11y.
+- **Fiabilité** : badge « Atout » consacré au cache multi-profils, à la sanitation et au rollback des médias.
+- **Visuel** : badge « En progrès » soulignant la bibliothèque de presets inspirée de Headless UI/Radix/Shadcn et les futures micro-interactions.
+
+Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la feuille de route et s'appuie sur une mise en forme accessible (articles listitem + badges ARIA) afin d'être compréhensible par les lecteurs d'écran.
 | Analytics & gouvernance | Tableau Insights tabulaire, cache menu par profil via transients.【F:sidebar-jlg/includes/admin-page.php†L942-L1099】【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L172】 | Dashboards narratifs, API analytics, suivi des performances par campagne. | Transformer les données en storytelling actionnable et exposer des API/webhooks. |
 
 ## 1. Options & gouvernance produit
@@ -38,7 +49,7 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 
 - Les formulaires sont très denses : un grand tableau de réglages par onglet sans regroupement visuel secondaire, ce qui fatigue lors des longues sessions. Introduire des blocs accordéon, des presets contextuels ou un moteur de recherche interne simplifierait la navigation.
 - Les statuts et comparaisons de versions d'options ne sont pas surfacés (pas d'historique, pas de rollback visuel). Ajouter un diff visuel (avant/après) et des métadonnées d'auteur alignerait l'expérience sur les suites pro orientées équipe.
-- Les notifications sont centralisées via un conteneur vierge `#sidebar-jlg-js-notices` sans design dédié. Prévoir un système de toast/progression renforcerait le feedback utilisateur.【F:sidebar-jlg/includes/admin-page.php†L48-L52】
+- Les notifications sont désormais gérées via un centre de toasts accessible (ARIA live, temporisation pausable, actions contextuelles) aligné sur les standards pro, tout en conservant des améliorations possibles pour la personnalisation par marque.【F:sidebar-jlg/includes/admin-page.php†L170-L180】【F:sidebar-jlg/assets/js/admin-script.js†L2800-L3074】【F:sidebar-jlg/assets/css/admin-style.css†L1-L166】
 - Ajouter un mode « brouillon » des réglages pour préparer des campagnes sans publier immédiatement : stocker des ensembles d'options dans la base (`post_meta` ou CPT dédié) puis les pousser côté front lorsqu'ils sont validés, à l'image des environnements de staging proposés par ConvertBox.
 
 ## 3. Navigation mobile & interactions
