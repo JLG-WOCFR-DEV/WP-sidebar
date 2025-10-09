@@ -35,6 +35,7 @@ class AnalyticsRepository
         'menu_link_click',
         'cta_view',
         'cta_click',
+        'sidebar_session',
     ];
 
     /**
@@ -56,6 +57,15 @@ class AnalyticsRepository
      *     profiles: array<string, array{label: string, is_fallback: bool, totals: array<string, int>}>,
      *     targets: array<string, array<string, int>>,
      *     windows: array<string, array{days: int, totals: array<string, int>}>,
+     *     sessions: array{
+     *         count: int,
+     *         total_duration_ms: int,
+     *         max_duration_ms: int,
+     *         average_duration_ms: int,
+     *         close_reasons: array<string, int>,
+     *         open_targets: array<string, int>,
+     *         interactions: array<string, int>
+     *     },
      *     last_event_at: ?string,
      *     last_event_type: ?string
      * }
@@ -78,6 +88,15 @@ class AnalyticsRepository
      *     profiles: array<string, array{label: string, is_fallback: bool, totals: array<string, int>}>,
      *     targets: array<string, array<string, int>>,
      *     windows: array<string, array{days: int, totals: array<string, int>}>,
+     *     sessions: array{
+     *         count: int,
+     *         total_duration_ms: int,
+     *         max_duration_ms: int,
+     *         average_duration_ms: int,
+     *         close_reasons: array<string, int>,
+     *         open_targets: array<string, int>,
+     *         interactions: array<string, int>
+     *     },
      *     last_event_at: ?string,
      *     last_event_type: ?string
      * }
@@ -149,6 +168,16 @@ class AnalyticsRepository
                 $targets[$normalizedEvent] = array_slice($targets[$normalizedEvent], 0, 10, true);
             }
             $data['targets'] = $targets;
+        }
+
+        if ($normalizedEvent === 'sidebar_session') {
+            $sessionContext = [
+                'duration' => $context['duration_ms'] ?? ($context['duration'] ?? null),
+                'close_reason' => $context['close_reason'] ?? ($context['closeReason'] ?? null),
+                'target' => $context['target'] ?? ($context['open_target'] ?? null),
+                'interactions' => $context['interactions'] ?? [],
+            ];
+            $data['sessions'] = $this->updateSessionMetrics($data['sessions'] ?? [], $sessionContext);
         }
 
         $data['last_event_at'] = gmdate('c', $timestamp);
@@ -425,6 +454,16 @@ class AnalyticsRepository
      *     daily: array<string, array<string, int>>,
      *     profiles: array<string, array{label: string, is_fallback: bool, totals: array<string, int>}>,
      *     targets: array<string, array<string, int>>,
+     *     windows: array<string, array{days: int, totals: array<string, int>}>,
+     *     sessions: array{
+     *         count: int,
+     *         total_duration_ms: int,
+     *         max_duration_ms: int,
+     *         average_duration_ms: int,
+     *         close_reasons: array<string, int>,
+     *         open_targets: array<string, int>,
+     *         interactions: array<string, int>
+     *     },
      *     last_event_at: ?string,
      *     last_event_type: ?string
      * }
@@ -433,6 +472,11 @@ class AnalyticsRepository
     {
         $totals = $this->normalizeTotals($data['totals'] ?? []);
         $daily = $this->normalizeDaily($data['daily'] ?? []);
+
+        $sessions = $this->normalizeSessions($data['sessions'] ?? []);
+        $sessions['average_duration_ms'] = $sessions['count'] > 0
+            ? (int) round($sessions['total_duration_ms'] / max(1, $sessions['count']))
+            : 0;
 
         return [
             'totals' => $totals,
@@ -443,9 +487,155 @@ class AnalyticsRepository
                 'last7' => $this->computeRollingWindowTotals($daily, 7),
                 'last30' => $this->computeRollingWindowTotals($daily, 30),
             ],
+            'sessions' => $sessions,
             'last_event_at' => $this->normalizeDateTime($data['last_event_at'] ?? null),
             'last_event_type' => $this->normalizeEventKey($data['last_event_type'] ?? ''),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $current
+     * @param array<string, mixed> $context
+     *
+     * @return array{
+     *     count: int,
+     *     total_duration_ms: int,
+     *     max_duration_ms: int,
+     *     close_reasons: array<string, int>,
+     *     open_targets: array<string, int>,
+     *     interactions: array<string, int>
+     * }
+     */
+    private function updateSessionMetrics($current, array $context): array
+    {
+        $metrics = $this->normalizeSessions($current);
+        $metrics['count'] += 1;
+
+        $duration = $this->sanitizeDuration($context['duration'] ?? null);
+        if ($duration !== null) {
+            $metrics['total_duration_ms'] += $duration;
+            if ($duration > $metrics['max_duration_ms']) {
+                $metrics['max_duration_ms'] = $duration;
+            }
+        }
+
+        $reasonKey = $this->sanitizeTarget($context['close_reason'] ?? null);
+        if ($reasonKey !== null) {
+            $metrics['close_reasons'][$reasonKey] = ($metrics['close_reasons'][$reasonKey] ?? 0) + 1;
+            arsort($metrics['close_reasons']);
+            if (count($metrics['close_reasons']) > 10) {
+                $metrics['close_reasons'] = array_slice($metrics['close_reasons'], 0, 10, true);
+            }
+        }
+
+        $targetKey = $this->sanitizeTarget($context['target'] ?? null);
+        if ($targetKey !== null) {
+            $metrics['open_targets'][$targetKey] = ($metrics['open_targets'][$targetKey] ?? 0) + 1;
+            arsort($metrics['open_targets']);
+            if (count($metrics['open_targets']) > 10) {
+                $metrics['open_targets'] = array_slice($metrics['open_targets'], 0, 10, true);
+            }
+        }
+
+        if (isset($context['interactions']) && is_array($context['interactions'])) {
+            foreach ($context['interactions'] as $interactionKey => $rawValue) {
+                $normalizedInteraction = $this->sanitizeTarget($interactionKey);
+                if ($normalizedInteraction === null || !is_numeric($rawValue)) {
+                    continue;
+                }
+
+                $metrics['interactions'][$normalizedInteraction] = ($metrics['interactions'][$normalizedInteraction] ?? 0)
+                    + max(0, (int) $rawValue);
+            }
+        }
+
+        return $metrics;
+    }
+
+    /**
+     * @param mixed $sessions
+     *
+     * @return array{
+     *     count: int,
+     *     total_duration_ms: int,
+     *     max_duration_ms: int,
+     *     close_reasons: array<string, int>,
+     *     open_targets: array<string, int>,
+     *     interactions: array<string, int>
+     * }
+     */
+    private function normalizeSessions($sessions): array
+    {
+        $normalized = [
+            'count' => 0,
+            'total_duration_ms' => 0,
+            'max_duration_ms' => 0,
+            'close_reasons' => [],
+            'open_targets' => [],
+            'interactions' => [],
+        ];
+
+        if (!is_array($sessions)) {
+            return $normalized;
+        }
+
+        if (isset($sessions['count']) && is_numeric($sessions['count'])) {
+            $normalized['count'] = max(0, (int) $sessions['count']);
+        }
+
+        if (isset($sessions['total_duration_ms']) && is_numeric($sessions['total_duration_ms'])) {
+            $normalized['total_duration_ms'] = max(0, (int) $sessions['total_duration_ms']);
+        }
+
+        if (isset($sessions['max_duration_ms']) && is_numeric($sessions['max_duration_ms'])) {
+            $normalized['max_duration_ms'] = max(0, (int) $sessions['max_duration_ms']);
+        }
+
+        $normalized['close_reasons'] = $this->normalizeLabelMap($sessions['close_reasons'] ?? []);
+        $normalized['open_targets'] = $this->normalizeLabelMap($sessions['open_targets'] ?? []);
+        $normalized['interactions'] = $this->normalizeLabelMap($sessions['interactions'] ?? []);
+
+        return $normalized;
+    }
+
+    /**
+     * @param mixed $map
+     *
+     * @return array<string, int>
+     */
+    private function normalizeLabelMap($map): array
+    {
+        if (!is_array($map)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($map as $key => $value) {
+            $normalizedKey = $this->sanitizeTarget(is_string($key) ? $key : '');
+            if ($normalizedKey === null || !is_numeric($value)) {
+                continue;
+            }
+
+            $normalized[$normalizedKey] = max(0, (int) $value);
+        }
+
+        arsort($normalized);
+
+        return array_slice($normalized, 0, 20, true);
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeDuration($value): ?int
+    {
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $duration = (int) round((float) $value);
+
+        return $duration < 0 ? 0 : $duration;
     }
 
     /**

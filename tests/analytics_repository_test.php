@@ -86,6 +86,24 @@ namespace {
     assertSame('cta_button', array_key_first($summaryAfterCta['targets']['cta_click'] ?? []) ?? null, 'CTA click target tracked');
     assertSame(1, $summaryAfterCta['windows']['last7']['totals']['cta_click'] ?? null, '7-day window counts CTA click');
 
+    $repository->recordEvent('sidebar_session', [
+        'duration_ms' => 4200,
+        'close_reason' => 'overlay',
+        'target' => 'toggle_button',
+        'interactions' => [
+            'menu_link_click' => 3,
+            'cta_click' => 1,
+        ],
+    ]);
+
+    $sessionSummary = $repository->getSummary();
+    assertSame(1, $sessionSummary['sessions']['count'] ?? null, 'Session count increments');
+    assertSame(4200, $sessionSummary['sessions']['total_duration_ms'] ?? null, 'Session duration aggregated');
+    assertSame(4200, $sessionSummary['sessions']['average_duration_ms'] ?? null, 'Session average computed');
+    assertSame('overlay', array_key_first($sessionSummary['sessions']['close_reasons'] ?? []) ?? null, 'Session close reason stored');
+    assertSame('toggle_button', array_key_first($sessionSummary['sessions']['open_targets'] ?? []) ?? null, 'Session open target stored');
+    assertSame(3, $sessionSummary['sessions']['interactions']['menu_link_click'] ?? null, 'Session interactions aggregated');
+
     $reflection = new \ReflectionClass(AnalyticsRepository::class);
     $maxBuckets = (int) $reflection->getConstant('MAX_DAILY_BUCKETS');
 
