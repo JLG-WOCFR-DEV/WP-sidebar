@@ -214,10 +214,22 @@ document.addEventListener('DOMContentLoaded', function() {
         0,
         Math.min(100, parseInt(rawBehaviorTriggers.scroll_depth, 10) || 0)
     );
+    const autoOpenExitIntentEnabled = rawBehaviorTriggers.exit_intent === true
+        || rawBehaviorTriggers.exit_intent === '1'
+        || rawBehaviorTriggers.exit_intent === 1
+        || rawBehaviorTriggers.exit_intent === 'true';
+    const autoOpenInactivityDelay = Math.max(
+        0,
+        Math.min(1800, parseInt(rawBehaviorTriggers.inactivity_delay, 10) || 0)
+    );
     let manualDismissed = false;
     let autoOpenTriggered = false;
     let autoOpenTimer = null;
     let autoOpenScrollListener = null;
+    let autoOpenExitIntentListener = null;
+    let autoOpenInactivityListener = null;
+    let autoOpenInactivityTimer = null;
+    const autoOpenInactivityEvents = ['mousemove', 'keydown', 'scroll', 'touchstart', 'pointerdown'];
 
     if (!shouldRememberState) {
         const fallbackStorage = resolvePersistentStorage();
@@ -322,6 +334,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function cancelAutoOpenInactivityTimer() {
+        if (autoOpenInactivityTimer !== null) {
+            window.clearTimeout(autoOpenInactivityTimer);
+            autoOpenInactivityTimer = null;
+        }
+    }
+
+    function teardownExitIntentListener() {
+        if (!autoOpenExitIntentListener) {
+            return;
+        }
+
+        document.removeEventListener('mouseout', autoOpenExitIntentListener);
+        autoOpenExitIntentListener = null;
+    }
+
+    function teardownInactivityListeners() {
+        if (autoOpenInactivityListener) {
+            autoOpenInactivityEvents.forEach((eventName) => {
+                document.removeEventListener(eventName, autoOpenInactivityListener);
+            });
+            autoOpenInactivityListener = null;
+        }
+
+        cancelAutoOpenInactivityTimer();
+    }
+
     function teardownAutoOpenTriggers() {
         cancelAutoOpenTimer();
 
@@ -329,6 +368,9 @@ document.addEventListener('DOMContentLoaded', function() {
             window.removeEventListener('scroll', autoOpenScrollListener);
             autoOpenScrollListener = null;
         }
+
+        teardownExitIntentListener();
+        teardownInactivityListeners();
     }
 
     function logAutoOpen(reason) {
@@ -398,8 +440,80 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function ensureExitIntentListener() {
+        if (!autoOpenExitIntentEnabled || autoOpenExitIntentListener) {
+            return;
+        }
+
+        autoOpenExitIntentListener = (event) => {
+            if (!canAutoOpen()) {
+                teardownExitIntentListener();
+                return;
+            }
+
+            const relatedTarget = event.relatedTarget;
+            if (relatedTarget && relatedTarget !== document.documentElement && relatedTarget !== document.body) {
+                return;
+            }
+
+            const pointerType = typeof event.pointerType === 'string' ? event.pointerType : '';
+            if (pointerType && pointerType !== 'mouse') {
+                return;
+            }
+
+            if (typeof event.clientY === 'number' && event.clientY <= 0) {
+                triggerAutoOpen('exit');
+            }
+        };
+
+        document.addEventListener('mouseout', autoOpenExitIntentListener);
+    }
+
+    function scheduleInactivityTimer() {
+        cancelAutoOpenInactivityTimer();
+
+        if (autoOpenInactivityDelay <= 0 || !canAutoOpen()) {
+            return;
+        }
+
+        autoOpenInactivityTimer = window.setTimeout(() => {
+            autoOpenInactivityTimer = null;
+            triggerAutoOpen('inactivity');
+        }, autoOpenInactivityDelay * 1000);
+    }
+
+    function ensureInactivityListeners() {
+        if (autoOpenInactivityDelay <= 0 || autoOpenInactivityListener) {
+            return;
+        }
+
+        autoOpenInactivityListener = () => {
+            if (!canAutoOpen()) {
+                cancelAutoOpenInactivityTimer();
+                return;
+            }
+
+            scheduleInactivityTimer();
+        };
+
+        autoOpenInactivityEvents.forEach((eventName) => {
+            document.addEventListener(eventName, autoOpenInactivityListener);
+        });
+
+        scheduleInactivityTimer();
+    }
+
     function setupAutoOpenTriggers() {
-        if ((autoOpenTimeDelay <= 0 && autoOpenScrollDepth <= 0) || autoOpenTriggered) {
+        if (autoOpenTriggered) {
+            return;
+        }
+
+        const hasAnyTrigger = autoOpenTimeDelay > 0
+            || autoOpenScrollDepth > 0
+            || autoOpenExitIntentEnabled
+            || autoOpenInactivityDelay > 0;
+
+        if (!hasAnyTrigger) {
             return;
         }
 
@@ -422,6 +536,14 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             window.addEventListener('scroll', autoOpenScrollListener, { passive: true });
             handleAutoOpenScroll();
+        }
+
+        if (autoOpenExitIntentEnabled) {
+            ensureExitIntentListener();
+        }
+
+        if (autoOpenInactivityDelay > 0) {
+            ensureInactivityListeners();
         }
     }
 

@@ -133,22 +133,30 @@ assertSame(false, $result_remember_zero['remember_last_state'] ?? null, 'Remembe
 $input_auto_open_valid = [
     'auto_open_time_delay' => '45',
     'auto_open_scroll_depth' => '60',
+    'auto_open_exit_intent' => '1',
+    'auto_open_inactivity_delay' => '120',
 ];
 
 $result_auto_open_valid = $method->invoke($sanitizer, $input_auto_open_valid, $existing_options);
 
 assertSame(45, $result_auto_open_valid['auto_open_time_delay'] ?? null, 'Auto-open timer accepts valid delay');
 assertSame(60, $result_auto_open_valid['auto_open_scroll_depth'] ?? null, 'Auto-open scroll accepts valid depth');
+assertSame(true, $result_auto_open_valid['auto_open_exit_intent'] ?? null, 'Exit intent trigger stored as boolean');
+assertSame(120, $result_auto_open_valid['auto_open_inactivity_delay'] ?? null, 'Inactivity trigger stores sanitized delay');
 
 $input_auto_open_out_of_range = [
     'auto_open_time_delay' => '7200',
     'auto_open_scroll_depth' => '140',
+    'auto_open_exit_intent' => '',
+    'auto_open_inactivity_delay' => '7200',
 ];
 
 $result_auto_open_out_of_range = $method->invoke($sanitizer, $input_auto_open_out_of_range, $existing_options);
 
 assertSame(600, $result_auto_open_out_of_range['auto_open_time_delay'] ?? null, 'Auto-open timer is capped at 600 seconds');
 assertSame(100, $result_auto_open_out_of_range['auto_open_scroll_depth'] ?? null, 'Auto-open scroll depth capped at 100');
+assertSame(false, $result_auto_open_out_of_range['auto_open_exit_intent'] ?? null, 'Empty exit intent flag resolves to false');
+assertSame(1800, $result_auto_open_out_of_range['auto_open_inactivity_delay'] ?? null, 'Inactivity delay capped at 1800 seconds');
 
 $existing_numeric_general = array_merge($defaults->all(), [
     'border_width'     => 4,
