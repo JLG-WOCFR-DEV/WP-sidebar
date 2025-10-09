@@ -63,6 +63,103 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const analyticsEnabled = !!(analyticsAdapter && analyticsAdapter.enabled);
 
+    const supportsHighResolutionTime = typeof window !== 'undefined'
+        && typeof window.performance !== 'undefined'
+        && typeof window.performance.now === 'function';
+
+    function getSessionTimestamp() {
+        if (supportsHighResolutionTime) {
+            return window.performance.now();
+        }
+
+        return Date.now();
+    }
+
+    let sessionStartTimestamp = null;
+    let sessionOpenTarget = 'toggle_button';
+    let sessionInteractionTotals = null;
+
+    function getEmptySessionInteractions() {
+        return {
+            menu_link_click: 0,
+            social_link_click: 0,
+            cta_click: 0,
+        };
+    }
+
+    function resetSessionTracking() {
+        sessionStartTimestamp = null;
+        sessionOpenTarget = 'toggle_button';
+        sessionInteractionTotals = null;
+    }
+
+    function beginSession(target) {
+        if (!analyticsEnabled) {
+            return;
+        }
+
+        if (sessionStartTimestamp !== null) {
+            finalizeSession('restart');
+        }
+
+        sessionStartTimestamp = getSessionTimestamp();
+        sessionOpenTarget = typeof target === 'string' && target !== '' ? target : 'toggle_button';
+        sessionInteractionTotals = getEmptySessionInteractions();
+    }
+
+    function recordSessionInteraction(key) {
+        if (!analyticsEnabled || !sessionInteractionTotals || typeof key !== 'string' || key === '') {
+            return;
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(sessionInteractionTotals, key)) {
+            sessionInteractionTotals[key] = 0;
+        }
+
+        sessionInteractionTotals[key] += 1;
+    }
+
+    function finalizeSession(reason) {
+        if (!analyticsEnabled) {
+            resetSessionTracking();
+            return;
+        }
+
+        if (sessionStartTimestamp === null) {
+            return;
+        }
+
+        const elapsed = Math.max(0, Math.round(getSessionTimestamp() - sessionStartTimestamp));
+        const normalizedReason = typeof reason === 'string' && reason !== '' ? reason : 'user';
+        let interactionsPayload;
+        if (sessionInteractionTotals) {
+            interactionsPayload = {};
+            Object.keys(sessionInteractionTotals).forEach((key) => {
+                const value = sessionInteractionTotals[key];
+                if (typeof value === 'number' && value > 0) {
+                    interactionsPayload[key] = value;
+                }
+            });
+            if (Object.keys(interactionsPayload).length === 0) {
+                interactionsPayload = undefined;
+            }
+        }
+
+        const payload = {
+            target: sessionOpenTarget || 'toggle_button',
+            close_reason: normalizedReason,
+            duration_ms: elapsed,
+        };
+
+        if (interactionsPayload) {
+            payload.interactions = interactionsPayload;
+        }
+
+        dispatchAnalytics('sidebar_session', payload);
+
+        resetSessionTracking();
+    }
+
     const seenCtaElements = analyticsEnabled
         ? (typeof WeakSet === 'function' ? new WeakSet() : new Set())
         : null;
@@ -1010,6 +1107,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!skipAnalytics) {
             dispatchAnalytics('sidebar_open', { target: analyticsTarget });
         }
+        if (analyticsEnabled) {
+            beginSession(analyticsTarget);
+        }
         hamburgerBtn.classList.add('is-active');
         hamburgerBtn.setAttribute('aria-expanded', 'true');
         if (closeLabel) {
@@ -1054,6 +1154,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (source !== 'responsive') {
             manualDismissed = true;
         }
+        if (analyticsEnabled) {
+            finalizeSession(source);
+        }
+
         document.body.classList.remove('sidebar-open');
         releaseScrollLock();
         hamburgerBtn.classList.remove('is-active');
@@ -1278,8 +1382,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     hamburgerBtn.addEventListener('click', toggleSidebar);
-    if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
-    if (overlay) overlay.addEventListener('click', closeSidebar);
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => closeSidebar({ source: 'close_button' }));
+    }
+    if (overlay) {
+        overlay.addEventListener('click', () => closeSidebar({ source: 'overlay' }));
+    }
 
     if (supportsPointerEvents && (gestureSettings.edgeSwipeEnabled || gestureSettings.closeSwipeEnabled)) {
         window.addEventListener('pointerdown', handleGesturePointerDown, { passive: true });
@@ -1309,16 +1417,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (analyticsEnabled) {
                 dispatchAnalytics('cta_click', { target: 'cta_button' });
             }
+            recordSessionInteraction('cta_click');
             return;
         }
 
         if (analyticsEnabled && link.closest('.social-icons')) {
             dispatchAnalytics('menu_link_click', { target: 'social_link' });
+            recordSessionInteraction('social_link_click');
             return;
         }
 
         if (analyticsEnabled && link.closest('.sidebar-menu')) {
             dispatchAnalytics('menu_link_click', { target: 'menu_link' });
+            recordSessionInteraction('menu_link_click');
         }
     }, true);
 

@@ -794,6 +794,22 @@ class Endpoints
             $recordContext['target'] = $contextPayload['target'];
         }
 
+        if (isset($contextPayload['duration_ms']) && is_numeric($contextPayload['duration_ms'])) {
+            $recordContext['duration_ms'] = (int) round((float) $contextPayload['duration_ms']);
+        } elseif (isset($contextPayload['duration']) && is_numeric($contextPayload['duration'])) {
+            $recordContext['duration_ms'] = (int) round((float) $contextPayload['duration']);
+        }
+
+        if (isset($contextPayload['close_reason']) && is_string($contextPayload['close_reason'])) {
+            $recordContext['close_reason'] = $contextPayload['close_reason'];
+        } elseif (isset($contextPayload['closeReason']) && is_string($contextPayload['closeReason'])) {
+            $recordContext['close_reason'] = $contextPayload['closeReason'];
+        }
+
+        if (isset($contextPayload['interactions']) && is_array($contextPayload['interactions'])) {
+            $recordContext['interactions'] = $contextPayload['interactions'];
+        }
+
         $summary = $this->analytics->recordEvent($eventType, $recordContext);
 
         wp_send_json_success([

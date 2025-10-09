@@ -43,6 +43,52 @@ if ( ! function_exists( 'sidebar_jlg_format_percentage_label' ) ) {
     }
 }
 
+if ( ! function_exists( 'sidebar_jlg_format_duration_label' ) ) {
+    function sidebar_jlg_format_duration_label( $milliseconds ): string {
+        $duration = is_numeric( $milliseconds ) ? max( 0, (int) round( (float) $milliseconds ) ) : 0;
+
+        if ( $duration < 1000 ) {
+            $base = max( 1, $duration );
+
+            return sprintf(
+                _n( '%s milliseconde', '%s millisecondes', $base, 'sidebar-jlg' ),
+                sidebar_jlg_format_metric_number( $base )
+            );
+        }
+
+        $totalSeconds = (int) round( $duration / 1000 );
+        if ( $totalSeconds < 60 ) {
+            return sprintf(
+                _n( '%s seconde', '%s secondes', $totalSeconds, 'sidebar-jlg' ),
+                sidebar_jlg_format_metric_number( $totalSeconds )
+            );
+        }
+
+        $minutes        = (int) floor( $totalSeconds / 60 );
+        $remaining      = $totalSeconds % 60;
+        $minutesLabel   = sprintf(
+            _n( '%s minute', '%s minutes', $minutes, 'sidebar-jlg' ),
+            sidebar_jlg_format_metric_number( $minutes )
+        );
+
+        if ( $remaining <= 0 ) {
+            return $minutesLabel;
+        }
+
+        $secondsLabel = sprintf(
+            _n( '%s seconde', '%s secondes', $remaining, 'sidebar-jlg' ),
+            sidebar_jlg_format_metric_number( $remaining )
+        );
+
+        return sprintf(
+            /* translators: 1: minutes label, 2: seconds label */
+            __( '%1$s %2$s', 'sidebar-jlg' ),
+            $minutesLabel,
+            $secondsLabel
+        );
+    }
+}
+
 if ( ! function_exists( 'sidebar_jlg_format_local_date' ) ) {
     function sidebar_jlg_format_local_date( string $date_string ): string {
         $timestamp = strtotime( $date_string );
@@ -1283,10 +1329,17 @@ $textTransformLabels = [
                     $analyticsProfilesData  = isset( $analyticsSummary['profiles'] ) && is_array( $analyticsSummary['profiles'] ) ? $analyticsSummary['profiles'] : [];
                     $analyticsTargets       = isset( $analyticsSummary['targets'] ) && is_array( $analyticsSummary['targets'] ) ? $analyticsSummary['targets'] : [];
                     $analyticsWindows       = isset( $analyticsSummary['windows'] ) && is_array( $analyticsSummary['windows'] ) ? $analyticsSummary['windows'] : [];
+                    $analyticsSessions      = isset( $analyticsSummary['sessions'] ) && is_array( $analyticsSummary['sessions'] ) ? $analyticsSummary['sessions'] : [];
                     $sidebarOpensTotal      = (int) ( $analyticsTotals['sidebar_open'] ?? 0 );
                     $menuClicksTotal        = (int) ( $analyticsTotals['menu_link_click'] ?? 0 );
                     $ctaViewsTotal          = (int) ( $analyticsTotals['cta_view'] ?? 0 );
                     $ctaClicksTotal         = (int) ( $analyticsTotals['cta_click'] ?? 0 );
+                    $sessionCount           = isset( $analyticsSessions['count'] ) ? (int) $analyticsSessions['count'] : 0;
+                    $sessionAverageDuration = isset( $analyticsSessions['average_duration_ms'] ) ? (int) $analyticsSessions['average_duration_ms'] : 0;
+                    $sessionMaxDuration     = isset( $analyticsSessions['max_duration_ms'] ) ? (int) $analyticsSessions['max_duration_ms'] : 0;
+                    $sessionCloseReasons    = isset( $analyticsSessions['close_reasons'] ) && is_array( $analyticsSessions['close_reasons'] ) ? $analyticsSessions['close_reasons'] : [];
+                    $sessionOpenTargets     = isset( $analyticsSessions['open_targets'] ) && is_array( $analyticsSessions['open_targets'] ) ? $analyticsSessions['open_targets'] : [];
+                    $sessionInteractions    = isset( $analyticsSessions['interactions'] ) && is_array( $analyticsSessions['interactions'] ) ? $analyticsSessions['interactions'] : [];
                     $totalInteractions      = array_sum( array_map( 'intval', $analyticsTotals ) );
                     $clickRate              = $sidebarOpensTotal > 0 ? ( $menuClicksTotal / $sidebarOpensTotal ) * 100 : 0.0;
                     $ctaRate                = $ctaViewsTotal > 0 ? ( $ctaClicksTotal / $ctaViewsTotal ) * 100 : 0.0;
@@ -1310,12 +1363,17 @@ $textTransformLabels = [
                         'social_link'    => __( 'Icônes sociales', 'sidebar-jlg' ),
                         'cta_button'     => __( 'Bouton CTA', 'sidebar-jlg' ),
                         'toggle_button'  => __( 'Bouton hamburger', 'sidebar-jlg' ),
+                        'gesture_swipe'  => __( 'Geste tactile', 'sidebar-jlg' ),
+                        'auto_timer'     => __( 'Déclencheur minuterie', 'sidebar-jlg' ),
+                        'auto_scroll'    => __( 'Déclencheur scroll', 'sidebar-jlg' ),
+                        'auto_trigger'   => __( 'Déclenchement automatique', 'sidebar-jlg' ),
                     ];
                     $eventLabels = [
                         'sidebar_open'    => __( 'Ouvertures', 'sidebar-jlg' ),
                         'menu_link_click' => __( 'Clics de navigation', 'sidebar-jlg' ),
                         'cta_view'        => __( 'Vues CTA', 'sidebar-jlg' ),
                         'cta_click'       => __( 'Clics CTA', 'sidebar-jlg' ),
+                        'sidebar_session' => __( 'Sessions suivies', 'sidebar-jlg' ),
                     ];
                     $windowLast7 = isset( $analyticsWindows['last7'] ) && is_array( $analyticsWindows['last7'] ) ? $analyticsWindows['last7'] : [];
                     $windowLast30 = isset( $analyticsWindows['last30'] ) && is_array( $analyticsWindows['last30'] ) ? $analyticsWindows['last30'] : [];
@@ -1350,6 +1408,7 @@ $textTransformLabels = [
                                 <tr><td><?php esc_html_e( 'Vues CTA', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $ctaViewsTotal ) ); ?></td></tr>
                                 <tr><td><?php esc_html_e( 'Clics CTA', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $ctaClicksTotal ) ); ?></td></tr>
                                 <tr><td><?php esc_html_e( 'Taux de clic navigation / ouverture', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_percentage_label( $clickRate ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Sessions suivies', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $analyticsTotals['sidebar_session'] ?? 0 ) ); ?></td></tr>
                             </tbody>
                         </table>
                         <?php
@@ -1389,6 +1448,93 @@ $textTransformLabels = [
                                 <p class="description"><?php printf( esc_html__( 'Fenêtre 7j calculée sur %s jour(s) de données disponibles.', 'sidebar-jlg' ), esc_html( sidebar_jlg_format_metric_number( $last7Days ) ) ); ?></p>
                             <?php endif; ?>
                         <?php endif; ?>
+                        <?php
+                        if ( $sessionCount > 0 ) :
+                            $averageDurationLabel = sidebar_jlg_format_duration_label( $sessionAverageDuration );
+                            $maxDurationLabel     = sidebar_jlg_format_duration_label( $sessionMaxDuration );
+                            $sessionReasonLabels  = [
+                                'user'          => __( 'Action manuelle', 'sidebar-jlg' ),
+                                'overlay'       => __( 'Clic sur l’arrière-plan', 'sidebar-jlg' ),
+                                'gesture'       => __( 'Geste tactile', 'sidebar-jlg' ),
+                                'responsive'    => __( 'Adaptation responsive', 'sidebar-jlg' ),
+                                'close_button'  => __( 'Bouton de fermeture', 'sidebar-jlg' ),
+                                'toggle_button' => __( 'Bouton hamburger', 'sidebar-jlg' ),
+                                'restart'       => __( 'Session relancée', 'sidebar-jlg' ),
+                            ];
+                            $sessionTargetLabels = [
+                                'toggle_button' => __( 'Bouton hamburger', 'sidebar-jlg' ),
+                                'gesture_swipe' => __( 'Geste tactile', 'sidebar-jlg' ),
+                                'auto_timer'    => __( 'Déclencheur minuterie', 'sidebar-jlg' ),
+                                'auto_scroll'   => __( 'Déclencheur scroll', 'sidebar-jlg' ),
+                                'auto_trigger'  => __( 'Déclenchement automatique', 'sidebar-jlg' ),
+                            ];
+                            $interactionLabels = [
+                                'menu_link_click'   => __( 'Clics de navigation', 'sidebar-jlg' ),
+                                'social_link_click' => __( 'Clics réseaux sociaux', 'sidebar-jlg' ),
+                                'cta_click'         => __( 'Conversions CTA', 'sidebar-jlg' ),
+                            ];
+                            $hasInteractionRows = false;
+                            foreach ( $interactionLabels as $interactionKey => $_label ) {
+                                if ( (int) ( $sessionInteractions[ $interactionKey ] ?? 0 ) > 0 ) {
+                                    $hasInteractionRows = true;
+                                    break;
+                                }
+                            }
+                            ?>
+                            <h3><?php esc_html_e( 'Sessions & engagement', 'sidebar-jlg' ); ?></h3>
+                            <div class="sidebar-jlg-analytics-kpis">
+                                <p><strong><?php echo esc_html( sidebar_jlg_format_metric_number( $sessionCount ) ); ?></strong><br><span class="description"><?php esc_html_e( 'Sessions suivies', 'sidebar-jlg' ); ?></span></p>
+                                <p><strong><?php echo esc_html( $averageDurationLabel ); ?></strong><br><span class="description"><?php esc_html_e( 'Durée moyenne', 'sidebar-jlg' ); ?></span></p>
+                                <p><strong><?php echo esc_html( $maxDurationLabel ); ?></strong><br><span class="description"><?php esc_html_e( 'Durée maximale', 'sidebar-jlg' ); ?></span></p>
+                            </div>
+                            <?php if ( $hasInteractionRows ) : ?>
+                                <table class="widefat striped">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col"><?php esc_html_e( 'Interaction', 'sidebar-jlg' ); ?></th>
+                                            <th scope="col"><?php esc_html_e( 'Total', 'sidebar-jlg' ); ?></th>
+                                            <th scope="col"><?php esc_html_e( 'Moyenne / session', 'sidebar-jlg' ); ?></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ( $interactionLabels as $interactionKey => $interactionLabel ) :
+                                            $interactionTotal = (int) ( $sessionInteractions[ $interactionKey ] ?? 0 );
+                                            if ( $interactionTotal <= 0 ) {
+                                                continue;
+                                            }
+                                            $averagePerSession = $sessionCount > 0 ? $interactionTotal / $sessionCount : 0;
+                                            ?>
+                                            <tr>
+                                                <td><?php echo esc_html( $interactionLabel ); ?></td>
+                                                <td><?php echo esc_html( sidebar_jlg_format_metric_number( $interactionTotal ) ); ?></td>
+                                                <td><?php echo esc_html( sidebar_jlg_format_metric_number( $averagePerSession, 2 ) ); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
+                            <?php if ( ! empty( $sessionCloseReasons ) ) : ?>
+                                <h4><?php esc_html_e( 'Motifs de fermeture', 'sidebar-jlg' ); ?></h4>
+                                <ul class="ul-disc">
+                                    <?php foreach ( array_slice( $sessionCloseReasons, 0, 5, true ) as $reasonKey => $count ) :
+                                        $label = $sessionReasonLabels[ $reasonKey ] ?? (string) $reasonKey;
+                                        ?>
+                                        <li><?php echo esc_html( $label ); ?> — <?php echo esc_html( sidebar_jlg_format_metric_number( $count ) ); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                            <?php if ( ! empty( $sessionOpenTargets ) ) : ?>
+                                <h4><?php esc_html_e( 'Déclencheurs principaux', 'sidebar-jlg' ); ?></h4>
+                                <ul class="ul-disc">
+                                    <?php foreach ( array_slice( $sessionOpenTargets, 0, 5, true ) as $targetKey => $count ) :
+                                        $label = $sessionTargetLabels[ $targetKey ] ?? (string) $targetKey;
+                                        ?>
+                                        <li><?php echo esc_html( $label ); ?> — <?php echo esc_html( sidebar_jlg_format_metric_number( $count ) ); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        <?php endif; ?>
+
                         <?php if ( ! empty( $recentDaily ) ) : ?>
                             <h3><?php esc_html_e( '7 derniers jours', 'sidebar-jlg' ); ?></h3>
                             <table class="widefat striped">
@@ -1398,6 +1544,7 @@ $textTransformLabels = [
                                         <th scope="col"><?php esc_html_e( 'Ouvertures', 'sidebar-jlg' ); ?></th>
                                         <th scope="col"><?php esc_html_e( 'Clics de navigation', 'sidebar-jlg' ); ?></th>
                                         <th scope="col"><?php esc_html_e( 'Clics CTA', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( 'Sessions suivies', 'sidebar-jlg' ); ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1409,6 +1556,7 @@ $textTransformLabels = [
                                             <td><?php echo esc_html( sidebar_jlg_format_metric_number( $counts['sidebar_open'] ?? 0 ) ); ?></td>
                                             <td><?php echo esc_html( sidebar_jlg_format_metric_number( $counts['menu_link_click'] ?? 0 ) ); ?></td>
                                             <td><?php echo esc_html( sidebar_jlg_format_metric_number( $counts['cta_click'] ?? 0 ) ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $counts['sidebar_session'] ?? 0 ) ); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -1423,6 +1571,7 @@ $textTransformLabels = [
                                         <th scope="col"><?php esc_html_e( 'Ouvertures', 'sidebar-jlg' ); ?></th>
                                         <th scope="col"><?php esc_html_e( 'Clics navigation', 'sidebar-jlg' ); ?></th>
                                         <th scope="col"><?php esc_html_e( 'Clics CTA', 'sidebar-jlg' ); ?></th>
+                                        <th scope="col"><?php esc_html_e( 'Sessions', 'sidebar-jlg' ); ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1443,6 +1592,7 @@ $textTransformLabels = [
                                             <td><?php echo esc_html( sidebar_jlg_format_metric_number( $profileTotals['sidebar_open'] ?? 0 ) ); ?></td>
                                             <td><?php echo esc_html( sidebar_jlg_format_metric_number( $profileTotals['menu_link_click'] ?? 0 ) ); ?></td>
                                             <td><?php echo esc_html( sidebar_jlg_format_metric_number( $profileTotals['cta_click'] ?? 0 ) ); ?></td>
+                                            <td><?php echo esc_html( sidebar_jlg_format_metric_number( $profileTotals['sidebar_session'] ?? 0 ) ); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

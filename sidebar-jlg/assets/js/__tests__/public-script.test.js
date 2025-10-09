@@ -6,6 +6,7 @@ describe('public-script.js', () => {
   let overlay;
   let mediaQueryList;
   let matchMediaListeners;
+  let performanceNowValue;
   const recordedDocumentListeners = [];
   const recordedWindowListeners = [];
   const dispatchPointerEvent = (target, type, options = {}) => {
@@ -129,6 +130,15 @@ describe('public-script.js', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     window.localStorage.clear();
+    performanceNowValue = 0;
+
+    Object.defineProperty(window, 'performance', {
+      configurable: true,
+      value: {
+        now: jest.fn(() => performanceNowValue),
+      },
+      writable: true,
+    });
 
     document.body.innerHTML = `
       <div id="sidebar-overlay"></div>
@@ -194,6 +204,8 @@ describe('public-script.js', () => {
     delete global.sidebarSettings;
     delete window.matchMedia;
     delete window.PointerEvent;
+    delete window.performance;
+    delete window.sidebarJLGAnalyticsFactory;
     removeRecordedListeners();
     document.body.innerHTML = '';
     window.localStorage.clear();
@@ -638,5 +650,49 @@ describe('public-script.js', () => {
     expect(link.style.getPropertyValue('--mouse-y')).toBe('');
     expect(link.style.getPropertyValue('--rotate-x')).toBe('');
     expect(link.style.getPropertyValue('--rotate-y')).toBe('');
+  });
+
+  test('dispatches session analytics with duration and interactions', () => {
+    const dispatchSpy = jest.fn();
+    window.sidebarJLGAnalyticsFactory = jest.fn(() => ({
+      enabled: true,
+      dispatch: dispatchSpy,
+    }));
+
+    loadScript({
+      analytics: {
+        enabled: true,
+        endpoint: '/analytics',
+        nonce: 'nonce',
+        action: 'track_event',
+        profile_id: 'default',
+      },
+    });
+
+    expect(window.sidebarJLGAnalyticsFactory).toHaveBeenCalled();
+
+    hamburgerBtn.click();
+    jest.runOnlyPendingTimers();
+
+    const menuLink = sidebar.querySelector('.sidebar-menu a');
+    const socialLink = sidebar.querySelector('.social-icons a');
+    const ctaButton = sidebar.querySelector('.menu-cta__button');
+
+    menuLink.click();
+    socialLink.click();
+    ctaButton.click();
+
+    performanceNowValue = 2000;
+    overlay.click();
+
+    const sessionCall = dispatchSpy.mock.calls.find((args) => args[0] === 'sidebar_session');
+    expect(sessionCall).toBeDefined();
+    const payload = sessionCall[1];
+    expect(payload.close_reason).toBe('overlay');
+    expect(payload.target).toBe('toggle_button');
+    expect(payload.duration_ms).toBe(2000);
+    expect(payload.interactions.menu_link_click).toBeGreaterThan(0);
+    expect(payload.interactions.social_link_click).toBeGreaterThan(0);
+    expect(payload.interactions.cta_click).toBeGreaterThan(0);
   });
 });
