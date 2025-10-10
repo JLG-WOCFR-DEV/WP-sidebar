@@ -358,6 +358,8 @@ class MenuPage
                 'searchNoTarget' => __('Aucun réglage filtrable sur cet onglet.', 'sidebar-jlg'),
                 'searchResultsCount' => __('%d sections affichées.', 'sidebar-jlg'),
                 'searchNoResults' => __('Aucun résultat ne correspond aux mots-clés saisis.', 'sidebar-jlg'),
+                'experienceModeSimpleSummary' => __('Mode simple : %d option(s) avancée(s) masquée(s).', 'sidebar-jlg'),
+                'experienceModeExpertSummary' => __('Mode expert : toutes les options sont visibles.', 'sidebar-jlg'),
                 'guidedModeNext' => __('Suivant', 'sidebar-jlg'),
                 'guidedModeFinish' => __('Terminer', 'sidebar-jlg'),
                 'guidedModeStepLabel' => __('Étape %1$s sur %2$s', 'sidebar-jlg'),
