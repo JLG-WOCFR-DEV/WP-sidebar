@@ -10,6 +10,7 @@ Cette note fait le point sur l'écart entre Sidebar JLG et les constructeurs de 
 | Personnalisation | Préréglages complets (couleurs, animations, responsive) et CTA enrichis.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L143】【F:sidebar-jlg/includes/sidebar-template.php†L129-L229】 | Variantes guidées par segment + automatisations (A/B, triggers). | Étendre le schéma de réglages aux scénarios comportementaux et à la duplication rapide de variations. |
 | Mobile & interactions | Gestes de base, focus trap, recalcul dynamique des sous-menus.【F:sidebar-jlg/assets/js/public-script.js†L45-L362】 | Micro-interactions haptiques, mémorisation d'état, transitions personnalisables. | Ajouter stockage local, feedback haptique optionnel et choix d'animations par preset. |
 | Accessibilité & QA | Respect des rôles/ARIA et préférence `prefers-reduced-motion`, audit manuel possible via script Pa11y.【F:sidebar-jlg/assets/js/public-script.js†L45-L210】【F:package.json†L8-L16】 | Audit continu (contraste, rapports) et check-lists intégrées. | Fournir des alertes en temps réel et un tableau de bord d'accessibilité embarqué. |
+| Fiabilité & Observabilité | Cache HTML multi-profils, sanitation systématique des imports et tests de non-régression sur le rendu.【F:sidebar-jlg/src/Cache/MenuCache.php†L5-L160】【F:sidebar-jlg/src/Ajax/Endpoints.php†L630-L657】【F:tests/render_sidebar_html_error_handling_test.php†L18-L69】 | Monitoring actif (SLA, logs centralisés) et métriques produit en continu. | Instrumenter les caches, automatiser les tests E2E et connecter un suivi d'erreurs temps réel. |
 
 ### Résumé visuel dans l'administration
 
@@ -82,7 +83,21 @@ Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la f
 - La documentation d'accessibilité dans le back-office est absente (pas de check-list, pas de rappels ARIA). Un encart d'aide et des tests unitaires dédiés renforceraient la posture pro.
 - Automatiser la génération d'un rapport Pa11y/Lighthouse après chaque sauvegarde via une action asynchrone (`wp_cron` ou Action Scheduler) puis afficher les résultats dans l'onglet Outils afin d'éviter les audits manuels ponctuels.
 
-## 5. Apparence WordPress & éditeur visuel
+## 5. Fiabilité, QA & observabilité
+
+**Forces actuelles**
+
+- Le cache HTML gère les contextes de locale et de profil, invalide les entrées corrompues et maintient un index dédié pour éviter les collisions.【F:sidebar-jlg/src/Cache/MenuCache.php†L5-L160】
+- Les imports/exports passent par un pipeline de sanitation (`sanitize_option`, `SettingsSanitizer`) qui nettoie les charges utiles avant persistance et purge le cache au besoin.【F:sidebar-jlg/src/Ajax/Endpoints.php†L630-L657】
+- Une large suite de tests CLI couvre le rendu, l'isolation du cache et les erreurs de récupération de données, ce qui sécurise les régressions serveur.【F:tests/sidebar_profile_cache_isolation_test.php†L22-L151】【F:tests/render_sidebar_html_error_handling_test.php†L18-L69】
+
+**Écarts & pistes**
+
+- Le TTL et la purge des transients sont globaux (`CACHE_TTL = 86400`, `clear()` intégral), sans métriques de hit/miss ni invalidation ciblée. Instrumenter `MenuCache` (compteurs, journalisation) et exposer ces mesures dans l'onglet Analytics offrirait une observabilité proche des suites pro.【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L109】
+- Les tests existants valident la logique PHP mais ne simulent pas les parcours UI (sauvegarde depuis l'administration, upload d'icônes). Ajouter des tests E2E Playwright/Cypress orchestrés via `npm run test:e2e` garantirait l'UX et la fiabilité perçue.
+- Centraliser les erreurs AJAX (ex. import, audit accessibilité) vers un journal dédié ou un connecteur Sentry/Raygun faciliterait le support, en complément du nettoyage actuel déclenché depuis `ajax_import_settings` et `ajax_run_accessibility_audit`.【F:sidebar-jlg/src/Ajax/Endpoints.php†L603-L757】
+
+## 6. Apparence WordPress & éditeur visuel
 
 **Forces actuelles**
 
@@ -96,7 +111,7 @@ Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la f
 - Le mode aperçu ne se connecte pas au front-end en contexte multi-langue/profil (pas de switch direct entre profils). Ajouter une palette de contextes (profil actif, langue, rôle) dans l'UI offrirait une vision réaliste, comparable aux suites pro.
 - Offrir un « mode maquette » Gutenberg : synchroniser les préréglages `DefaultSettings::STYLE_PRESETS` avec des variations de block patterns pour prévisualiser la sidebar complète dans l'éditeur de site.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L143】
 
-## 6. Performance & maintenance
+## 7. Performance & maintenance
 
 **Forces actuelles**
 
@@ -113,7 +128,7 @@ Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la f
 - Les scripts publics et admin ne sont pas audités automatiquement (pas de mesure de bundle ou d'éligibilité HTTP/2 push). Intégrer un rapport Lighthouse/Bundle Analyzer dans la CI mettrait Sidebar JLG au niveau des solutions premium en matière de suivi de performance.
 - Mettre en place une instrumentation simple (compteur hit/miss, durée de génération) stockée dans les transients ou via une table dédiée fournirait des insights pour le futur dashboard observabilité.
 
-## 7. Interopérabilité & écosystème
+## 8. Interopérabilité & écosystème
 
 **Forces actuelles**
 
@@ -125,7 +140,7 @@ Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la f
 - Aucun SDK ni documentation de Webhooks n'est proposé pour relier des suites analytiques ou des outils d'orchestration (Zapier, Make). Publier une feuille de route publique, un espace développeur et des exemples d'intégration aiderait à rivaliser avec les plateformes pro à forte communauté.
 - Cartographier les dépendances WordPress existantes (hooks, CPT, options) et publier un schéma d'extension clarifie les points d'ancrage pour les agences, à l'image des « Developer Resources » d'Elementor.
 
-## 8. Synthèse UI/UX & design
+## 9. Synthèse UI/UX & design
 
 **Constats UI actuels**
 
@@ -137,6 +152,7 @@ Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la f
 
 - Introduire un layout en deux colonnes avec une barre latérale persistante (états, raccourcis, documentation) et transformer chaque groupe de réglages en cartes pliables/accumulables pour réduire la charge cognitive ; prévoir un champ de recherche de réglages similaire à Elementor Pro pour naviguer rapidement.【F:sidebar-jlg/includes/admin-page.php†L96-L229】
 - Construire un design system léger (palette, typographies, composants de formulaire) et remplacer les tables par des `fieldset` modulaires avec aides contextuelles, badges d'état et contrôles illustrés ; appliquer ces styles via `admin-style.css` pour dépasser la simple surcharge des classes WordPress.【F:sidebar-jlg/assets/css/admin-style.css†L1-L180】
+- Exploiter les préréglages `STYLE_PRESETS` pour générer des tokens (couleurs, rayons, typographies) partagés entre l'admin et le front, puis proposer un panneau de theming visuel permettant d'ajuster ces variables sans quitter l'aperçu.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L200】【F:sidebar-jlg/includes/admin-page.php†L70-L132】
 - Enrichir l'aperçu avec des cadres de devices (mobile/tablette/desktop), un fond personnalisable et des overlays d'accessibilité (contraste, focus) afin de rapprocher l'expérience de tests visuels des solutions premium ; connecter ces contrôles à la toolbar existante pour rester dans le même flux de travail.【F:sidebar-jlg/includes/admin-page.php†L60-L95】
 - Mettre en place une bibliothèque de composants réutilisables (cartes de menu, tuiles d'icônes) avec des états hover/focus documentés, afin d'aligner la cohérence visuelle entre l'administration et le rendu public et d'accélérer la création d'un éditeur visuel ultérieur.【F:sidebar-jlg/includes/sidebar-template.php†L129-L229】【F:sidebar-jlg/assets/css/admin-style.css†L103-L180】
 
@@ -144,9 +160,9 @@ Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la f
 
 En priorisant un éditeur visuel temps réel, des scénarios conditionnels avancés et un accompagnement accessibilité/analytics, Sidebar JLG pourra rivaliser avec les leaders tout en capitalisant sur son intégration WordPress native.
 
-## 9. Approfondissements UX/UI inspirés des suites professionnelles
+## 10. Approfondissements UX/UI inspirés des suites professionnelles
 
-### 9.1 Palette de commande et regroupements contextuels
+### 10.1 Palette de commande et regroupements contextuels
 
 Les onglets actuels reposent sur un ruban `nav-tab` classique et de longues tables de réglages, ce qui oblige à scroller pour retrouver un champ précis lors des itérations rapides.【F:sidebar-jlg/includes/admin-page.php†L96-L229】 Les constructeurs premium comme Elementor ou JetMenu proposent désormais une palette de commande (`Cmd/Ctrl + K`) et un moteur de recherche de réglages. Pour rapprocher Sidebar JLG de ces standards :
 
@@ -165,7 +181,7 @@ Les onglets actuels reposent sur un ruban `nav-tab` classique et de longues tabl
 - Spécification fonctionnelle du moteur de recherche (structure de l'index, logique de scoring, raccourcis clavier).
 - Prototype interactif (Figma ou Storybook) pour tester les animations d'ouverture/fermeture de la palette.
 
-### 9.2 Mode "canvas" immersif pour l'aperçu
+### 10.2 Mode "canvas" immersif pour l'aperçu
 
 L'aperçu AJAX actuel offre déjà des boutons de breakpoint et une bascule comparaison, mais reste encapsulé dans un panneau statique blanc.【F:sidebar-jlg/includes/admin-page.php†L107-L132】 Pour proposer une expérience équivalente aux simulateurs de Framer ou ConvertBox :
 
@@ -184,7 +200,7 @@ L'aperçu AJAX actuel offre déjà des boutons de breakpoint et une bascule comp
 - Spécification des APIs nécessaires côté aperçu (édition inline, synchronisation des modifications en direct avec les formulaires).
 - Prototype de transitions (CSS/JS) pour animer le passage au canvas et l'affichage des overlays.
 
-### 9.3 Tableau de bord narratif
+### 10.3 Tableau de bord narratif
 
 Le tab « Insights & Analytics » synthétise déjà les totaux, l'historique 7 jours et la répartition par profil au format tableau.【F:sidebar-jlg/includes/admin-page.php†L942-L1099】 Pour se rapprocher de la narration visuelle des solutions marketing (OptinMonster, ConvertBox) :
 
@@ -211,7 +227,7 @@ Le tab « Insights & Analytics » synthétise déjà les totaux, l'historique 7 
 - Schéma de données nécessaires pour alimenter les annotations automatiques et les comparaisons temporelles.
 - Plan de tests utilisateurs (questions de compréhension, temps pour identifier une opportunité).
 
-### 9.4 Atelier de profils contextuels
+### 10.4 Atelier de profils contextuels
 
 L'éditeur de profils propose déjà un planificateur horaire, des filtres par taxonomie et des actions de clonage, mais sans visualisation synthétique des cibles ni prévisualisation contextuelle.【F:sidebar-jlg/includes/admin-page.php†L900-L923】 Pour atteindre le niveau des « Audience Builders » professionnels :
 
@@ -230,7 +246,7 @@ L'éditeur de profils propose déjà un planificateur horaire, des filtres par t
 - Kit UI des badges, alertes et cartes de profils (états par couleur, icônes normalisées).
 - Backlog technique listant les dépendances (API d'aperçu, stockage des presets, gestion des conflits).
 
-### 9.5 Design system cohérent et composables
+### 10.5 Design system cohérent et composables
 
 Les styles admin reposent encore majoritairement sur les classes WordPress (`form-table`, `widefat`) avec quelques cartes/presets dédiées.【F:sidebar-jlg/assets/css/admin-style.css†L1-L180】 Pour renforcer la cohérence et préparer une future interface SPA :
 
@@ -249,7 +265,7 @@ Les styles admin reposent encore majoritairement sur les classes WordPress (`for
 - Documentation Storybook initiale (boutons, champs, cartes, badges, overlays).
 - Plan de migration progressive des écrans existants vers les nouveaux composants.
 
-### 9.6 Micro-interactions front & mobile
+### 10.6 Micro-interactions front & mobile
 
 Le script public gère déjà le tracking Analytics, les CTA et l'accessibilité clavier, mais reste focalisé sur les clics et l'ouverture via le bouton toggle.【F:sidebar-jlg/assets/js/public-script.js†L36-L219】 Pour atteindre le niveau d'apps mobiles premium :
 
@@ -268,7 +284,7 @@ Le script public gère déjà le tracking Analytics, les CTA et l'accessibilité
 - Prototype technique des interactions (CodePen/Storybook) validant la performance sur appareils à faible puissance.
 - Plan de tests QA incluant la compatibilité avec `prefers-reduced-motion`, VoiceOver/TalkBack et différents navigateurs mobiles.
 
-### 9.7 Mode « simple » vs « expert » inspiré des workflows pro
+### 10.7 Mode « simple » vs « expert » inspiré des workflows pro
 
 Les réglages sont aujourd'hui linéaires : un ruban d'onglets WordPress suivi de larges tables de champs, quel que soit le niveau d'utilisateur.【F:sidebar-jlg/includes/admin-page.php†L236-L245】【F:sidebar-jlg/includes/admin-page.php†L422-L928】 Les suites professionnelles (Elementor Pro, HubSpot CTAs) pratiquent la divulgation progressive avec un mode express et un mode avancé pour limiter la surcharge cognitive.
 
@@ -302,7 +318,7 @@ Les réglages sont aujourd'hui linéaires : un ruban d'onglets WordPress suivi d
 - **Tests d'accessibilité** : vérifier que les cartes et accordéons restent navigables en lecture séquentielle, que les éléments masqués ont `aria-hidden="true"` et que le focus revient sur le bouton d'origine lors de la fermeture d'un panel.
 - **KPIs** : suivre le taux d'achèvement du setup en mode simple (nombre de checklists complétées), le taux de bascule vers le mode expert et la réduction du temps moyen de configuration par rapport à la version actuelle.
 
-### 9.8 Fiabilité & observabilité au niveau des plateformes pro
+### 10.8 Fiabilité & observabilité au niveau des plateformes pro
 
 La fiabilité repose aujourd'hui sur un cache HTML multi-profils (transients 24h, purge globale), des toasts accessibles et un logging minimal (error_log).【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L196】【F:sidebar-jlg/assets/js/admin-script.js†L2800-L3111】 Les offres professionnelles ajoutent un monitoring temps réel, des garde-fous automatiques et une transparence accrue sur l'état des intégrations.
 
