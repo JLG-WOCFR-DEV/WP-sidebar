@@ -64,6 +64,10 @@ class SidebarRenderer
         'sidebar_position' => 'left',
     ];
 
+    private const DYNAMIC_STYLE_CACHE_GROUP = 'sidebar_jlg_dynamic_styles';
+    private const DYNAMIC_STYLE_SALT_OPTION = 'sidebar_jlg_dynamic_styles_salt';
+    private const DYNAMIC_STYLE_CACHE_TTL = 21600; // 6 hours.
+
     private const STYLE_VARIABLE_MAP = [
         [
             'option' => 'width_desktop',
@@ -258,6 +262,10 @@ class SidebarRenderer
     private string $version;
     private bool $bodyDataPrinted = false;
     private static ?RequestContextResolver $sharedRequestContextResolver = null;
+    /**
+     * @var array<string, string>
+     */
+    private array $dynamicStyleRuntimeCache = [];
 
     public function __construct(
         SettingsRepository $settings,
@@ -317,7 +325,12 @@ class SidebarRenderer
             $this->version
         );
 
-        $dynamicStyles = $this->buildDynamicStyles($options);
+        $profileId = isset($profile['id']) && is_string($profile['id']) && $profile['id'] !== ''
+            ? $profile['id']
+            : 'default';
+        $normalizedProfileKey = $this->normalizeProfileKey($profileId);
+
+        $dynamicStyles = $this->buildDynamicStyles($options, $normalizedProfileKey);
         if ($dynamicStyles !== '') {
             wp_add_inline_style('sidebar-jlg-public-css', $dynamicStyles);
         }
@@ -404,21 +417,43 @@ class SidebarRenderer
         wp_localize_script('sidebar-jlg-public-js', 'sidebarSettings', $localizedOptions);
     }
 
-    private function buildDynamicStyles(array $options): string
+    private function buildDynamicStyles(array $options, ?string $profileId = null): string
     {
+        $profileKey = $this->normalizeProfileKey($profileId);
+        $dependencies = $this->extractDynamicStyleDependencies($options);
+        $fingerprint = $this->fingerprintDynamicStyleDependencies($dependencies);
+
+        $cacheKey = null;
+
+        if ($fingerprint !== null) {
+            $cacheKey = $this->getDynamicStylesSalt() . ':' . $profileKey . ':' . $fingerprint;
+
+            if (isset($this->dynamicStyleRuntimeCache[$cacheKey])) {
+                return $this->dynamicStyleRuntimeCache[$cacheKey];
+            }
+
+            $cached = $this->fetchDynamicStylesFromCache($cacheKey);
+            if (is_string($cached)) {
+                $this->dynamicStyleRuntimeCache[$cacheKey] = $cached;
+
+                return $cached;
+            }
+        }
+
         $variables = $this->collectDynamicStyleVariables($options);
 
         if ($variables === []) {
-            return '';
+            $css = '';
+        } else {
+            $css = $this->renderDynamicStyleBlock($variables);
         }
 
-        $styles = ':root {';
-        foreach ($variables as $name => $value) {
-            $styles .= $name . ': ' . esc_attr($value) . ';';
+        if ($cacheKey !== null) {
+            $this->dynamicStyleRuntimeCache[$cacheKey] = $css;
+            $this->storeDynamicStylesInCache($cacheKey, $css);
         }
-        $styles .= '}';
 
-        return $styles;
+        return $css;
     }
 
     private function collectDynamicStyleVariables(array $options): array
@@ -456,6 +491,291 @@ class SidebarRenderer
         }
 
         return $variables;
+    }
+
+    private function normalizeProfileKey(?string $profileId): string
+    {
+        if (!is_string($profileId) || $profileId === '') {
+            return 'default';
+        }
+
+        $sanitized = sanitize_key($profileId);
+
+        if ($sanitized === '') {
+            $sanitized = substr(md5($profileId), 0, 12);
+        }
+
+        return $sanitized === '' ? 'default' : $sanitized;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function extractDynamicStyleDependencies(array $options): array
+    {
+        $dependencies = [];
+
+        $optionKeys = [
+            'width_desktop',
+            'width_tablet',
+            'width_mobile',
+            'font_size',
+            'font_weight',
+            'text_transform',
+            'letter_spacing',
+            'font_color',
+            'font_hover_color',
+            'animation_speed',
+            'header_padding_top',
+            'header_alignment_desktop',
+            'header_alignment_mobile',
+            'header_logo_size',
+            'hamburger_top_position',
+            'hamburger_horizontal_offset',
+            'hamburger_size',
+            'floating_vertical_margin',
+            'border_radius',
+            'border_width',
+            'border_color',
+            'overlay_color',
+            'overlay_opacity',
+            'mobile_bg_color',
+            'mobile_bg_opacity',
+            'mobile_blur',
+            'menu_alignment_desktop',
+            'menu_alignment_mobile',
+            'search_alignment',
+            'horizontal_bar_height',
+            'horizontal_bar_alignment',
+        ];
+
+        foreach ($optionKeys as $key) {
+            $dependencies[$key] = self::resolveOption($options, $key);
+        }
+
+        $dependencies['background'] = [
+            'type' => self::sanitizeCssString(self::resolveOption($options, 'bg_color_type'))
+                ?? self::DYNAMIC_STYLE_DEFAULTS['bg_color_type'],
+            'color' => self::sanitizeCssString(self::resolveOption($options, 'bg_color'))
+                ?? self::DYNAMIC_STYLE_DEFAULTS['bg_color'],
+            'start' => self::sanitizeCssString(self::resolveOption($options, 'bg_color_start')),
+            'end' => self::sanitizeCssString(self::resolveOption($options, 'bg_color_end')),
+        ];
+
+        $dependencies['accent'] = [
+            'type' => self::sanitizeCssString(self::resolveOption($options, 'accent_color_type'))
+                ?? self::DYNAMIC_STYLE_DEFAULTS['accent_color_type'],
+            'color' => self::sanitizeCssString(self::resolveOption($options, 'accent_color'))
+                ?? self::DYNAMIC_STYLE_DEFAULTS['accent_color'],
+            'start' => self::sanitizeCssString(self::resolveOption($options, 'accent_color_start')),
+            'end' => self::sanitizeCssString(self::resolveOption($options, 'accent_color_end')),
+        ];
+
+        $fontKey = self::resolveOption($options, 'font_family');
+        $fontStack = null;
+        if (is_string($fontKey) && $fontKey !== '') {
+            $fontStack = TypographyOptions::getFontStack($fontKey);
+        }
+        if ($fontStack === null) {
+            $fontStack = TypographyOptions::getFontStack(self::DYNAMIC_STYLE_DEFAULTS['font_family']);
+        }
+        $dependencies['font_family'] = $fontStack;
+
+        $dependencies['hamburger_color'] = self::sanitizeCssString($options['hamburger_color'] ?? null)
+            ?? self::sanitizeCssString(self::resolveOption($options, 'font_color'))
+            ?? self::DYNAMIC_STYLE_DEFAULTS['font_color'];
+
+        $dependencies['content_margin'] = $this->resolveContentMargin($options);
+
+        $rawSocialSize = self::resolveOption($options, 'social_icon_size');
+        $dependencies['social_icon_size'] = is_numeric($rawSocialSize) ? (float) $rawSocialSize : self::DYNAMIC_STYLE_DEFAULTS['social_icon_size'];
+
+        $dependencies['hover_effects'] = [
+            'desktop' => self::sanitizeCssString(self::resolveOption($options, 'hover_effect_desktop'))
+                ?? self::DYNAMIC_STYLE_DEFAULTS['hover_effect_desktop'],
+            'mobile' => self::sanitizeCssString(self::resolveOption($options, 'hover_effect_mobile'))
+                ?? self::DYNAMIC_STYLE_DEFAULTS['hover_effect_mobile'],
+            'neon_blur' => self::formatPixelValue(self::resolveOption($options, 'neon_blur')),
+            'neon_spread' => self::formatPixelValue(self::resolveOption($options, 'neon_spread')),
+        ];
+
+        $dependencies['accessible_labels'] = [
+            'nav' => self::resolveAccessibleLabelOption($options, 'nav_aria_label', __('Navigation principale', 'sidebar-jlg')),
+            'open' => self::resolveAccessibleLabelOption($options, 'toggle_open_label', __('Afficher le sous-menu', 'sidebar-jlg')),
+            'close' => self::resolveAccessibleLabelOption($options, 'toggle_close_label', __('Masquer le sous-menu', 'sidebar-jlg')),
+        ];
+
+        $dependencies['safe_area_fallbacks'] = $this->resolveSafeAreaFallbacks($options);
+
+        return $dependencies;
+    }
+
+    private function resolveSafeAreaFallbacks(array $options): array
+    {
+        $defaults = [
+            'block_start' => '0px',
+            'block_end' => '0px',
+            'inline_start' => '0px',
+            'inline_end' => '0px',
+        ];
+
+        $fallbacks = apply_filters('sidebar_jlg_safe_area_fallbacks', $defaults, $options);
+
+        if (!is_array($fallbacks)) {
+            $fallbacks = $defaults;
+        } else {
+            $fallbacks = array_merge($defaults, $fallbacks);
+        }
+
+        foreach ($fallbacks as $key => $value) {
+            $fallbacks[$key] = self::sanitizeCssString($value) ?? $defaults[$key];
+        }
+
+        ksort($fallbacks);
+
+        return $fallbacks;
+    }
+
+    /**
+     * @param array<string, mixed> $dependencies
+     */
+    private function fingerprintDynamicStyleDependencies(array $dependencies): ?string
+    {
+        $sorted = $this->sortDependencyArray($dependencies);
+
+        if (function_exists('wp_json_encode')) {
+            $encoded = wp_json_encode($sorted);
+        } else {
+            $encoded = json_encode($sorted);
+        }
+
+        if (!is_string($encoded) || $encoded === '') {
+            $encoded = serialize($sorted);
+        }
+
+        if (!is_string($encoded) || $encoded === '') {
+            return null;
+        }
+
+        return md5($encoded);
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     * @return array<string, mixed>
+     */
+    private function sortDependencyArray(array $values): array
+    {
+        foreach ($values as $key => $value) {
+            if (is_array($value)) {
+                $values[$key] = $this->sortDependencyArray($value);
+            }
+        }
+
+        ksort($values);
+
+        return $values;
+    }
+
+    private function fetchDynamicStylesFromCache(string $cacheKey): ?string
+    {
+        if (!function_exists('wp_cache_get')) {
+            return null;
+        }
+
+        $cached = wp_cache_get($cacheKey, self::DYNAMIC_STYLE_CACHE_GROUP);
+
+        return is_string($cached) ? $cached : null;
+    }
+
+    private function storeDynamicStylesInCache(string $cacheKey, string $css): void
+    {
+        if (!function_exists('wp_cache_set')) {
+            return;
+        }
+
+        $ttl = defined('HOUR_IN_SECONDS') ? (int) (self::DYNAMIC_STYLE_CACHE_TTL ?: HOUR_IN_SECONDS) : self::DYNAMIC_STYLE_CACHE_TTL;
+
+        wp_cache_set($cacheKey, $css, self::DYNAMIC_STYLE_CACHE_GROUP, $ttl);
+    }
+
+    private function renderDynamicStyleBlock(array $variables): string
+    {
+        if ($variables === []) {
+            return '';
+        }
+
+        ksort($variables);
+
+        $styles = '.sidebar-jlg {';
+
+        foreach ($variables as $name => $value) {
+            $styles .= $name . ': ' . esc_attr($value) . ';';
+        }
+
+        $styles .= '}';
+
+        return $styles;
+    }
+
+    private function getDynamicStylesSalt(): string
+    {
+        $stored = get_option(self::DYNAMIC_STYLE_SALT_OPTION, '1');
+
+        if (!is_string($stored) || $stored === '') {
+            $stored = '1';
+        }
+
+        return $stored;
+    }
+
+    public function bumpDynamicStylesCacheSalt(): void
+    {
+        $current = $this->getDynamicStylesSalt();
+
+        if (is_numeric($current)) {
+            $next = (string) ((int) $current + 1);
+        } else {
+            $next = (string) (int) (time() % 1000);
+        }
+
+        update_option(self::DYNAMIC_STYLE_SALT_OPTION, $next, 'no');
+        $this->dynamicStyleRuntimeCache = [];
+    }
+
+    private function wrapSidebarMarkup(string $html, array $options, string $profileKey): string
+    {
+        $layoutStyle = isset($options['layout_style']) ? sanitize_key((string) $options['layout_style']) : 'full';
+        if ($layoutStyle === '') {
+            $layoutStyle = 'full';
+        }
+
+        $position = $this->resolveSidebarPosition($options);
+
+        return sprintf(
+            '<div class="sidebar-jlg" data-sidebar-profile="%s" data-sidebar-layout="%s" data-sidebar-position="%s">%s</div>',
+            esc_attr($profileKey),
+            esc_attr($layoutStyle),
+            esc_attr($position),
+            $html
+        );
+    }
+
+    private function isWrappedSidebarMarkup(string $html): bool
+    {
+        if ($html === '') {
+            return false;
+        }
+
+        if (strpos($html, 'class="sidebar-jlg"') !== false) {
+            return true;
+        }
+
+        if (strpos($html, "class='sidebar-jlg'") !== false) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -882,6 +1202,7 @@ class SidebarRenderer
         $profileId = isset($profile['id']) && is_string($profile['id']) && $profile['id'] !== ''
             ? $profile['id']
             : 'default';
+        $normalizedProfileKey = $this->normalizeProfileKey($profileId);
         if (empty($options['enable_sidebar'])) {
             return null;
         }
@@ -898,27 +1219,34 @@ class SidebarRenderer
             $profileId
         );
 
-        $html = false;
+        $cachePayload = false;
 
         if ($cacheEnabled) {
-            $html = $this->cache->get($currentLocale, $profileId);
+            $cachePayload = $this->cache->get($currentLocale, $profileId);
+
+            if (is_string($cachePayload) && !$this->isWrappedSidebarMarkup($cachePayload)) {
+                $cachePayload = $this->wrapSidebarMarkup($cachePayload, $options, $normalizedProfileKey);
+                $this->cache->set($currentLocale, $cachePayload, $profileId);
+            }
         } else {
             $this->cache->delete($currentLocale, $profileId);
         }
 
-        if (!$cacheEnabled || false === $html) {
-            $html = $this->renderSidebarToHtml($options);
+        if (!$cacheEnabled || false === $cachePayload) {
+            $innerHtml = $this->renderSidebarToHtml($options);
 
-            if (!is_string($html)) {
+            if (!is_string($innerHtml)) {
                 return null;
             }
 
+            $cachePayload = $this->wrapSidebarMarkup($innerHtml, $options, $normalizedProfileKey);
+
             if ($cacheEnabled) {
-                $this->cache->set($currentLocale, $html, $profileId);
+                $this->cache->set($currentLocale, $cachePayload, $profileId);
             }
         }
 
-        return $html;
+        return is_string($cachePayload) ? $cachePayload : null;
     }
 
     public function outputSidebar(): void

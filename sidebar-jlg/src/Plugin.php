@@ -137,6 +137,7 @@ class Plugin
     public function handleSettingsUpdated($oldValue = null, $value = null, string $optionName = ''): void
     {
         $this->cache->clear();
+        $this->renderer->bumpDynamicStylesCacheSalt();
 
         if ($this->hasSidebarPositionChanged($oldValue, $value)) {
             $this->cache->forgetLocaleIndex();
@@ -196,6 +197,7 @@ class Plugin
     {
         $this->cache->clear();
         $this->cache->forgetLocaleIndex();
+        $this->renderer->bumpDynamicStylesCacheSalt();
     }
 
     private function registerContextInvalidationHooks(): void
