@@ -85,27 +85,38 @@ class MenuCache
     {
         $cachedEntries = $this->getCachedLocales();
 
-        foreach ($cachedEntries as $entry) {
-            if (!is_array($entry)) {
-                continue;
+        if (!empty($cachedEntries)) {
+            $transientKeys = [];
+
+            foreach ($cachedEntries as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+
+                $locale = isset($entry['locale']) ? (string) $entry['locale'] : '';
+                if ($locale === '') {
+                    continue;
+                }
+
+                $suffixValue = $entry['suffix'] ?? null;
+                $suffix = is_string($suffixValue) ? $suffixValue : null;
+
+                $primaryKey = $this->getTransientKey($locale, $suffix);
+                $transientKeys[$primaryKey] = true;
+
+                if ($suffix !== null) {
+                    $legacyKey = $this->getTransientKey($locale, null);
+                    $transientKeys[$legacyKey] = true;
+                }
             }
 
-            $locale = $entry['locale'] ?? null;
-            if (!is_string($locale) || $locale === '') {
-                continue;
+            foreach (array_keys($transientKeys) as $transientKey) {
+                delete_transient($transientKey);
             }
-
-            $suffix = $entry['suffix'] ?? null;
-            $suffix = is_string($suffix) ? $suffix : null;
-
-            $this->delete($locale, $suffix);
         }
 
         delete_transient('sidebar_jlg_full_html');
-
-        if (!empty($cachedEntries)) {
-            delete_option($this->optionName);
-        }
+        delete_option($this->optionName);
     }
 
     public function forgetLocaleIndex(): void
