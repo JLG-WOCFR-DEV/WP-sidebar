@@ -957,6 +957,9 @@ $textTransformLabels = [
                                     <button type="button" class="button button-secondary" data-style-preset-trigger="headless_minimal"><?php esc_html_e( 'SaaS clair', 'sidebar-jlg' ); ?></button>
                                     <button type="button" class="button button-secondary" data-style-preset-trigger="shadcn_soft"><?php esc_html_e( 'Sombre premium', 'sidebar-jlg' ); ?></button>
                                     <button type="button" class="button button-secondary" data-style-preset-trigger="bootstrap_classic"><?php esc_html_e( 'Corporate', 'sidebar-jlg' ); ?></button>
+                                    <button type="button" class="button button-secondary" data-style-preset-trigger="astra_modern"><?php esc_html_e( 'Compatibilité Astra', 'sidebar-jlg' ); ?></button>
+                                    <button type="button" class="button button-secondary" data-style-preset-trigger="divi_sleek"><?php esc_html_e( 'Divi dynamique', 'sidebar-jlg' ); ?></button>
+                                    <button type="button" class="button button-secondary" data-style-preset-trigger="bricks_neutral"><?php esc_html_e( 'Bricks neutre', 'sidebar-jlg' ); ?></button>
                                 </div>
                             </div>
                             <div class="sidebar-jlg-style-presets__grid" data-style-preset-grid>

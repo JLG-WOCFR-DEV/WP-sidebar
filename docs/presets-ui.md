@@ -18,6 +18,9 @@ Les presets suivants sont désormais disponibles dans le plugin (`DefaultSetting
 | `retro_warm` | Ambiance rétro | Dégradé orangé/rose, typographie à empattements et boutons arrondis. |
 | `glass_neon` | Glassmorphism | Transparence sombre, accent néon et effet glow. |
 | `anime_neon` | Anime.js | Gradient violet/bleu, effet lumineux marqué et animation scale punchy. |
+| `astra_modern` | Thème Astra | Marine profond, accent turquoise AA et hover souligné pour les layouts Astra. |
+| `divi_sleek` | Divi | Dégradé violet/orangé, boutons pill et animation scale dynamique. |
+| `bricks_neutral` | Bricks Builder | Tons sable/gris chauds et accent cuivre pour s’intégrer aux sections Bricks. |
 
 ## Librairies de composants headless
 
@@ -71,9 +74,6 @@ Ces presets couvrent différents niveaux d'opinion et de personnalisation, offra
 
 ## Backlog de presets à produire
 
-- **`astra_modern`** – Palette bleu marine / turquoise adaptée au thème Astra, compatibilité contrastes WCAG AA.
-- **`divi_sleek`** – Dégradé violet/orangé et boutons pill reprenant les conventions Divi (hover souligné, transitions fluides).
-- **`bricks_neutral`** – Tons sable/gris chauds, typographie sans serif et espacement généreux inspirés de Bricks Builder.
 - **`marketing_cta`** – Accent corail, gros CTA arrondi et animations d'entrée progressives pour pages de capture.
 - **`minimal_darkglass`** – Variante sombre inspirée du glassmorphism avec accent cyan, pensée pour les sites SaaS nocturnes.
 
