@@ -28,7 +28,8 @@ Chaque item mentionne le prochain jalon pour garder l'équipe alignée avec la f
 **Forces actuelles**
 
 - L'interface regroupe les réglages dans des onglets thématiques (général, profils, styles, contenu, social, effets, outils) et expose un aperçu multi-vues pour valider les changements sans quitter l'écran.【F:sidebar-jlg/includes/admin-page.php†L60-L95】
-- Les préréglages de style fournissent un point de départ cohérent et couvrent couleurs, typographies, animations et paramètres mobiles, ce qui rapproche l'expérience des offres premium.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L143】
+- Les préréglages de style fournissent un point de départ cohérent et couvrent couleurs, typographies, animations et paramètres mobiles, ce qui rapproche l'expérience des offres premium.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L226】
+- Les presets dédiés aux thèmes Astra, Divi et Bricks facilitent l'alignement visuel avec les environnements clients tout en respectant le contraste AA attendu sur ces stacks professionnelles.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L226-L308】
 - Le moteur de menu accepte des CTA riches (titre, description, bouton, shortcode) et conserve des attributs de données pour d'éventuels branchements analytiques.【F:sidebar-jlg/includes/sidebar-template.php†L129-L229】
 - Des déclencheurs comportementaux combinant timer, profondeur de scroll, exit intent et inactivité rapprochent l'orchestration marketing des solutions pro sans nécessiter de code.【F:sidebar-jlg/includes/admin-page.php†L708-L764】【F:sidebar-jlg/assets/js/public-script.js†L200-L470】
 
