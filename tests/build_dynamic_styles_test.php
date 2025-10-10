@@ -27,7 +27,7 @@ function runDynamicStyleScenario(
 
     $styles = (string) $method->invoke($renderer, $options);
 
-    assertStringContains(':root {', $styles, $label . ' includes :root selector');
+    assertStringContains('.sidebar-jlg {', $styles, $label . ' includes scoped selector');
 
     foreach ($expectations as $expected) {
         assertStringContains($expected, $styles, $label . ' contains `' . $expected . '`');
