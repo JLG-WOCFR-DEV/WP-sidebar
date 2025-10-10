@@ -1801,6 +1801,149 @@ jQuery(document).ready(function($) {
     const iconEntryByExactKey = {};
     const iconKeyLookup = {};
 
+    const EXPERIENCE_STORAGE_KEY = 'sidebarJlgExperienceMode';
+    const experienceDom = {
+        root: document.querySelector('[data-sidebar-experience]'),
+        toggle: document.querySelector('[data-sidebar-mode-toggle]'),
+        summary: document.querySelector('[data-sidebar-mode-summary]'),
+    };
+    const experienceButtons = experienceDom.toggle
+        ? Array.from(experienceDom.toggle.querySelectorAll('[data-mode-value]'))
+        : [];
+    const experienceState = {
+        mode: 'simple',
+    };
+
+    function normalizeExperienceMode(value) {
+        return value === 'expert' ? 'expert' : 'simple';
+    }
+
+    function readStoredExperienceMode() {
+        try {
+            if (window.localStorage) {
+                const stored = window.localStorage.getItem(EXPERIENCE_STORAGE_KEY);
+                if (typeof stored === 'string' && stored !== '') {
+                    return normalizeExperienceMode(stored);
+                }
+            }
+        } catch (error) {
+            // Ignore storage access errors (private mode, quota, etc.).
+        }
+
+        if (experienceDom.root && typeof experienceDom.root.getAttribute === 'function') {
+            const initial = experienceDom.root.getAttribute('data-sidebar-experience-mode');
+            if (typeof initial === 'string' && initial !== '') {
+                return normalizeExperienceMode(initial);
+            }
+        }
+
+        return 'simple';
+    }
+
+    function persistExperienceMode(mode) {
+        try {
+            if (window.localStorage) {
+                window.localStorage.setItem(EXPERIENCE_STORAGE_KEY, mode);
+            }
+        } catch (error) {
+            // Silently ignore storage persistence issues.
+        }
+    }
+
+    function updateExperienceButtons() {
+        if (!experienceButtons.length) {
+            return;
+        }
+
+        experienceButtons.forEach((button) => {
+            const value = normalizeExperienceMode(button.getAttribute('data-mode-value'));
+            const isActive = value === experienceState.mode;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    }
+
+    function getAdvancedElements() {
+        if (!experienceDom.root) {
+            return [];
+        }
+
+        return Array.from(experienceDom.root.querySelectorAll('[data-sidebar-mode="expert"]'));
+    }
+
+    function updateExperienceSummary() {
+        if (!experienceDom.summary) {
+            return;
+        }
+
+        if (experienceState.mode === 'expert') {
+            const expertSummary = getI18nString(
+                'experienceModeExpertSummary',
+                'Mode expert : toutes les options sont visibles.'
+            );
+            experienceDom.summary.textContent = expertSummary;
+            return;
+        }
+
+        const advancedCount = getAdvancedElements().length;
+        const template = getI18nString(
+            'experienceModeSimpleSummary',
+            'Mode simple : %d option(s) avancée(s) masquée(s).'
+        );
+        experienceDom.summary.textContent = template.replace('%d', advancedCount);
+    }
+
+    function syncExperienceModeVisibility() {
+        if (!experienceDom.root) {
+            return;
+        }
+
+        experienceDom.root.setAttribute('data-sidebar-experience-mode', experienceState.mode);
+        getAdvancedElements().forEach((element) => {
+            if (experienceState.mode === 'simple') {
+                element.setAttribute('aria-hidden', 'true');
+                element.classList.add('is-experience-hidden');
+            } else {
+                element.removeAttribute('aria-hidden');
+                element.classList.remove('is-experience-hidden');
+            }
+        });
+
+        updateExperienceButtons();
+        updateExperienceSummary();
+    }
+
+    function setExperienceMode(nextMode, { persist = false } = {}) {
+        const normalized = normalizeExperienceMode(nextMode);
+
+        if (experienceState.mode !== normalized) {
+            experienceState.mode = normalized;
+            if (persist) {
+                persistExperienceMode(normalized);
+            }
+        }
+
+        syncExperienceModeVisibility();
+    }
+
+    function bindExperienceModeToggle() {
+        if (!experienceButtons.length) {
+            setExperienceMode(readStoredExperienceMode());
+            return;
+        }
+
+        experienceButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const value = button.getAttribute('data-mode-value');
+                setExperienceMode(value, { persist: true });
+            });
+        });
+
+        setExperienceMode(readStoredExperienceMode());
+    }
+
+    bindExperienceModeToggle();
+
     const profileChoices = normalizeProfileChoices(sidebarJLG.profile_choices);
     const profilesState = {
         profiles: [],
@@ -3636,6 +3779,8 @@ jQuery(document).ready(function($) {
                 $element.attr('aria-hidden', 'false');
             });
         });
+
+        syncExperienceModeVisibility();
     }
 
     function applySearchFilter(rawQuery) {
@@ -3648,6 +3793,7 @@ jQuery(document).ready(function($) {
                 $searchStatus.text('');
             }
             updateSearchControls();
+            syncExperienceModeVisibility();
             return;
         }
 
@@ -3706,6 +3852,7 @@ jQuery(document).ready(function($) {
         }
 
         updateSearchControls();
+        syncExperienceModeVisibility();
     }
 
     function clearSearch() {

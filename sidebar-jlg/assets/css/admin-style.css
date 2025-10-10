@@ -258,6 +258,54 @@
     flex: 0 0 auto;
 }
 
+.sidebar-jlg-command-bar__mode {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 0 1 220px;
+    min-width: 200px;
+}
+
+.sidebar-jlg-command-bar__mode-label {
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.sidebar-jlg-mode-toggle {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid #dcdcde;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #f6f7f7;
+}
+
+.sidebar-jlg-mode-toggle .button {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    color: #1d2327;
+    padding: 6px 16px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-jlg-mode-toggle .button + .button {
+    border-left: 1px solid #dcdcde;
+}
+
+.sidebar-jlg-mode-toggle .button.is-active,
+.sidebar-jlg-mode-toggle .button[aria-pressed="true"] {
+    background: #3858e9;
+    color: #fff;
+}
+
+.sidebar-jlg-command-bar__mode-summary {
+    margin: 0;
+    font-size: 12px;
+    color: #50575e;
+}
+
 .sidebar-jlg-command-bar__status {
     margin: 0;
     flex-basis: 100%;
@@ -309,6 +357,10 @@
 
 .sidebar-jlg-guided-controls__actions .button.button-primary {
     box-shadow: none;
+}
+
+[data-sidebar-experience][data-sidebar-experience-mode="simple"] [data-sidebar-mode="expert"] {
+    display: none !important;
 }
 
 .tab-content.is-guided-mode [data-sidebar-guided-step] {

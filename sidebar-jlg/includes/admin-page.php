@@ -157,7 +157,7 @@ $textTransformLabels = [
     'capitalize' => __( 'Capitaliser', 'sidebar-jlg' ),
 ];
 ?>
-<div class="wrap sidebar-jlg-admin-wrap">
+<div class="wrap sidebar-jlg-admin-wrap" data-sidebar-experience data-sidebar-experience-mode="simple">
     <h1><?php esc_html_e( 'Réglages de la Sidebar JLG', 'sidebar-jlg' ); ?></h1>
 
     <?php
@@ -289,6 +289,25 @@ $textTransformLabels = [
             <button type="button" class="button button-secondary" data-sidebar-search-clear>
                 <?php esc_html_e( 'Effacer', 'sidebar-jlg' ); ?>
             </button>
+        </div>
+        <div class="sidebar-jlg-command-bar__mode" data-sidebar-mode-panel>
+            <span class="sidebar-jlg-command-bar__mode-label"><?php esc_html_e( 'Mode', 'sidebar-jlg' ); ?></span>
+            <div
+                class="sidebar-jlg-mode-toggle"
+                role="group"
+                aria-label="<?php esc_attr_e( 'Choisir le niveau de personnalisation', 'sidebar-jlg' ); ?>"
+                data-sidebar-mode-toggle
+            >
+                <button type="button" class="button button-secondary is-active" data-mode-value="simple" aria-pressed="true">
+                    <?php esc_html_e( 'Simple', 'sidebar-jlg' ); ?>
+                </button>
+                <button type="button" class="button button-secondary" data-mode-value="expert" aria-pressed="false">
+                    <?php esc_html_e( 'Expert', 'sidebar-jlg' ); ?>
+                </button>
+            </div>
+            <p class="sidebar-jlg-command-bar__mode-summary" data-sidebar-mode-summary aria-live="polite">
+                <?php esc_html_e( 'Mode simple : les options avancées sont masquées.', 'sidebar-jlg' ); ?>
+            </p>
         </div>
         <p id="sidebar-jlg-settings-search-status" class="sidebar-jlg-command-bar__status" aria-live="polite"></p>
         <div class="sidebar-jlg-command-bar__guided" data-sidebar-guided>
@@ -431,7 +450,7 @@ $textTransformLabels = [
                                     <p id="<?php echo esc_attr( $activationDescriptionId ); ?>" class="description"><?php esc_html_e( 'Active ou désactive complètement la sidebar sur votre site.', 'sidebar-jlg' ); ?></p>
                                 </td>
                             </tr>
-                            <tr>
+                            <tr data-sidebar-mode="expert">
                                 <th scope="row"><?php esc_html_e( 'Insights & Analytics', 'sidebar-jlg' ); ?></th>
                                 <td>
                                     <?php $analyticsDescriptionId = 'sidebar-jlg-analytics-help'; ?>
@@ -471,7 +490,7 @@ $textTransformLabels = [
                                         <br>
                                         <label><input type="radio" name="sidebar_jlg_settings[layout_style]" value="horizontal-bar" <?php checked($options['layout_style'], 'horizontal-bar'); ?>> <?php esc_html_e('Barre horizontale', 'sidebar-jlg'); ?></label>
                                     </p>
-                                    <div class="floating-options-field" style="<?php echo $options['layout_style'] === 'floating' ? '' : 'display:none;'; ?>">
+                                    <div class="floating-options-field" data-sidebar-mode="expert" style="<?php echo $options['layout_style'] === 'floating' ? '' : 'display:none;'; ?>">
                                         <?php $floatingMargin = $dimensionValues['floating_vertical_margin']; ?>
                                         <?php $borderRadius = $dimensionValues['border_radius']; ?>
                                         <div class="sidebar-jlg-dimension-grid" data-sidebar-dimension-grid>
@@ -516,7 +535,7 @@ $textTransformLabels = [
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="horizontal-options-field" style="<?php echo $options['layout_style'] === 'horizontal-bar' ? '' : 'display:none;'; ?>">
+                                    <div class="horizontal-options-field" data-sidebar-mode="expert" style="<?php echo $options['layout_style'] === 'horizontal-bar' ? '' : 'display:none;'; ?>">
                                         <?php $horizontalHeight = $dimensionValues['horizontal_bar_height']; ?>
                                         <div class="sidebar-jlg-dimension-grid" data-sidebar-dimension-grid>
                                             <div class="sidebar-jlg-dimension-grid__item">
@@ -582,7 +601,7 @@ $textTransformLabels = [
                                     </select>
                                     <p class="description"><?php esc_html_e('Choisissez si la sidebar pousse le contenu de votre site ou passe par-dessus.', 'sidebar-jlg'); ?></p>
                                     <?php $contentMargin = $dimensionValues['content_margin']; ?>
-                                    <div class="push-option-field" style="<?php echo $options['desktop_behavior'] === 'push' ? '' : 'display:none;'; ?>">
+                                    <div class="push-option-field" data-sidebar-mode="expert" style="<?php echo $options['desktop_behavior'] === 'push' ? '' : 'display:none;'; ?>">
                                         <label><?php esc_html_e( 'Marge de sécurité du contenu', 'sidebar-jlg' ); ?></label>
                                         <div
                                             class="sidebar-jlg-unit-control"
@@ -602,7 +621,7 @@ $textTransformLabels = [
                                     </div>
                                 </td>
                             </tr>
-                            <tr>
+                            <tr data-sidebar-mode="expert">
                                 <th scope="row"><?php esc_html_e( 'Fond de superposition', 'sidebar-jlg' ); ?></th>
                                 <td>
                                     <p><label><?php esc_html_e( 'Couleur', 'sidebar-jlg' ); ?></label> <input type="text" name="sidebar_jlg_settings[overlay_color]" value="<?php echo esc_attr( $options['overlay_color'] ); ?>" class="color-picker-rgba"/></p>
@@ -625,7 +644,7 @@ $textTransformLabels = [
                                     <p class="description"><?php esc_html_e( 'Ajuste le fond affiché derrière la sidebar en mode overlay.', 'sidebar-jlg' ); ?></p>
                                 </td>
                             </tr>
-                            <tr>
+                            <tr data-sidebar-mode="expert">
                                 <th scope="row"><?php esc_html_e( 'Dimensions', 'sidebar-jlg' ); ?></th>
                                 <td>
                                     <p><label for="sidebar-jlg-width-desktop"><?php esc_html_e( 'Largeur (Desktop)', 'sidebar-jlg' ); ?></label> <input type="number" id="sidebar-jlg-width-desktop" name="sidebar_jlg_settings[width_desktop]" value="<?php echo esc_attr( $options['width_desktop'] ); ?>" class="small-text"/> <span class="description">px</span></p>
@@ -637,7 +656,7 @@ $textTransformLabels = [
                                     </p>
                                 </td>
                             </tr>
-                            <tr>
+                            <tr data-sidebar-mode="expert">
                                 <th scope="row"><?php esc_html_e( 'Bouton Hamburger (Mobile)', 'sidebar-jlg' ); ?></th>
                                 <td>
                                     <?php $hamburgerOffset = $dimensionValues['hamburger_top_position']; ?>

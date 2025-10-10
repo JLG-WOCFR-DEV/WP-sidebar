@@ -267,3 +267,104 @@ Le script public gère déjà le tracking Analytics, les CTA et l'accessibilité
 - Prototype technique des interactions (CodePen/Storybook) validant la performance sur appareils à faible puissance.
 - Plan de tests QA incluant la compatibilité avec `prefers-reduced-motion`, VoiceOver/TalkBack et différents navigateurs mobiles.
 
+### 9.7 Mode « simple » vs « expert » inspiré des workflows pro
+
+Les réglages sont aujourd'hui linéaires : un ruban d'onglets WordPress suivi de larges tables de champs, quel que soit le niveau d'utilisateur.【F:sidebar-jlg/includes/admin-page.php†L236-L245】【F:sidebar-jlg/includes/admin-page.php†L422-L928】 Les suites professionnelles (Elementor Pro, HubSpot CTAs) pratiquent la divulgation progressive avec un mode express et un mode avancé pour limiter la surcharge cognitive.
+
+**Objectif UX/UI**
+
+- Offrir un parcours guidé pour les créateurs pressés tout en conservant la richesse des réglages pour les experts.
+- Réduire le temps nécessaire à la configuration initiale et limiter les erreurs en masquant par défaut les options sensibles.
+
+**Solutions proposées**
+
+- Ajouter un sélecteur « Mode simple / Mode expert » persistant dans l'en-tête. Le mode simple affiche un nombre restreint de cartes regroupant les fondamentaux (apparence, déclencheur principal, CTA) avec une checklist contextuelle ; le mode expert dévoile l'intégralité des tables et options granulaire.
+- Regrouper les champs en sections thématiques réutilisables (cartes pliables, `fieldset` illustrés) et indiquer leur disponibilité par mode. Les cartes du mode simple reprennent les presets (`DefaultSettings::STYLE_PRESETS`) pour accélérer la prise en main.【F:sidebar-jlg/src/Settings/DefaultSettings.php†L7-L206】
+- Autoriser la promotion temporaire d'un réglage expert via une recommandation contextuelle (toast ou badge) lorsqu'un preset nécessite une précision supplémentaire. Les notifications existantes (`renderNotice`) peuvent être enrichies d'actions « Afficher dans le mode expert » pour conserver l'accessibilité clavier et la possibilité de pause.【F:sidebar-jlg/assets/js/admin-script.js†L2800-L3084】
+- Mémoriser le mode choisi et les sections ouvertes dans `localStorage` côté navigateur, afin d'offrir une continuité entre sessions sans solliciter le serveur.
+- Documenter les dépendances entre champs (ex. activation d'un timer, choix d'un profil) via des info-bulles et une aide contextuelle dédiée au mode expert pour éviter les configurations incohérentes.
+
+**Livrables & prochaines étapes**
+
+- Wireframes double-mode (simple/expert) détaillant la hiérarchie de contenu et les transitions.
+- Spécification d'accessibilité (raccourcis clavier, état ARIA du toggle de mode, comportement des sections masquées pour les lecteurs d'écran).
+- Plan de migration progressive des onglets existants vers des composants « carte » compatibles avec les deux modes.
+
+**Découpage détaillé**
+
+- **Architecture de l'information** : cartographier chaque champ existant et le classer dans l'une des catégories suivantes : fondations (affichées en mode simple), options avancées (mode expert) ou utilitaires (mode expert uniquement). Produire un spreadsheet partagé précisant onglet source, priorité, dépendances, texte d'aide et statut d'accessibilité.
+- **Expérience utilisateur** :
+  - *Mode simple* : afficher 4 à 6 cartes synthétiques (« Apparence », « Déclencheur », « Contenu & CTA », « Audience », « Comportements »). Chaque carte contient un résumé en une phrase, les champs essentiels, un CTA « voir plus » qui ouvre un panel latéral et une checklist de validation.
+  - *Mode expert* : conserver les tables détaillées mais les regrouper en accordéons repliables, avec un sommaire collant permettant d'atteindre les sections clés au clavier (`aria-controls`). Prévoir un « quick switch » pour passer directement à la section correspondante d'une carte du mode simple.
+- **Sauvegarde & persistance** : stocker la préférence de mode dans `localStorage` pour éviter l'ajout de métadonnées côté serveur. Introduire un filtre PHP (`sidebar_jlg_admin_mode`) pour permettre aux administrateurs multisites de forcer un mode par rôle.
+- **États vides & onboarding** : proposer un tutoriel illustré lorsque le mode simple est activé pour la première fois. Les étapes sont vocalisées via `aria-live` et résumées dans un PDF/Help Center.
+- **Tests d'accessibilité** : vérifier que les cartes et accordéons restent navigables en lecture séquentielle, que les éléments masqués ont `aria-hidden="true"` et que le focus revient sur le bouton d'origine lors de la fermeture d'un panel.
+- **KPIs** : suivre le taux d'achèvement du setup en mode simple (nombre de checklists complétées), le taux de bascule vers le mode expert et la réduction du temps moyen de configuration par rapport à la version actuelle.
+
+### 9.8 Fiabilité & observabilité au niveau des plateformes pro
+
+La fiabilité repose aujourd'hui sur un cache HTML multi-profils (transients 24h, purge globale), des toasts accessibles et un logging minimal (error_log).【F:sidebar-jlg/src/Cache/MenuCache.php†L7-L196】【F:sidebar-jlg/assets/js/admin-script.js†L2800-L3111】 Les offres professionnelles ajoutent un monitoring temps réel, des garde-fous automatiques et une transparence accrue sur l'état des intégrations.
+
+**Objectif produit**
+
+- Renforcer la robustesse perçue en fournissant des indicateurs de santé et des mécanismes de récupération automatique.
+- Détecter plus finement les anomalies (cache, AJAX, webhooks) et alerter les administrateurs avant l'impact utilisateur.
+
+**Solutions proposées**
+
+- Introduire un « panneau de santé » dans l'onglet Outils listant les tests rapides : statut du cache, latence de génération, version des assets, connectivité API. Chaque test affiche un badge (OK, Attention, Critique) et propose un bouton de remédiation (purge ciblée, relance du cron).
+- Étendre `MenuCache` avec un suivi des hits/miss et une purge différentielle par profil/locale. Stocker ces métriques et les exposer dans Insights pour rapprocher la maintenance de l'observabilité des suites pro.【F:sidebar-jlg/src/Cache/MenuCache.php†L27-L160】
+- Ajouter un journal d'événements (succès/erreurs AJAX, webhooks) accessible depuis l'admin, avec filtrage par gravité. Les notifications temps réel s'appuient sur le système de toasts mais se doublent d'une entrée horodatée pour post-mortem.
+- Prévoir des webhooks de supervision (Pingdom, Better Uptime) ou une commande WP-CLI `sidebar-jlg:health-check` qui exécute les contrôles clés et renvoie un code de sortie exploitable en CI/CD.
+- Mettre en place une routine de warmup du cache après sauvegarde (cron asynchrone) afin d'éviter les ralentissements post-déploiement et aligner les bonnes pratiques des plateformes marketing.
+
+**Livrables & prochaines étapes**
+
+- Spécification du panneau de santé (grille des tests, règles de seuils, UX des remédiations).
+- Backlog technique du suivi des métriques cache (structure de données, calculs, endpoints de restitution).
+- Prototype CLI/cron validant le warmup automatique et l'émission de logs structurés (format JSON) pour les outils d'observabilité externes.
+
+**Architecture de fiabilité proposée**
+
+- **Panneau de santé** : composant React light-weight inséré dans l'onglet Outils via `wp.data`. Chaque vérification (cache, latence API, version des assets, statut cron) expose une `progress-card` avec badge et CTA correctif. Les contrôles sont exécutés via une route REST `sidebar-jlg/v1/health` protégée par capabilities et cache 5 minutes.
+- **Instrumentation du cache** : enrichir `MenuCache` avec un stockage d'indicateurs (`hit_count`, `miss_count`, `build_time_ms`, `last_warmup`) dans un tableau dédié (`wp_sidebar_jlg_cache_stats`). Ces données alimentent le module Insights (graphique cumulatif + ratio hits/miss).
+- **Warmup automatique** : après sauvegarde (`sidebar_jlg_after_save`), déclencher une tâche asynchrone (Action Scheduler ou `wp_cron`) qui reconstruit les transients des profils actifs et journalise la durée. En cas d'échec, un toast critique est affiché et un webhook optionnel peut être envoyé.
+- **Logs & audits** : utiliser `WP_CLI::log` et un fichier JSON rotatif (`wp-content/uploads/sidebar-jlg/logs/*.json`) pour centraliser les événements. Proposer un export depuis l'admin avec filtrage par gravité et un bouton « Copier pour le support ».
+- **Alertes proactives** : exposer un connecteur Zapier/Make minimal via un webhook `sidebar_jlg_monitoring` qui relaie les états critiques (échec warmup, latence API > 2 s, erreurs AJAX récurrentes). Documenter les scénarios d'utilisation dans la future section développeur.
+- **Plan de tests** : scénarios QA automatisés (PHPUnit + Playwright) pour vérifier les retours du health check, la cohérence des métriques et le succès des remédiations.
+
+**Phasage recommandé**
+
+1. **Semaine 1** : implémenter les métriques `MenuCache` et la route REST de health check (statuts mockés), publier la documentation de données.
+2. **Semaine 2** : développer l'UI du panneau de santé + warmup asynchrone, écrire les tests unitaires et end-to-end.
+3. **Semaine 3** : intégrer les webhooks/CLI, finaliser les logs structurés et préparer le tutoriel de surveillance pour les clients premium.
+
+Ces jalons rapprochent Sidebar JLG de la transparence opérationnelle des suites pro, tout en restant compatibles avec l'architecture WordPress standard.
+
+---
+
+## 11. Feuille de route intégrée des améliorations
+
+| Phase | Horizon | Livrables clés | Impacts attendus |
+| --- | --- | --- | --- |
+| **Kickoff UX** | Semaine 0 | Audit des options, tri des champs, fiches persona pour mode simple/expert | Alignement des parties prenantes, vision produit partagée |
+| **Design & prototypes** | Semaines 1-2 | Maquettes haute fidélité des cartes, prototypes du mode canvas, storyboard micro-interactions | Validation UI/UX, feedback utilisateurs pilotes |
+| **Itération accessibilité** | Semaines 2-3 | Spécifications ARIA, tests screen reader, ajustements contrastes & focus | Conformité AA, réduction des tickets support accessibilité |
+| **Développement incrémental** | Semaines 3-6 | Implémentation mode simple/expert, palette de commandes, panneau de santé | Gains de productivité admin, visibilité sur la fiabilité |
+| **Observabilité & QA** | Semaines 5-7 | Warmup cache, métriques hits/miss, scénarios Playwright/Pa11y | Réduction incidents, alertes proactives |
+| **Beta fermée** | Semaine 8 | Déploiement sur 5 clients pilotes, collecte analytics & retours | Ajustements finaux basés sur données réelles |
+| **Lancement public** | Semaine 9 | Documentation marketing, guides vidéo, article de blog | Adoption accélérée, perception premium renforcée |
+
+### Indicateurs de succès
+
+- 30 % de réduction du temps moyen pour configurer une première sidebar (analytics admin).
+- Score de satisfaction (CSAT) > 4/5 sur le nouveau flux (enquête post-lancement).
+- Taux d'erreur cache < 1 % grâce au warmup + monitoring.
+- 100 % des parcours critiques validés par les tests d'accessibilité (NVDA, VoiceOver, Pa11y CI).
+
+### Suivi post-lancement
+
+- Planifier une rétrospective à J+30 pour mesurer l'adoption des modes simple/expert et ajuster la distribution des options.
+- Mettre à jour trimestriellement la feuille de route UI/UX avec les retours clients et benchmarks pro.
+- Intégrer le tableau de bord narratif dans une prochaine itération (phase 2) en s'appuyant sur les métriques consolidées.
+
