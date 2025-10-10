@@ -28,6 +28,6 @@ Chaque item renvoie vers la documentation officielle du W3C afin de faciliter la
 
 ## Actions en préparation
 
-- Ajouter une alerte proactive dans l'onglet **Accessibilité & WCAG 2.2** lorsque `npm run audit:accessibility` n'a pas été exécuté depuis 30 jours (stockage de l'horodatage côté option).
+- Une alerte proactive dans l'onglet **Accessibilité & WCAG 2.2** vous rappelle de relancer Pa11y lorsque plus de 30 jours se sont écoulés depuis le dernier audit enregistré.
 - Fournir un modèle de rapport Pa11y (`docs/a11y-report-template.md`, à créer) pour standardiser la remontée des écarts.
 - Étendre les tests manuels à la navigation via lecteurs d'écran (NVDA, VoiceOver) et consigner les résultats dans le référentiel QA (`docs/axes-roadmap.md`).

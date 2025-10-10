@@ -8,11 +8,17 @@ use JLG\Sidebar\Admin\View\ColorPickerField;
 use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
+use function current_time;
 use function esc_url;
 use function esc_url_raw;
+use function get_option;
 use function home_url;
+use function human_time_diff;
 use function sanitize_key;
+use function sanitize_text_field;
 use function wp_create_nonce;
+use function wp_date;
+use const DAY_IN_SECONDS;
 
 class MenuPage
 {
@@ -301,6 +307,7 @@ class MenuPage
         $auditChecks = isset($auditReport['checks']) && is_array($auditReport['checks'])
             ? $auditReport['checks']
             : [];
+        $lastAudit = $this->getLastAccessibilityAudit();
 
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php', 'relative'),
@@ -327,6 +334,7 @@ class MenuPage
                 'is_available' => !empty($auditReport['can_run']),
                 'checks' => $auditChecks,
                 'binary' => isset($auditReport['binary']) && is_string($auditReport['binary']) ? $auditReport['binary'] : '',
+                'last_run' => $lastAudit,
             ],
             'i18n' => [
                 'menuItemDefaultTitle' => __('Nouvel élément', 'sidebar-jlg'),
@@ -450,6 +458,105 @@ class MenuPage
         return $properties;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function getLastAccessibilityAudit(): array
+    {
+        $raw = get_option('sidebar_jlg_accessibility_audit_last_run');
+        if (!is_array($raw)) {
+            return [
+                'has_run' => false,
+                'is_stale' => true,
+            ];
+        }
+
+        $timestamp = isset($raw['timestamp']) ? (int) $raw['timestamp'] : 0;
+        $siteTime = isset($raw['site_time']) && is_string($raw['site_time']) ? $raw['site_time'] : '';
+        $isoTime = isset($raw['iso_time']) && is_string($raw['iso_time']) ? $raw['iso_time'] : '';
+        $targetUrl = isset($raw['target_url']) && is_string($raw['target_url'])
+            ? esc_url_raw($raw['target_url'])
+            : '';
+
+        $summary = [];
+        if (isset($raw['summary']) && is_array($raw['summary'])) {
+            foreach ($raw['summary'] as $key => $value) {
+                if (!is_string($key)) {
+                    continue;
+                }
+
+                $summary[$key] = (int) $value;
+            }
+        }
+
+        $issuesCount = isset($raw['issues_count']) ? max(0, (int) $raw['issues_count']) : 0;
+
+        $meta = [];
+        if (isset($raw['meta']) && is_array($raw['meta'])) {
+            $meta['document_title'] = isset($raw['meta']['document_title']) && is_string($raw['meta']['document_title'])
+                ? sanitize_text_field($raw['meta']['document_title'])
+                : '';
+            $meta['page_url'] = isset($raw['meta']['page_url']) && is_string($raw['meta']['page_url'])
+                ? esc_url_raw($raw['meta']['page_url'])
+                : '';
+            $meta['execution_time_ms'] = isset($raw['meta']['execution_time_ms'])
+                ? max(0, (int) $raw['meta']['execution_time_ms'])
+                : 0;
+            $meta['binary'] = isset($raw['meta']['binary']) && is_string($raw['meta']['binary'])
+                ? sanitize_text_field($raw['meta']['binary'])
+                : '';
+        }
+
+        $currentTimestamp = current_time('timestamp');
+        $dateFormat = (string) get_option('date_format');
+        $timeFormat = (string) get_option('time_format');
+        $format = trim($dateFormat . ' ' . $timeFormat);
+        if ($format === '') {
+            $format = 'Y-m-d H:i';
+        }
+
+        $readable = $timestamp > 0 ? wp_date($format, $timestamp) : '';
+        $relative = $timestamp > 0 ? human_time_diff($timestamp, $currentTimestamp) : '';
+        $isStale = $timestamp > 0 ? ($currentTimestamp - $timestamp) >= (30 * DAY_IN_SECONDS) : true;
+        $hasRun = $timestamp > 0;
+
+        $summaryText = '';
+        if (!empty($summary)) {
+            $summaryText = sprintf(
+                /* translators: 1: number of errors, 2: number of warnings, 3: number of notices. */
+                __('%1$d erreur(s), %2$d avertissement(s), %3$d notice(s).', 'sidebar-jlg'),
+                $summary['error'] ?? 0,
+                $summary['warning'] ?? 0,
+                $summary['notice'] ?? 0
+            );
+        }
+
+        $targetLabel = '';
+        if ($targetUrl !== '') {
+            $targetLabel = sprintf(
+                /* translators: %s: audited URL. */
+                __('URL analysée : %s', 'sidebar-jlg'),
+                $targetUrl
+            );
+        }
+
+        return [
+            'timestamp' => $timestamp,
+            'site_time' => $siteTime,
+            'iso_time' => $isoTime,
+            'target_url' => $targetUrl,
+            'target_label' => $targetLabel,
+            'summary' => $summary,
+            'summary_text' => $summaryText,
+            'issues_count' => $issuesCount,
+            'meta' => $meta,
+            'relative' => $relative,
+            'readable' => $readable,
+            'is_stale' => $isStale,
+            'has_run' => $hasRun,
+        ];
+    }
+
     public function render(): void
     {
         $colorPicker = $this->colorPicker;
@@ -460,6 +567,7 @@ class MenuPage
         $analyticsSummary = $this->analytics->getSummary();
         $auditStatus = $this->auditRunner->getEnvironmentReport();
         $auditDefaultUrl = esc_url(home_url('/'));
+        $lastAccessibilityAudit = $this->getLastAccessibilityAudit();
 
         require plugin_dir_path($this->pluginFile) . 'includes/admin-page.php';
     }

@@ -1735,6 +1735,70 @@ $textTransformLabels = [
         </div>
 
         <div id="tab-accessibility" class="tab-content" role="tabpanel" aria-labelledby="tab-accessibility-tab" aria-hidden="true" hidden>
+            <?php
+            $reminderData = [];
+            if ( isset( $lastAccessibilityAudit ) && is_array( $lastAccessibilityAudit ) ) {
+                $reminderData = $lastAccessibilityAudit;
+            }
+
+            $reminderHasRun = ! empty( $reminderData['has_run'] );
+            $reminderIsStale = array_key_exists( 'is_stale', $reminderData ) ? (bool) $reminderData['is_stale'] : true;
+            $reminderClass = 'sidebar-jlg-accessibility-audit__reminder ' . ( $reminderHasRun && ! $reminderIsStale ? 'sidebar-jlg-accessibility-audit__reminder--fresh' : 'sidebar-jlg-accessibility-audit__reminder--stale' );
+            $reminderIcon = $reminderHasRun && ! $reminderIsStale ? 'dashicons-yes-alt' : 'dashicons-warning';
+
+            $reminderRelative = isset( $reminderData['relative'] ) && is_string( $reminderData['relative'] ) ? $reminderData['relative'] : '';
+            $reminderReadable = isset( $reminderData['readable'] ) && is_string( $reminderData['readable'] ) ? $reminderData['readable'] : '';
+            $reminderSummary = isset( $reminderData['summary_text'] ) && is_string( $reminderData['summary_text'] ) ? $reminderData['summary_text'] : '';
+            $reminderTarget = isset( $reminderData['target_label'] ) && is_string( $reminderData['target_label'] ) ? $reminderData['target_label'] : '';
+
+            $reminderTitle = '';
+            $reminderMessage = '';
+
+            if ( ! $reminderHasRun ) {
+                $reminderTitle   = __( 'Aucun audit Pa11y n’a encore été enregistré.', 'sidebar-jlg' );
+                $reminderMessage = __( 'Lancez un audit pour établir une base de référence et documenter votre conformité.', 'sidebar-jlg' );
+            } elseif ( $reminderIsStale ) {
+                $relativeText = $reminderRelative !== '' ? $reminderRelative : __( 'quelques semaines', 'sidebar-jlg' );
+                $readableText = $reminderReadable !== '' ? $reminderReadable : __( 'date non disponible', 'sidebar-jlg' );
+                $reminderTitle = sprintf(
+                    /* translators: 1: relative time, 2: formatted date. */
+                    __( 'Votre dernier audit remonte à %1$s (%2$s).', 'sidebar-jlg' ),
+                    $relativeText,
+                    $readableText
+                );
+                $reminderMessage = __( 'Relancez Pa11y pour garder vos contrôles à jour et éviter les régressions d’accessibilité.', 'sidebar-jlg' );
+            } else {
+                $relativeText = $reminderRelative !== '' ? $reminderRelative : __( 'quelques heures', 'sidebar-jlg' );
+                $readableText = $reminderReadable !== '' ? $reminderReadable : __( 'date récente', 'sidebar-jlg' );
+                $reminderTitle = sprintf(
+                    /* translators: 1: relative time, 2: formatted date. */
+                    __( 'Dernier audit réalisé il y a %1$s (%2$s).', 'sidebar-jlg' ),
+                    $relativeText,
+                    $readableText
+                );
+                $reminderMessage = __( 'Poursuivez vos vérifications régulières pour maintenir la conformité WCAG.', 'sidebar-jlg' );
+            }
+
+            $reminderCta = $reminderHasRun && ! $reminderIsStale
+                ? __( 'Afficher les contrôles d’audit', 'sidebar-jlg' )
+                : __( 'Lancer un audit maintenant', 'sidebar-jlg' );
+            ?>
+            <div id="sidebar-jlg-accessibility-audit-reminder" class="<?php echo esc_attr( $reminderClass ); ?>" role="status" aria-live="polite" data-has-run="<?php echo esc_attr( $reminderHasRun ? '1' : '0' ); ?>" data-is-stale="<?php echo esc_attr( $reminderIsStale ? '1' : '0' ); ?>">
+                <span class="dashicons <?php echo esc_attr( $reminderIcon ); ?> sidebar-jlg-accessibility-audit__reminder-icon" id="sidebar-jlg-accessibility-audit-reminder-icon" aria-hidden="true"></span>
+                <div class="sidebar-jlg-accessibility-audit__reminder-content">
+                    <p class="sidebar-jlg-accessibility-audit__reminder-title" id="sidebar-jlg-accessibility-audit-reminder-title"><?php echo esc_html( $reminderTitle ); ?></p>
+                    <p class="sidebar-jlg-accessibility-audit__reminder-message" id="sidebar-jlg-accessibility-audit-reminder-message"><?php echo esc_html( $reminderMessage ); ?></p>
+                    <?php if ( $reminderSummary !== '' ) : ?>
+                        <p class="sidebar-jlg-accessibility-audit__reminder-meta" id="sidebar-jlg-accessibility-audit-reminder-summary"><?php echo esc_html( $reminderSummary ); ?></p>
+                    <?php endif; ?>
+                    <?php if ( $reminderTarget !== '' ) : ?>
+                        <p class="sidebar-jlg-accessibility-audit__reminder-meta" id="sidebar-jlg-accessibility-audit-reminder-url"><?php echo esc_html( $reminderTarget ); ?></p>
+                    <?php endif; ?>
+                </div>
+                <div class="sidebar-jlg-accessibility-audit__reminder-actions">
+                    <a href="#sidebar-jlg-accessibility-audit" class="button button-secondary" id="sidebar-jlg-accessibility-audit-reminder-action"><?php echo esc_html( $reminderCta ); ?></a>
+                </div>
+            </div>
             <div id="sidebar-jlg-accessibility-audit" class="sidebar-jlg-accessibility-audit" data-is-available="<?php echo esc_attr( $auditIsAvailable ? '1' : '0' ); ?>">
                 <h3><?php esc_html_e( 'Audit automatisé (Pa11y)', 'sidebar-jlg' ); ?></h3>
                 <p class="description"><?php esc_html_e( 'Exécutez Pa11y depuis WordPress pour contrôler une URL de votre site. Nécessite Node.js et la commande Pa11y sur le serveur.', 'sidebar-jlg' ); ?></p>

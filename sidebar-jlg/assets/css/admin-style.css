@@ -942,6 +942,93 @@ input:checked + .jlg-slider:before { transform: translateX(26px); }
     margin: 6px 0;
 }
 
+.sidebar-jlg-accessibility-audit__reminder {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 24px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1px solid #cbd5f5;
+    background: #f8fafc;
+}
+
+.sidebar-jlg-accessibility-audit__reminder--stale {
+    border-color: #fcd34d;
+    background: #fef3c7;
+    color: #78350f;
+}
+
+.sidebar-jlg-accessibility-audit__reminder--stale .sidebar-jlg-accessibility-audit__reminder-title,
+.sidebar-jlg-accessibility-audit__reminder--stale .sidebar-jlg-accessibility-audit__reminder-message,
+.sidebar-jlg-accessibility-audit__reminder--stale .sidebar-jlg-accessibility-audit__reminder-meta {
+    color: #78350f;
+}
+
+.sidebar-jlg-accessibility-audit__reminder--stale .dashicons {
+    color: #b45309;
+}
+
+.sidebar-jlg-accessibility-audit__reminder--fresh {
+    border-color: #6ee7b7;
+    background: #ecfdf5;
+    color: #065f46;
+}
+
+.sidebar-jlg-accessibility-audit__reminder--fresh .sidebar-jlg-accessibility-audit__reminder-title,
+.sidebar-jlg-accessibility-audit__reminder--fresh .sidebar-jlg-accessibility-audit__reminder-message,
+.sidebar-jlg-accessibility-audit__reminder--fresh .sidebar-jlg-accessibility-audit__reminder-meta {
+    color: #065f46;
+}
+
+.sidebar-jlg-accessibility-audit__reminder--fresh .dashicons {
+    color: #047857;
+}
+
+.sidebar-jlg-accessibility-audit__reminder-icon {
+    font-size: 28px;
+    height: 32px;
+    width: 32px;
+    line-height: 32px;
+}
+
+.sidebar-jlg-accessibility-audit__reminder-content {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sidebar-jlg-accessibility-audit__reminder-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 4px;
+}
+
+.sidebar-jlg-accessibility-audit__reminder-message {
+    margin: 0 0 6px;
+    font-size: 13px;
+}
+
+.sidebar-jlg-accessibility-audit__reminder-meta {
+    margin: 0;
+    font-size: 12px;
+    color: #475569;
+}
+
+.sidebar-jlg-accessibility-audit__reminder-meta + .sidebar-jlg-accessibility-audit__reminder-meta {
+    margin-top: 4px;
+}
+
+.sidebar-jlg-accessibility-audit__reminder-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-jlg-accessibility-audit__reminder-actions .button {
+    white-space: nowrap;
+}
+
 .sidebar-jlg-accessibility-audit__issues {
     margin: 12px 0 0;
     padding-left: 20px;

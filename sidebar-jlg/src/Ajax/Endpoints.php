@@ -14,12 +14,16 @@ use function current_time;
 use function esc_url_raw;
 use function gmdate;
 use function home_url;
+use function human_time_diff;
 use function json_decode;
 use function sanitize_option;
 use function sanitize_key;
 use function sanitize_text_field;
 use function update_option;
 use function time;
+use function get_option;
+use function wp_date;
+use const DAY_IN_SECONDS;
 use function wp_parse_args;
 use function wp_send_json_error;
 use function wp_send_json_success;
@@ -697,10 +701,52 @@ class Endpoints
             wp_send_json_error($payload);
         }
 
+        $summary = isset($result['summary']) && is_array($result['summary']) ? $result['summary'] : [];
+        $issues = isset($result['issues']) && is_array($result['issues']) ? $result['issues'] : [];
+        $meta = isset($result['meta']) && is_array($result['meta']) ? $result['meta'] : [];
+
+        $storedSummary = [];
+        foreach ($summary as $key => $value) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            $storedSummary[$key] = (int) $value;
+        }
+
+        $storedMeta = [
+            'document_title' => isset($meta['document_title']) && is_string($meta['document_title'])
+                ? sanitize_text_field($meta['document_title'])
+                : '',
+            'page_url' => isset($meta['page_url']) && is_string($meta['page_url'])
+                ? esc_url_raw($meta['page_url'])
+                : '',
+            'execution_time_ms' => isset($meta['execution_time_ms'])
+                ? max(0, (int) $meta['execution_time_ms'])
+                : 0,
+            'binary' => isset($meta['binary']) && is_string($meta['binary'])
+                ? sanitize_text_field($meta['binary'])
+                : '',
+        ];
+
+        $timestamp = current_time('timestamp');
+        $stored = [
+            'timestamp' => $timestamp,
+            'site_time' => current_time('mysql'),
+            'target_url' => esc_url_raw($targetUrl),
+            'summary' => $storedSummary,
+            'issues_count' => count($issues),
+            'meta' => $storedMeta,
+            'iso_time' => gmdate('c', time()),
+        ];
+
+        update_option('sidebar_jlg_accessibility_audit_last_run', $stored);
+
         $response = [
-            'summary' => isset($result['summary']) && is_array($result['summary']) ? $result['summary'] : [],
-            'issues' => isset($result['issues']) && is_array($result['issues']) ? $result['issues'] : [],
-            'meta' => isset($result['meta']) && is_array($result['meta']) ? $result['meta'] : [],
+            'summary' => $summary,
+            'issues' => $issues,
+            'meta' => $meta,
+            'last_run' => $this->formatAccessibilityAuditMetadata($stored),
         ];
 
         if (!empty($result['log']) && is_string($result['log'])) {
@@ -816,6 +862,105 @@ class Endpoints
             'message' => __('Événement enregistré.', 'sidebar-jlg'),
             'summary' => $summary,
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
+    private function formatAccessibilityAuditMetadata(array $data): array
+    {
+        $timestamp = isset($data['timestamp']) ? (int) $data['timestamp'] : 0;
+        $siteNow = current_time('timestamp');
+        $dateFormat = (string) get_option('date_format');
+        $timeFormat = (string) get_option('time_format');
+
+        $readable = '';
+        $relative = '';
+        if ($timestamp > 0) {
+            $format = trim($dateFormat . ' ' . $timeFormat);
+            if ($format === '') {
+                $format = 'Y-m-d H:i';
+            }
+
+            $readable = wp_date($format, $timestamp);
+            $relative = human_time_diff($timestamp, $siteNow);
+        }
+
+        $summary = [];
+        if (isset($data['summary']) && is_array($data['summary'])) {
+            foreach ($data['summary'] as $key => $value) {
+                if (!is_string($key)) {
+                    continue;
+                }
+
+                $summary[$key] = (int) $value;
+            }
+        }
+
+        $issuesCount = isset($data['issues_count']) ? max(0, (int) $data['issues_count']) : 0;
+
+        $summaryText = '';
+        if (!empty($summary)) {
+            $summaryText = sprintf(
+                /* translators: 1: number of errors, 2: number of warnings, 3: number of notices. */
+                __('%1$d erreur(s), %2$d avertissement(s), %3$d notice(s).', 'sidebar-jlg'),
+                $summary['error'] ?? 0,
+                $summary['warning'] ?? 0,
+                $summary['notice'] ?? 0
+            );
+        }
+
+        $targetUrl = isset($data['target_url']) && is_string($data['target_url'])
+            ? esc_url_raw($data['target_url'])
+            : '';
+
+        $targetLabel = '';
+        if ($targetUrl !== '') {
+            $targetLabel = sprintf(
+                /* translators: %s: audited URL. */
+                __('URL analysée : %s', 'sidebar-jlg'),
+                $targetUrl
+            );
+        }
+
+        $meta = [];
+        if (isset($data['meta']) && is_array($data['meta'])) {
+            $meta['document_title'] = isset($data['meta']['document_title']) && is_string($data['meta']['document_title'])
+                ? sanitize_text_field($data['meta']['document_title'])
+                : '';
+            $meta['page_url'] = isset($data['meta']['page_url']) && is_string($data['meta']['page_url'])
+                ? esc_url_raw($data['meta']['page_url'])
+                : '';
+            $meta['execution_time_ms'] = isset($data['meta']['execution_time_ms'])
+                ? max(0, (int) $data['meta']['execution_time_ms'])
+                : 0;
+            $meta['binary'] = isset($data['meta']['binary']) && is_string($data['meta']['binary'])
+                ? sanitize_text_field($data['meta']['binary'])
+                : '';
+        }
+
+        $isStale = true;
+        if ($timestamp > 0) {
+            $isStale = ($siteNow - $timestamp) >= (30 * DAY_IN_SECONDS);
+        }
+
+        return [
+            'timestamp' => $timestamp,
+            'site_time' => isset($data['site_time']) && is_string($data['site_time']) ? $data['site_time'] : '',
+            'iso_time' => isset($data['iso_time']) && is_string($data['iso_time']) ? $data['iso_time'] : '',
+            'target_url' => $targetUrl,
+            'target_label' => $targetLabel,
+            'summary' => $summary,
+            'summary_text' => $summaryText,
+            'issues_count' => $issuesCount,
+            'meta' => $meta,
+            'relative' => $relative,
+            'readable' => $readable,
+            'is_stale' => $isStale,
+            'has_run' => $timestamp > 0,
+        ];
     }
 
     private function extractSettingsFromImport(array $decoded): array
