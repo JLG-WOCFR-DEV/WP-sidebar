@@ -476,7 +476,15 @@ function fetchNavMenus() {
 class SidebarPreviewModule {
     constructor(args = {}) {
         this.container = args.container || null;
-        this.viewport = this.container ? this.container.querySelector('.sidebar-jlg-preview__viewport') : null;
+        this.viewportsContainer = this.container
+            ? this.container.querySelector('[data-sidebar-preview-viewports]')
+            : null;
+        this.viewport = this.viewportsContainer
+            ? this.viewportsContainer.querySelector('[data-preview-role="primary"]')
+            : (this.container ? this.container.querySelector('.sidebar-jlg-preview__viewport') : null);
+        this.splitViewClones = this.viewportsContainer
+            ? Array.from(this.viewportsContainer.querySelectorAll('[data-preview-role="split"]'))
+            : [];
         this.statusElement = this.container ? this.container.querySelector('.sidebar-jlg-preview__status') : null;
         this.form = args.form || null;
         this.ajaxUrl = args.ajaxUrl || '';
@@ -521,6 +529,18 @@ class SidebarPreviewModule {
         this.toolbar = this.container ? this.container.querySelector('.sidebar-jlg-preview__toolbar') : null;
         this.previewButtons = this.toolbar ? Array.from(this.toolbar.querySelectorAll('[data-preview-size]')) : [];
         this.toolbarInitialized = false;
+        this.splitToggle = this.toolbar ? this.toolbar.querySelector('[data-preview-split-toggle]') : null;
+        this.touchOverlay = this.container ? this.container.querySelector('[data-touch-overlay]') : null;
+        this.breakpointsForm = this.container ? this.container.querySelector('[data-preview-breakpoints]') : null;
+        this.breakpointInputs = this.breakpointsForm
+            ? Array.from(this.breakpointsForm.querySelectorAll('[data-breakpoint-input]'))
+            : [];
+        this.breakpointsInitialized = false;
+        this.splitViewEnabled = false;
+
+        this.breakpoints = SidebarPreviewModule.getDefaultBreakpoints(this.container);
+        this.applyBreakpointVariables();
+        this.populateBreakpointInputs();
 
         this.aside = null;
         this.nav = null;
@@ -541,23 +561,92 @@ class SidebarPreviewModule {
         this.isInitializing = false;
 
         this.updatePreviewSizeClasses();
+        this.updateTouchOverlay();
 
         this.updateMenuFromDomBound = this.updateMenuFromDom.bind(this);
         this.updateSocialFromDomBound = this.updateSocialFromDom.bind(this);
+        this.handleResizeBound = this.updateTouchOverlay.bind(this);
+
+        if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+            window.addEventListener('resize', this.handleResizeBound, { passive: true });
+        }
     }
 
     static normalizePreviewSize(value) {
         const normalized = typeof value === 'string' ? value.toLowerCase() : '';
-        if (normalized === 'mobile' || normalized === 'tablet') {
+        if (normalized === 'mobile' || normalized === 'tablet' || normalized === 'desktop') {
             return normalized;
         }
 
-        return 'desktop';
+        return 'mobile';
     }
 
     static getPreviewLabel(value) {
         const normalized = SidebarPreviewModule.normalizePreviewSize(value);
         return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    }
+
+    static getDefaultBreakpoints(container) {
+        const defaults = {
+            mobile: 360,
+            tablet: 820,
+            desktop: 1160
+        };
+
+        if (!container) {
+            return defaults;
+        }
+
+        return {
+            mobile: SidebarPreviewModule.parseBreakpoint(container.getAttribute('data-breakpoint-mobile'), defaults.mobile),
+            tablet: SidebarPreviewModule.parseBreakpoint(container.getAttribute('data-breakpoint-tablet'), defaults.tablet),
+            desktop: SidebarPreviewModule.parseBreakpoint(container.getAttribute('data-breakpoint-desktop'), defaults.desktop)
+        };
+    }
+
+    static normalizeBreakpointKey(value) {
+        const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+        if (normalized === 'mobile' || normalized === 'tablet' || normalized === 'desktop') {
+            return normalized;
+        }
+
+        return '';
+    }
+
+    static parseBreakpoint(value, fallback) {
+        const fallbackValue = Number.isFinite(fallback) ? fallback : 0;
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return Math.max(0, Math.round(value));
+        }
+
+        if (typeof value !== 'string') {
+            return fallbackValue;
+        }
+
+        const trimmed = value.trim();
+        if (trimmed === '') {
+            return fallbackValue;
+        }
+
+        const parsed = Number.parseInt(trimmed, 10);
+        if (!Number.isFinite(parsed)) {
+            return fallbackValue;
+        }
+
+        return Math.max(0, parsed);
+    }
+
+    static getPreviewOrder(size) {
+        const normalized = SidebarPreviewModule.normalizePreviewSize(size);
+        if (normalized === 'mobile') {
+            return 1;
+        }
+
+        if (normalized === 'tablet') {
+            return 2;
+        }
+
+        return 3;
     }
 
     static cloneObject(object) {
@@ -687,8 +776,10 @@ class SidebarPreviewModule {
                 this.setState('ready');
                 this.clearStatus();
                 this.setupToolbar();
+                this.setupBreakpointControls();
                 this.setupBindings();
                 this.applyOptions();
+                this.updateTouchOverlay();
             })
             .catch(() => {
                 // Failure is handled by loadPreview via renderFallback.
@@ -781,6 +872,7 @@ class SidebarPreviewModule {
                     if (response && response.success && response.data && typeof response.data.html === 'string') {
                         this.viewport.innerHTML = response.data.html;
                         this.afterMarkupRendered();
+                        this.refreshSplitView();
                         resolve(response.data);
                         return;
                     }
@@ -829,6 +921,7 @@ class SidebarPreviewModule {
         this.captureDefaultFontStackFromMarkup();
         this.updatePreviewSizeClasses();
         this.updateAccessibilityLabels();
+        this.updateTouchOverlay();
     }
 
     setupToolbar() {
@@ -849,10 +942,17 @@ class SidebarPreviewModule {
                     this.setPreviewSize(size, { triggerButton: button });
                 });
             });
+            if (this.splitToggle) {
+                this.splitToggle.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    this.setSplitView(!this.splitViewEnabled);
+                });
+            }
             this.toolbarInitialized = true;
         }
 
         this.setPreviewSize(this.previewSize, { skipApply: true });
+        this.updateSplitToggleState();
     }
 
     setPreviewSize(size, options = {}) {
@@ -874,6 +974,9 @@ class SidebarPreviewModule {
         if (!this.isInitializing && !skipApply) {
             this.applyOptions();
         }
+
+        this.refreshSplitView();
+        this.updateTouchOverlay();
     }
 
     updatePreviewSizeClasses() {
@@ -928,6 +1031,242 @@ class SidebarPreviewModule {
         } else {
             this.overlay.style.display = 'none';
         }
+    }
+
+    updateTouchOverlay() {
+        if (!this.touchOverlay) {
+            return;
+        }
+
+        const shouldDisplay = this.previewSize === 'mobile' || this.splitViewEnabled;
+        if (shouldDisplay) {
+            this.touchOverlay.removeAttribute('hidden');
+            const target = this.resolveMobilePreviewTarget();
+            if (target) {
+                const raf = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+                    ? window.requestAnimationFrame.bind(window)
+                    : (callback) => callback();
+
+                raf(() => {
+                    this.positionTouchOverlay(target);
+                });
+            }
+        } else {
+            this.touchOverlay.setAttribute('hidden', '');
+        }
+    }
+
+    resolveMobilePreviewTarget() {
+        if (!this.viewportsContainer) {
+            return this.previewSize === 'mobile' ? this.viewport : null;
+        }
+
+        if (!this.splitViewEnabled) {
+            return this.previewSize === 'mobile' ? this.viewport : null;
+        }
+
+        const candidates = Array.from(this.viewportsContainer.querySelectorAll('.sidebar-jlg-preview__viewport'));
+        const mobileCandidate = candidates.find((element) => {
+            if (!element || element.hasAttribute('hidden')) {
+                return false;
+            }
+
+            const size = SidebarPreviewModule.normalizePreviewSize(element.getAttribute('data-preview-size'));
+            return size === 'mobile';
+        });
+
+        if (mobileCandidate) {
+            return mobileCandidate;
+        }
+
+        return this.previewSize === 'mobile' ? this.viewport : null;
+    }
+
+    positionTouchOverlay(target) {
+        if (!this.touchOverlay || !target || !this.container) {
+            return;
+        }
+
+        const containerRect = this.container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const left = Math.max(0, targetRect.left - containerRect.left);
+        const width = Math.max(0, targetRect.width);
+
+        this.touchOverlay.style.setProperty('--sidebar-touch-left', `${left}px`);
+        this.touchOverlay.style.setProperty('--sidebar-touch-width', `${width}px`);
+    }
+
+    updateSplitToggleState() {
+        if (!this.splitToggle) {
+            return;
+        }
+
+        const isActive = Boolean(this.splitViewEnabled);
+        this.splitToggle.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        this.splitToggle.classList.toggle('is-active', isActive);
+    }
+
+    setSplitView(enable) {
+        const nextState = Boolean(enable);
+        if (nextState === this.splitViewEnabled) {
+            return;
+        }
+
+        this.splitViewEnabled = nextState;
+
+        if (this.container) {
+            this.container.setAttribute('data-split-view', this.splitViewEnabled ? 'true' : 'false');
+        }
+
+        this.refreshSplitView();
+        this.updateSplitToggleState();
+        this.updateTouchOverlay();
+
+        if (!this.splitViewEnabled && this.splitViewClones && this.splitViewClones.length) {
+            this.splitViewClones.forEach((clone) => {
+                if (clone) {
+                    clone.setAttribute('hidden', '');
+                    clone.setAttribute('aria-hidden', 'true');
+                }
+            });
+        }
+    }
+
+    refreshSplitView() {
+        if (!this.splitViewEnabled || !this.splitViewClones || !this.splitViewClones.length || !this.viewport) {
+            return;
+        }
+
+        const markup = this.viewport.innerHTML;
+        const primaryOrder = SidebarPreviewModule.getPreviewOrder(this.previewSize);
+
+        if (this.viewport && typeof this.viewport.style !== 'undefined') {
+            this.viewport.style.order = primaryOrder;
+        }
+
+        this.splitViewClones.forEach((clone) => {
+            if (!clone) {
+                return;
+            }
+
+            clone.innerHTML = markup;
+            const size = SidebarPreviewModule.normalizePreviewSize(clone.getAttribute('data-preview-size'));
+            const label = this.getPreviewButtonLabel(size) || SidebarPreviewModule.getPreviewLabel(size);
+            clone.setAttribute('data-preview-size', size);
+            clone.setAttribute('data-preview-label', label);
+            this.replaceClass(clone, 'preview-', size);
+
+            if (typeof clone.setAttribute === 'function') {
+                clone.setAttribute('aria-hidden', 'true');
+                clone.setAttribute('inert', '');
+            }
+
+            if (size === this.previewSize) {
+                clone.setAttribute('hidden', '');
+            } else {
+                clone.removeAttribute('hidden');
+            }
+
+            if (typeof clone.style !== 'undefined') {
+                clone.style.order = SidebarPreviewModule.getPreviewOrder(size);
+            }
+
+            const focusable = clone.querySelectorAll('a, button, input, select, textarea, [tabindex]');
+            focusable.forEach((element) => {
+                element.setAttribute('tabindex', '-1');
+                element.setAttribute('aria-hidden', 'true');
+            });
+        });
+    }
+
+    populateBreakpointInputs() {
+        if (!this.breakpointInputs || !this.breakpointInputs.length) {
+            return;
+        }
+
+        this.breakpointInputs.forEach((input) => {
+            if (!input) {
+                return;
+            }
+
+            const key = SidebarPreviewModule.normalizeBreakpointKey(input.getAttribute('data-breakpoint-input'));
+            if (!key || !Object.prototype.hasOwnProperty.call(this.breakpoints, key)) {
+                return;
+            }
+
+            input.value = this.breakpoints[key];
+        });
+    }
+
+    applyBreakpointVariables() {
+        if (!this.container) {
+            return;
+        }
+
+        const map = {
+            mobile: '--sidebar-preview-width-mobile',
+            tablet: '--sidebar-preview-width-tablet',
+            desktop: '--sidebar-preview-width-desktop'
+        };
+
+        Object.keys(map).forEach((key) => {
+            const cssVar = map[key];
+            const value = this.breakpoints[key];
+            if (Number.isFinite(value) && value > 0) {
+                this.container.style.setProperty(cssVar, `${value}px`);
+                this.container.setAttribute(`data-breakpoint-${key}`, String(value));
+            }
+        });
+    }
+
+    setupBreakpointControls() {
+        if (this.breakpointsInitialized || !this.breakpointInputs || !this.breakpointInputs.length) {
+            return;
+        }
+
+        this.breakpointInputs.forEach((input) => {
+            if (!input) {
+                return;
+            }
+
+            input.addEventListener('input', () => {
+                this.handleBreakpointInput(input, { previewOnly: true });
+            });
+
+            input.addEventListener('change', () => {
+                this.handleBreakpointInput(input);
+            });
+        });
+
+        this.breakpointsInitialized = true;
+    }
+
+    handleBreakpointInput(input, options = {}) {
+        if (!input) {
+            return;
+        }
+
+        const key = SidebarPreviewModule.normalizeBreakpointKey(input.getAttribute('data-breakpoint-input'));
+        if (!key) {
+            return;
+        }
+
+        const previous = this.breakpoints[key];
+        const nextValue = SidebarPreviewModule.parseBreakpoint(input.value, previous);
+
+        if (!Number.isFinite(nextValue) || nextValue <= 0) {
+            input.value = previous;
+            return;
+        }
+
+        this.breakpoints[key] = nextValue;
+        this.applyBreakpointVariables();
+
+        if (!options || !options.previewOnly) {
+            this.refreshSplitView();
+        }
+
+        this.updateTouchOverlay();
     }
 
     detachObservers() {
