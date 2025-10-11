@@ -157,7 +157,12 @@ $textTransformLabels = [
     'capitalize' => __( 'Capitaliser', 'sidebar-jlg' ),
 ];
 ?>
-<div class="wrap sidebar-jlg-admin-wrap" data-sidebar-experience data-sidebar-experience-mode="simple">
+<div
+    class="wrap sidebar-jlg-admin-wrap"
+    data-sidebar-experience
+    data-sidebar-experience-mode="simple"
+    data-sidebar-form-mode="simple"
+>
     <h1><?php esc_html_e( 'Réglages de la Sidebar JLG', 'sidebar-jlg' ); ?></h1>
 
     <?php
@@ -404,6 +409,29 @@ $textTransformLabels = [
                 <?php esc_html_e( 'Mode simple : les options avancées sont masquées.', 'sidebar-jlg' ); ?>
             </p>
         </div>
+        <div
+            class="sidebar-jlg-command-bar__experience-switch"
+            data-sidebar-experience-view-toggle
+            role="group"
+            aria-label="<?php esc_attr_e( 'Choisir l’interface d’édition', 'sidebar-jlg' ); ?>"
+        >
+            <button
+                type="button"
+                class="button button-secondary is-active"
+                data-experience-view="form"
+                aria-pressed="true"
+            >
+                <?php esc_html_e( 'Formulaire', 'sidebar-jlg' ); ?>
+            </button>
+            <button
+                type="button"
+                class="button button-secondary"
+                data-experience-view="canvas"
+                aria-pressed="false"
+            >
+                <?php esc_html_e( 'Canvas', 'sidebar-jlg' ); ?>
+            </button>
+        </div>
         <p id="sidebar-jlg-settings-search-status" class="sidebar-jlg-command-bar__status" aria-live="polite"></p>
         <div class="sidebar-jlg-command-bar__guided" data-sidebar-guided>
             <button
@@ -434,6 +462,70 @@ $textTransformLabels = [
             </div>
         </div>
     </div>
+
+    <section
+        class="sidebar-jlg-canvas"
+        data-sidebar-canvas
+        aria-hidden="true"
+        hidden
+    >
+        <header
+            class="sidebar-jlg-canvas__toolbar"
+            role="toolbar"
+            aria-label="<?php esc_attr_e( 'Outils de l’éditeur visuel', 'sidebar-jlg' ); ?>"
+            data-sidebar-canvas-toolbar
+        >
+            <div class="sidebar-jlg-canvas__toolbar-group">
+                <button type="button" class="button button-secondary" data-canvas-command="undo" disabled>
+                    <?php esc_html_e( 'Annuler', 'sidebar-jlg' ); ?>
+                </button>
+                <button type="button" class="button button-secondary" data-canvas-command="redo" disabled>
+                    <?php esc_html_e( 'Rétablir', 'sidebar-jlg' ); ?>
+                </button>
+            </div>
+            <div class="sidebar-jlg-canvas__toolbar-group">
+                <button type="button" class="button button-secondary" data-canvas-command="refresh">
+                    <?php esc_html_e( 'Rafraîchir l’aperçu', 'sidebar-jlg' ); ?>
+                </button>
+            </div>
+        </header>
+        <div class="sidebar-jlg-canvas__body">
+            <div class="sidebar-jlg-canvas__workspace" data-sidebar-canvas-workspace>
+                <div class="sidebar-jlg-canvas__preview" data-sidebar-canvas-preview aria-live="polite"></div>
+                <div class="sidebar-jlg-canvas__items" data-sidebar-canvas-items role="list"></div>
+                <p class="sidebar-jlg-canvas__empty" data-sidebar-canvas-empty hidden>
+                    <?php esc_html_e( 'Ajoutez un élément de menu ou un bloc CTA pour commencer.', 'sidebar-jlg' ); ?>
+                </p>
+            </div>
+            <aside class="sidebar-jlg-canvas__inspector" data-sidebar-canvas-inspector aria-live="polite" hidden>
+                <h2 class="sidebar-jlg-canvas__inspector-title"><?php esc_html_e( 'Édition rapide', 'sidebar-jlg' ); ?></h2>
+                <form class="sidebar-jlg-canvas__inspector-form" data-sidebar-canvas-form>
+                    <label class="sidebar-jlg-canvas__field">
+                        <span class="sidebar-jlg-canvas__field-label"><?php esc_html_e( 'Titre', 'sidebar-jlg' ); ?></span>
+                        <input type="text" class="regular-text" data-canvas-field="label" autocomplete="off" />
+                    </label>
+                    <label class="sidebar-jlg-canvas__field">
+                        <span class="sidebar-jlg-canvas__field-label"><?php esc_html_e( 'Icône', 'sidebar-jlg' ); ?></span>
+                        <input type="text" class="regular-text" data-canvas-field="icon" autocomplete="off" />
+                        <p class="description"><?php esc_html_e( 'Utilisez une clé d’icône disponible ou un slug personnalisé.', 'sidebar-jlg' ); ?></p>
+                    </label>
+                    <label class="sidebar-jlg-canvas__field">
+                        <span class="sidebar-jlg-canvas__field-label"><?php esc_html_e( 'Couleur', 'sidebar-jlg' ); ?></span>
+                        <input type="text" class="regular-text" data-canvas-field="color" autocomplete="off" />
+                        <p class="description"><?php esc_html_e( 'Valeurs CSS ou RGBA (ex: rgba(255, 255, 255, 1)).', 'sidebar-jlg' ); ?></p>
+                    </label>
+                    <div class="sidebar-jlg-canvas__inspector-actions">
+                        <button type="button" class="button button-primary" data-canvas-command="apply">
+                            <?php esc_html_e( 'Appliquer', 'sidebar-jlg' ); ?>
+                        </button>
+                        <button type="button" class="button" data-canvas-command="cancel">
+                            <?php esc_html_e( 'Fermer', 'sidebar-jlg' ); ?>
+                        </button>
+                    </div>
+                </form>
+            </aside>
+        </div>
+    </section>
 
     <form action="options.php" method="post" id="sidebar-jlg-form">
         <?php

@@ -661,12 +661,19 @@ class SettingsSanitizer
                         $ctaButtonUrl = array_key_exists('cta_button_url', $item)
                             ? $item['cta_button_url']
                             : ($existingItem['cta_button_url'] ?? '');
+                        $ctaButtonColor = array_key_exists('cta_button_color', $item)
+                            ? $item['cta_button_color']
+                            : ($existingItem['cta_button_color'] ?? '');
 
                         $sanitizedItem['cta_title'] = sanitize_text_field($ctaTitle);
                         $sanitizedItem['cta_description'] = wp_kses_post($ctaDescription);
                         $sanitizedItem['cta_shortcode'] = wp_kses_post($ctaShortcode);
                         $sanitizedItem['cta_button_label'] = sanitize_text_field($ctaButtonLabel);
                         $sanitizedItem['cta_button_url'] = esc_url_raw($ctaButtonUrl);
+                        $sanitizedItem['cta_button_color'] = ValueNormalizer::normalizeColorWithExisting(
+                            $ctaButtonColor,
+                            $existingItem['cta_button_color'] ?? ''
+                        );
                         break;
                     case 'post':
                     case 'page':

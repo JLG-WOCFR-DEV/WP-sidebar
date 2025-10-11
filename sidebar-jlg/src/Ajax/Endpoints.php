@@ -10,6 +10,10 @@ use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
+use JLG\Sidebar\Settings\ValueNormalizer;
+use WP_Error;
+use WP_REST_Request;
+use WP_REST_Response;
 use function __;
 use function current_time;
 use function esc_attr;
@@ -20,6 +24,7 @@ use function human_time_diff;
 use function json_decode;
 use function sanitize_key;
 use function sanitize_text_field;
+use function wp_kses_post;
 use function update_option;
 use function time;
 use function get_option;
@@ -81,6 +86,9 @@ class Endpoints
         add_action('wp_ajax_jlg_track_event', [$this, 'ajax_track_event']);
         add_action('wp_ajax_nopriv_jlg_track_event', [$this, 'ajax_track_event']);
         add_action('wp_ajax_jlg_run_accessibility_audit', [$this, 'ajax_run_accessibility_audit']);
+        add_action('wp_ajax_jlg_canvas_update_item', [$this, 'ajax_canvas_update_item']);
+        add_action('wp_ajax_jlg_canvas_reorder_items', [$this, 'ajax_canvas_reorder_items']);
+        add_action('rest_api_init', [$this, 'register_rest_routes']);
     }
 
     /**
@@ -359,6 +367,151 @@ class Endpoints
         }
 
         wp_send_json_success($response);
+    }
+
+    public function ajax_canvas_update_item(): void
+    {
+        $capability = $this->get_ajax_capability();
+
+        if (!current_user_can($capability)) {
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
+        }
+
+        check_ajax_referer('jlg_canvas_nonce', 'nonce');
+
+        $rawIndex = isset($_POST['index']) ? wp_unslash($_POST['index']) : null;
+        $index = is_numeric($rawIndex) ? (int) $rawIndex : -1;
+
+        $payload = $_POST['item'] ?? null;
+        if (is_string($payload)) {
+            $payload = json_decode(wp_unslash($payload), true);
+        }
+
+        if (!is_array($payload)) {
+            wp_send_json_error(__('Données de mise à jour invalides.', 'sidebar-jlg'));
+        }
+
+        $result = $this->handleCanvasUpdate([
+            'index' => $index,
+            'item' => $payload,
+        ]);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+
+        wp_send_json_success($result);
+    }
+
+    public function ajax_canvas_reorder_items(): void
+    {
+        $capability = $this->get_ajax_capability();
+
+        if (!current_user_can($capability)) {
+            wp_send_json_error(__('Permission refusée.', 'sidebar-jlg'));
+        }
+
+        check_ajax_referer('jlg_canvas_nonce', 'nonce');
+
+        $rawItems = $_POST['items'] ?? null;
+        if (is_string($rawItems)) {
+            $rawItems = json_decode(wp_unslash($rawItems), true);
+        }
+
+        if (!is_array($rawItems)) {
+            wp_send_json_error(__('Aucun élément à enregistrer.', 'sidebar-jlg'));
+        }
+
+        $result = $this->handleCanvasReorder($rawItems);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+
+        wp_send_json_success($result);
+    }
+
+    public function register_rest_routes(): void
+    {
+        if (!function_exists('register_rest_route')) {
+            return;
+        }
+
+        register_rest_route(
+            'sidebar-jlg/v1',
+            '/canvas/item',
+            [
+                'methods' => ['POST', 'PUT', 'PATCH'],
+                'callback' => [$this, 'rest_canvas_update_item'],
+                'permission_callback' => [$this, 'rest_permissions_check'],
+            ]
+        );
+
+        register_rest_route(
+            'sidebar-jlg/v1',
+            '/canvas/order',
+            [
+                'methods' => ['POST'],
+                'callback' => [$this, 'rest_canvas_reorder_items'],
+                'permission_callback' => [$this, 'rest_permissions_check'],
+            ]
+        );
+    }
+
+    public function rest_permissions_check($request = null): bool
+    {
+        return current_user_can($this->get_ajax_capability());
+    }
+
+    /**
+     * @param WP_REST_Request|array<string, mixed> $request
+     */
+    public function rest_canvas_update_item($request)
+    {
+        $params = $request instanceof WP_REST_Request ? $request->get_json_params() : (array) $request;
+        $index = isset($params['index']) ? (int) $params['index'] : -1;
+        $item = null;
+        if (isset($params['item']) && is_array($params['item'])) {
+            $item = $params['item'];
+        } elseif (isset($params['data']) && is_array($params['data'])) {
+            $item = $params['data'];
+        }
+
+        if ($item === null) {
+            return new WP_REST_Response(['message' => __('Données de mise à jour invalides.', 'sidebar-jlg')], 400);
+        }
+
+        $result = $this->handleCanvasUpdate([
+            'index' => $index,
+            'item' => $item,
+        ]);
+
+        if (is_wp_error($result)) {
+            return new WP_REST_Response(['message' => $result->get_error_message()], 400);
+        }
+
+        return new WP_REST_Response($result, 200);
+    }
+
+    /**
+     * @param WP_REST_Request|array<int, mixed> $request
+     */
+    public function rest_canvas_reorder_items($request)
+    {
+        $params = $request instanceof WP_REST_Request ? $request->get_json_params() : (array) $request;
+        $items = isset($params['items']) && is_array($params['items']) ? $params['items'] : $params;
+
+        if (!is_array($items)) {
+            return new WP_REST_Response(['message' => __('Aucun élément à enregistrer.', 'sidebar-jlg')], 400);
+        }
+
+        $result = $this->handleCanvasReorder($items);
+
+        if (is_wp_error($result)) {
+            return new WP_REST_Response(['message' => $result->get_error_message()], 400);
+        }
+
+        return new WP_REST_Response($result, 200);
     }
 
     public function ajax_upload_custom_icon(): void
@@ -1068,6 +1221,144 @@ class Endpoints
     private function get_ajax_capability(): string
     {
         return apply_filters('sidebar_jlg_ajax_capability', 'manage_options');
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>|WP_Error
+     */
+    private function handleCanvasUpdate(array $data)
+    {
+        $index = isset($data['index']) ? (int) $data['index'] : -1;
+        $item = isset($data['item']) && is_array($data['item']) ? $data['item'] : null;
+
+        if ($index < 0 || $item === null) {
+            return new WP_Error('invalid_canvas_item', __('Élément introuvable.', 'sidebar-jlg'));
+        }
+
+        $options = $this->settings->getOptionsWithRevalidation();
+        $menuItems = isset($options['menu_items']) && is_array($options['menu_items']) ? $options['menu_items'] : [];
+
+        if (!isset($menuItems[$index]) || !is_array($menuItems[$index])) {
+            return new WP_Error('invalid_canvas_item', __('Élément introuvable.', 'sidebar-jlg'));
+        }
+
+        $menuItems[$index] = $this->mergeCanvasItem($menuItems[$index], $item);
+        $options['menu_items'] = array_values($menuItems);
+
+        $this->settings->saveOptions($options);
+        $this->cache->clear();
+
+        return [
+            'items' => $this->getMenuItemsForCanvas(),
+        ];
+    }
+
+    /**
+     * @param array<int, mixed> $items
+     * @return array<string, mixed>|WP_Error
+     */
+    private function handleCanvasReorder(array $items)
+    {
+        $options = $this->settings->getOptionsWithRevalidation();
+        $normalized = [];
+
+        foreach ($items as $item) {
+            if (is_array($item)) {
+                $normalized[] = $item;
+            }
+        }
+
+        $options['menu_items'] = array_values($normalized);
+
+        $this->settings->saveOptions($options);
+        $this->cache->clear();
+
+        return [
+            'items' => $this->getMenuItemsForCanvas(),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $original
+     * @param array<string, mixed> $changes
+     * @return array<string, mixed>
+     */
+    private function mergeCanvasItem(array $original, array $changes): array
+    {
+        $merged = $original;
+
+        if (isset($changes['label'])) {
+            $merged['label'] = sanitize_text_field($changes['label']);
+        }
+
+        if (isset($changes['icon'])) {
+            $merged['icon'] = sanitize_key($changes['icon']);
+        }
+
+        if (isset($changes['icon_type'])) {
+            $merged['icon_type'] = sanitize_key($changes['icon_type']);
+        }
+
+        if (isset($changes['type'])) {
+            $merged['type'] = sanitize_key($changes['type']);
+        }
+
+        if (array_key_exists('cta_button_color', $changes) || array_key_exists('color', $changes)) {
+            $candidate = $changes['cta_button_color'] ?? $changes['color'] ?? null;
+            $merged['cta_button_color'] = ValueNormalizer::normalizeColorWithExisting(
+                $candidate,
+                $original['cta_button_color'] ?? ''
+            );
+        }
+
+        if (($merged['type'] ?? '') === 'cta') {
+            if (isset($changes['cta_title'])) {
+                $merged['cta_title'] = sanitize_text_field($changes['cta_title']);
+            }
+
+            if (isset($changes['cta_description'])) {
+                $merged['cta_description'] = wp_kses_post($changes['cta_description']);
+            }
+
+            if (isset($changes['cta_shortcode'])) {
+                $merged['cta_shortcode'] = wp_kses_post($changes['cta_shortcode']);
+            }
+
+            if (isset($changes['cta_button_label'])) {
+                $merged['cta_button_label'] = sanitize_text_field($changes['cta_button_label']);
+            }
+
+            if (isset($changes['cta_button_url'])) {
+                $merged['cta_button_url'] = esc_url_raw($changes['cta_button_url']);
+            }
+        } else {
+            if (isset($changes['value'])) {
+                $merged['value'] = absint($changes['value']);
+            }
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function getMenuItemsForCanvas(): array
+    {
+        $options = $this->settings->getOptions();
+        if (!isset($options['menu_items']) || !is_array($options['menu_items'])) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($options['menu_items'] as $item) {
+            if (is_array($item)) {
+                $items[] = $item;
+            }
+        }
+
+        return array_values($items);
     }
 
     /**
