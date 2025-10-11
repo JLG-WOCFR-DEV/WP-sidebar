@@ -245,13 +245,21 @@ $textTransformLabels = [
         <a href="#tab-tools" class="nav-tab" id="tab-tools-tab" role="tab" aria-controls="tab-tools" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Outils', 'sidebar-jlg' ); ?></a>
     </div>
 
-    <div id="sidebar-jlg-preview" class="sidebar-jlg-preview" data-state="idle">
+    <div
+        id="sidebar-jlg-preview"
+        class="sidebar-jlg-preview"
+        data-state="idle"
+        data-preview-size="mobile"
+        data-breakpoint-mobile="360"
+        data-breakpoint-tablet="820"
+        data-breakpoint-desktop="1160"
+    >
         <div class="sidebar-jlg-preview__header">
             <h2><?php esc_html_e( 'Aperçu en direct', 'sidebar-jlg' ); ?></h2>
             <p class="description"><?php esc_html_e( 'L’aperçu se met à jour automatiquement lorsque vous modifiez les réglages.', 'sidebar-jlg' ); ?></p>
         </div>
         <div class="sidebar-jlg-preview__toolbar" role="toolbar" aria-label="<?php esc_attr_e( 'Choisir la taille de prévisualisation', 'sidebar-jlg' ); ?>">
-            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button" data-preview-size="mobile" aria-pressed="false">
+            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button is-active" data-preview-size="mobile" aria-pressed="true">
                 <span class="screen-reader-text"><?php esc_html_e( 'Prévisualiser en mode mobile', 'sidebar-jlg' ); ?></span>
                 <span aria-hidden="true"><?php esc_html_e( 'Mobile', 'sidebar-jlg' ); ?></span>
             </button>
@@ -259,7 +267,7 @@ $textTransformLabels = [
                 <span class="screen-reader-text"><?php esc_html_e( 'Prévisualiser en mode tablette', 'sidebar-jlg' ); ?></span>
                 <span aria-hidden="true"><?php esc_html_e( 'Tablette', 'sidebar-jlg' ); ?></span>
             </button>
-            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button is-active" data-preview-size="desktop" aria-pressed="true">
+            <button type="button" class="button button-secondary sidebar-jlg-preview__toolbar-button" data-preview-size="desktop" aria-pressed="false">
                 <span class="screen-reader-text"><?php esc_html_e( 'Prévisualiser en mode bureau', 'sidebar-jlg' ); ?></span>
                 <span aria-hidden="true"><?php esc_html_e( 'Desktop', 'sidebar-jlg' ); ?></span>
             </button>
@@ -267,9 +275,96 @@ $textTransformLabels = [
                 <span class="screen-reader-text"><?php esc_html_e( 'Basculer entre l’aperçu initial et l’aperçu actuel', 'sidebar-jlg' ); ?></span>
                 <span class="sidebar-jlg-preview__toolbar-button-label" aria-hidden="true"><?php esc_html_e( 'Comparer', 'sidebar-jlg' ); ?></span>
             </button>
+            <button
+                type="button"
+                class="button button-secondary sidebar-jlg-preview__toolbar-button"
+                data-preview-split-toggle
+                aria-pressed="false"
+            >
+                <span class="screen-reader-text"><?php esc_html_e( 'Activer ou désactiver la vue comparée', 'sidebar-jlg' ); ?></span>
+                <span aria-hidden="true"><?php esc_html_e( 'Split view', 'sidebar-jlg' ); ?></span>
+            </button>
         </div>
+        <fieldset class="sidebar-jlg-preview__breakpoints" data-preview-breakpoints>
+            <legend><?php esc_html_e( 'Breakpoints personnalisés', 'sidebar-jlg' ); ?></legend>
+            <p class="description">
+                <?php esc_html_e( 'Ajustez les largeurs de prévisualisation pour refléter votre grille responsive.', 'sidebar-jlg' ); ?>
+            </p>
+            <div class="sidebar-jlg-preview__breakpoints-grid">
+                <label class="sidebar-jlg-preview__breakpoint">
+                    <span><?php esc_html_e( 'Mobile', 'sidebar-jlg' ); ?></span>
+                    <input
+                        type="number"
+                        min="240"
+                        max="640"
+                        step="10"
+                        value="360"
+                        data-breakpoint-input="mobile"
+                        aria-label="<?php esc_attr_e( 'Largeur mobile en pixels', 'sidebar-jlg' ); ?>"
+                    />
+                    <span class="sidebar-jlg-preview__breakpoint-unit" aria-hidden="true">px</span>
+                </label>
+                <label class="sidebar-jlg-preview__breakpoint">
+                    <span><?php esc_html_e( 'Tablette', 'sidebar-jlg' ); ?></span>
+                    <input
+                        type="number"
+                        min="600"
+                        max="1024"
+                        step="10"
+                        value="820"
+                        data-breakpoint-input="tablet"
+                        aria-label="<?php esc_attr_e( 'Largeur tablette en pixels', 'sidebar-jlg' ); ?>"
+                    />
+                    <span class="sidebar-jlg-preview__breakpoint-unit" aria-hidden="true">px</span>
+                </label>
+                <label class="sidebar-jlg-preview__breakpoint">
+                    <span><?php esc_html_e( 'Desktop', 'sidebar-jlg' ); ?></span>
+                    <input
+                        type="number"
+                        min="960"
+                        max="1600"
+                        step="10"
+                        value="1160"
+                        data-breakpoint-input="desktop"
+                        aria-label="<?php esc_attr_e( 'Largeur desktop en pixels', 'sidebar-jlg' ); ?>"
+                    />
+                    <span class="sidebar-jlg-preview__breakpoint-unit" aria-hidden="true">px</span>
+                </label>
+            </div>
+        </fieldset>
         <div class="sidebar-jlg-preview__status" role="status" aria-live="polite"></div>
-        <div class="sidebar-jlg-preview__viewport" aria-label="<?php esc_attr_e( 'Aperçu de la sidebar', 'sidebar-jlg' ); ?>"></div>
+        <div class="sidebar-jlg-preview__viewports" data-sidebar-preview-viewports>
+            <div
+                class="sidebar-jlg-preview__viewport"
+                data-preview-role="primary"
+                data-preview-size="mobile"
+                aria-label="<?php esc_attr_e( 'Aperçu de la sidebar', 'sidebar-jlg' ); ?>"
+            ></div>
+            <div
+                class="sidebar-jlg-preview__viewport"
+                data-preview-role="split"
+                data-preview-size="mobile"
+                aria-hidden="true"
+                hidden
+            ></div>
+            <div
+                class="sidebar-jlg-preview__viewport"
+                data-preview-role="split"
+                data-preview-size="tablet"
+                aria-hidden="true"
+                hidden
+            ></div>
+            <div
+                class="sidebar-jlg-preview__viewport"
+                data-preview-role="split"
+                data-preview-size="desktop"
+                aria-hidden="true"
+                hidden
+            ></div>
+        </div>
+        <div class="sidebar-jlg-preview__touch-overlay" data-touch-overlay aria-hidden="true">
+            <span class="sidebar-jlg-preview__touch-point"></span>
+        </div>
     </div>
 
     <div class="sidebar-jlg-command-bar" data-sidebar-command-bar>
