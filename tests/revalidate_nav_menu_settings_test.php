@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
 use JLG\Sidebar\Settings\SettingsRepository;
@@ -15,7 +16,8 @@ SettingsRepository::invalidateCachedNavMenu();
 $pluginFile = __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 $defaults = new DefaultSettings();
 $icons = new IconLibrary($pluginFile);
-$repository = new SettingsRepository($defaults, $icons);
+$sanitizer = new SettingsSanitizer($defaults, $icons);
+$repository = new SettingsRepository($defaults, $icons, $sanitizer);
 
 $GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
     'menu_items' => [

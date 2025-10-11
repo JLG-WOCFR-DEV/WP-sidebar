@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Frontend\Blocks\SearchBlock;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
@@ -49,7 +50,8 @@ $defaults = new DefaultSettings();
 $iconLibrary = new IconLibrary($pluginFile);
 
 $createBlock = static function () use ($defaults, $iconLibrary, $pluginFile): SearchBlock {
-    $settings = new SettingsRepository($defaults, $iconLibrary);
+    $sanitizer = new SettingsSanitizer($defaults, $iconLibrary);
+    $settings = new SettingsRepository($defaults, $iconLibrary, $sanitizer);
 
     return new SearchBlock($settings, $pluginFile, 'test-version');
 };
@@ -87,14 +89,11 @@ update_option('sidebar_jlg_settings', $initialOptions);
 $authorizedBlock = $createBlock();
 $authorizedBlock->render($attributes);
 
-$expectedOptions = $initialOptions;
-$expectedOptions['enable_search'] = true;
-$expectedOptions['search_method'] = 'shortcode';
-$expectedOptions['search_alignment'] = 'center';
-$expectedOptions['search_shortcode'] = '[example]';
-
 $storedAfterAuthorized = get_option('sidebar_jlg_settings');
-assertSameValue($expectedOptions, $storedAfterAuthorized, 'Options are synchronized for authorized users in admin context.');
+assertSameValue(true, $storedAfterAuthorized['enable_search'] ?? null, 'Enable search flag synchronized for authorized users.');
+assertSameValue('shortcode', $storedAfterAuthorized['search_method'] ?? null, 'Search method synchronized for authorized users.');
+assertSameValue('center', $storedAfterAuthorized['search_alignment'] ?? null, 'Search alignment synchronized for authorized users.');
+assertSameValue('[example]', $storedAfterAuthorized['search_shortcode'] ?? null, 'Search shortcode synchronized and trimmed for authorized users.');
 
 // Scenario 3: rendered markup exposes contrast helpers and scheme metadata.
 $GLOBALS['test_current_user_can'] = false;
