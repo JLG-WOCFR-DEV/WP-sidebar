@@ -63,7 +63,27 @@ function renderSidebarHtml(): string {
 }
 
 function cachedLocaleExists(array $entries, string $locale, ?string $suffix): bool {
-    foreach ($entries as $entry) {
+    $expectedSuffix = $suffix === null ? '__default__' : $suffix;
+
+    foreach ($entries as $entryKey => $entryValue) {
+        if (is_string($entryKey) && is_array($entryValue)) {
+            if ($entryKey !== $locale) {
+                continue;
+            }
+
+            if (array_key_exists($expectedSuffix, $entryValue)) {
+                return true;
+            }
+
+            if ($expectedSuffix === '__default__' && array_key_exists('', $entryValue)) {
+                return true;
+            }
+
+            continue;
+        }
+
+        $entry = $entryValue;
+
         if (is_array($entry)) {
             $entryLocale = isset($entry['locale']) ? (string) $entry['locale'] : '';
             $entrySuffix = $entry['suffix'] ?? null;
@@ -293,7 +313,7 @@ $GLOBALS['wp_test_function_overrides']['update_option'] = static function ($name
     return true;
 };
 
-$GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] = SIDEBAR_JLG_VERSION;
+$GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] = '4.9.0';
 $GLOBALS['wp_test_options']['sidebar_jlg_cached_locales'] = [
     ['locale' => 'fr_FR', 'suffix' => 'default'],
 ];
@@ -312,8 +332,8 @@ $GLOBALS['wp_test_options']['sidebar_jlg_settings'] = [
 $revalidatingPlugin = new SidebarPlugin(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php', SIDEBAR_JLG_VERSION);
 $revalidatingPlugin->register();
 
-if (isset($registeredHooks['admin_init'])) {
-    foreach ($registeredHooks['admin_init'] as $listener) {
+if (isset($registeredHooks['plugins_loaded'])) {
+    foreach ($registeredHooks['plugins_loaded'] as $listener) {
         $callback = $listener['callback'];
         $acceptedArgs = $listener['accepted_args'];
 
@@ -324,6 +344,15 @@ if (isset($registeredHooks['admin_init'])) {
         }
     }
 }
+
+assertTrue(
+    empty($GLOBALS['wp_test_options']['sidebar_jlg_pending_maintenance'] ?? null),
+    'Maintenance flag cleared after plugins_loaded maintenance run'
+);
+assertTrue(
+    ($GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] ?? null) === SIDEBAR_JLG_VERSION,
+    'Plugin version updated to current release during maintenance run'
+);
 
 assertTrue(
     !isset($GLOBALS['wp_test_transients']['sidebar_jlg_full_html_fr_FR_default']),

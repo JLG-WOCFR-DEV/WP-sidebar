@@ -19,6 +19,7 @@ use JLG\Sidebar\Settings\SettingsRepository;
 
 class Plugin
 {
+    private const MAINTENANCE_FLAG_OPTION = 'sidebar_jlg_pending_maintenance';
     private string $pluginFile;
     private string $version;
     private DefaultSettings $defaults;
@@ -87,12 +88,7 @@ class Plugin
         add_filter('sanitize_option_sidebar_jlg_profiles', [$this->sanitizer, 'sanitize_profiles'], 10, 2);
         add_filter('sanitize_option_sidebar_jlg_active_profile', [$this->sanitizer, 'sanitize_active_profile'], 10, 2);
         add_action('init', [$this, 'loadTextdomain']);
-        $isAdminContext = !function_exists('is_admin') || is_admin();
-
-        if ($isAdminContext) {
-            add_action('admin_init', [$this, 'maybeRunMaintenance'], 5);
-            add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
-        }
+        add_action('plugins_loaded', [$this, 'onPluginsLoaded'], 1);
         add_action('upgrader_process_complete', [$this, 'handleUpgrade'], 10, 2);
         add_action('update_option_sidebar_jlg_settings', [$this, 'handleSettingsUpdated'], 10, 3);
         add_action('add_option_sidebar_jlg_profiles', [$this, 'handleProfilesOptionChanged'], 10, 2);
@@ -128,6 +124,18 @@ class Plugin
     public function loadTextdomain(): void
     {
         load_plugin_textdomain('sidebar-jlg', false, dirname(plugin_basename($this->pluginFile)) . '/languages');
+    }
+
+    public function onPluginsLoaded(): void
+    {
+        $this->primeMaintenanceFlag();
+
+        if (!$this->isAdminContext()) {
+            return;
+        }
+
+        $this->registerActivationErrorNoticeIfNeeded();
+        $this->maybeRunMaintenance();
     }
 
     /**
@@ -352,7 +360,7 @@ class Plugin
 
     public function maybeRunMaintenance(): void
     {
-        if ($this->maintenanceCompleted) {
+        if (!$this->shouldRunMaintenanceOnCurrentRequest()) {
             return;
         }
 
@@ -366,7 +374,153 @@ class Plugin
         }
 
         $this->maintenanceCompleted = true;
+        $this->clearPendingMaintenanceFlag();
         $this->maybeInvalidateCacheOnVersionChange();
         $this->settings->revalidateStoredOptions();
+    }
+
+    private function shouldRunMaintenanceOnCurrentRequest(): bool
+    {
+        if ($this->maintenanceCompleted) {
+            return false;
+        }
+
+        if (!$this->hasMaintenanceWorkPending()) {
+            return false;
+        }
+
+        if ($this->isRestrictedRequestContext()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function hasMaintenanceWorkPending(): bool
+    {
+        if ($this->isMaintenanceFlagSet()) {
+            return true;
+        }
+
+        return $this->isPluginVersionOutdated();
+    }
+
+    private function isRestrictedRequestContext(): bool
+    {
+        if (function_exists('wp_installing') && wp_installing()) {
+            return true;
+        }
+
+        if (function_exists('wp_doing_cron') && wp_doing_cron()) {
+            return true;
+        }
+
+        if (function_exists('wp_doing_ajax') && wp_doing_ajax()) {
+            return true;
+        }
+
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            return true;
+        }
+
+        if (defined('WP_CLI') && WP_CLI) {
+            return false;
+        }
+
+        if (function_exists('current_user_can') && !current_user_can('manage_options')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function primeMaintenanceFlag(): void
+    {
+        if (!$this->isPluginVersionOutdated()) {
+            return;
+        }
+
+        if ($this->isMaintenanceFlagSet()) {
+            return;
+        }
+
+        $this->markMaintenancePending();
+    }
+
+    private function isMaintenanceFlagSet(): bool
+    {
+        if (!function_exists('get_option')) {
+            return false;
+        }
+
+        $value = get_option(self::MAINTENANCE_FLAG_OPTION, '');
+
+        return $value === 'yes';
+    }
+
+    private function markMaintenancePending(): void
+    {
+        if (!function_exists('update_option')) {
+            return;
+        }
+
+        update_option(self::MAINTENANCE_FLAG_OPTION, 'yes', 'no');
+    }
+
+    private function clearPendingMaintenanceFlag(): void
+    {
+        if (!function_exists('delete_option')) {
+            return;
+        }
+
+        delete_option(self::MAINTENANCE_FLAG_OPTION);
+    }
+
+    private function isPluginVersionOutdated(): bool
+    {
+        if (!function_exists('get_option')) {
+            return false;
+        }
+
+        $storedVersion = get_option('sidebar_jlg_plugin_version');
+
+        return $storedVersion !== $this->version;
+    }
+
+    private function isAdminContext(): bool
+    {
+        return !function_exists('is_admin') || is_admin();
+    }
+
+    private function hasActivationErrorNotice(): bool
+    {
+        if (!function_exists('get_transient')) {
+            return false;
+        }
+
+        $message = get_transient('sidebar_jlg_activation_error');
+
+        if ($message === false) {
+            return false;
+        }
+
+        if (is_string($message)) {
+            return $message !== '';
+        }
+
+        if (is_array($message)) {
+            return $message !== [];
+        }
+
+        return true;
+    }
+
+    private function registerActivationErrorNoticeIfNeeded(): void
+    {
+        if (!$this->hasActivationErrorNotice()) {
+            return;
+        }
+
+        add_action('admin_notices', [$this, 'renderActivationErrorNotice']);
     }
 }

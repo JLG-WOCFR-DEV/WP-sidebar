@@ -46,6 +46,7 @@ class ActivationHandler
             return;
         }
 
+        delete_option('sidebar_jlg_pending_maintenance');
         update_option('sidebar_jlg_plugin_version', $this->version);
 
         $this->menuCache->clear();
