@@ -101,6 +101,7 @@ $adminPlugin = new SidebarPlugin(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php', SI
 $adminPlugin->register();
 
 $simulateHook('plugins_loaded', $registeredHooks);
+$simulateHook('admin_init', $registeredHooks);
 
 assertTestCondition(
     empty($GLOBALS['wp_test_options']['sidebar_jlg_pending_maintenance'] ?? null),

@@ -130,12 +130,18 @@ class Plugin
     {
         $this->primeMaintenanceFlag();
 
+        if (defined('WP_CLI') && WP_CLI) {
+            $this->maybeRunMaintenance();
+
+            return;
+        }
+
         if (!$this->isAdminContext()) {
             return;
         }
 
         $this->registerActivationErrorNoticeIfNeeded();
-        $this->maybeRunMaintenance();
+        add_action('admin_init', [$this, 'maybeRunMaintenance'], 1);
     }
 
     /**
