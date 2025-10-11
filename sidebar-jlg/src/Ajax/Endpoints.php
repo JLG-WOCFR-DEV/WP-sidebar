@@ -18,7 +18,6 @@ use function gmdate;
 use function home_url;
 use function human_time_diff;
 use function json_decode;
-use function sanitize_option;
 use function sanitize_key;
 use function sanitize_text_field;
 use function update_option;
@@ -632,11 +631,19 @@ class Endpoints
             wp_send_json_error(__('Le fichier ne contient pas de réglages valides.', 'sidebar-jlg'));
         }
 
-        $sanitized = sanitize_option('sidebar_jlg_settings', $settings);
+        $existingOptions = $this->settings->getOptions();
 
-        if (!is_array($sanitized)) {
-            $sanitized = [];
+        if (!is_array($existingOptions) || $existingOptions === []) {
+            $rawExistingOptions = get_option('sidebar_jlg_settings', []);
+            if (is_array($rawExistingOptions) && $rawExistingOptions !== []) {
+                $existingOptions = $rawExistingOptions;
+            }
         }
+
+        $sanitized = $this->sanitizer->sanitize_settings(
+            $settings,
+            is_array($existingOptions) ? $existingOptions : null
+        );
 
         $sanitizedProfiles = null;
 
