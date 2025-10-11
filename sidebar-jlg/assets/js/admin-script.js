@@ -104,6 +104,905 @@ function joinMessages(...messages) {
     return messages.filter(Boolean).join(' ');
 }
 
+function deepClone(value) {
+    if (value === null || typeof value !== 'object') {
+        return value;
+    }
+
+    try {
+        return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+        if (Array.isArray(value)) {
+            return value.map((item) => deepClone(item));
+        }
+
+        const clone = {};
+        Object.keys(value).forEach((key) => {
+            clone[key] = deepClone(value[key]);
+        });
+
+        return clone;
+    }
+}
+
+function sanitizeWidgetType(type) {
+    if (typeof type !== 'string') {
+        return '';
+    }
+
+    return type.replace(/[^a-z0-9_-]/gi, '').toLowerCase();
+}
+
+function generateWidgetId(type) {
+    const sanitized = sanitizeWidgetType(type) || 'widget';
+    const random = Math.floor(Math.random() * 99999).toString(36);
+
+    return `${sanitized}-${Date.now().toString(36)}-${random}`;
+}
+
+function buildSectionDefaults(schema) {
+    const defaults = {};
+
+    if (!schema || typeof schema !== 'object') {
+        return defaults;
+    }
+
+    Object.keys(schema).forEach((key) => {
+        const definition = schema[key];
+        if (!definition || typeof definition !== 'object') {
+            return;
+        }
+
+        const type = typeof definition.type === 'string' ? definition.type : 'text';
+        const fallback = definition.default;
+
+        switch (type) {
+            case 'boolean':
+                defaults[key] = !!fallback;
+                break;
+            case 'number':
+                defaults[key] = Number.isFinite(Number(fallback)) ? Number(fallback) : 0;
+                break;
+            case 'dimension': {
+                const baseUnit = Array.isArray(definition.units) && definition.units.length
+                    ? definition.units[0]
+                    : 'px';
+                const dimension = (fallback && typeof fallback === 'object') ? fallback : {};
+                const value = typeof dimension.value === 'string' || typeof dimension.value === 'number'
+                    ? String(dimension.value)
+                    : '';
+                const unit = typeof dimension.unit === 'string' && dimension.unit !== ''
+                    ? dimension.unit
+                    : baseUnit;
+
+                defaults[key] = { value, unit };
+                break;
+            }
+            case 'repeater':
+                defaults[key] = Array.isArray(fallback) ? deepClone(fallback) : [];
+                break;
+            default:
+                defaults[key] = typeof fallback === 'string' ? fallback : '';
+        }
+    });
+
+    return defaults;
+}
+
+function createWidgetFromSchema(type, schema) {
+    const sanitizedType = sanitizeWidgetType(type) || 'widget';
+    const label = schema && typeof schema.label === 'string' ? schema.label : sanitizedType;
+    const contentDefaults = buildSectionDefaults(schema && schema.content ? schema.content : {});
+    const styleDefaults = buildSectionDefaults(schema && schema.style ? schema.style : {});
+    const trackingDefaults = buildSectionDefaults(
+        schema && schema.tracking && schema.tracking.fields ? schema.tracking.fields : {}
+    );
+
+    const events = {};
+    if (schema && schema.tracking && schema.tracking.events && typeof schema.tracking.events === 'object') {
+        Object.keys(schema.tracking.events).forEach((eventKey) => {
+            const eventName = schema.tracking.events[eventKey];
+            if (typeof eventName === 'string' && eventName.trim() !== '') {
+                const normalized = eventName.trim().replace(/[^a-z0-9_]+/gi, '_').toLowerCase();
+                if (normalized !== '') {
+                    events[eventKey] = normalized;
+                }
+            }
+        });
+    }
+
+    return {
+        id: generateWidgetId(sanitizedType),
+        type: sanitizedType,
+        title: label,
+        is_enabled: true,
+        content: contentDefaults,
+        style: styleDefaults,
+        tracking: {
+            events,
+            ...trackingDefaults,
+        },
+    };
+}
+
+function mergeSectionDefaults(defaultSection, overrideSection, schemaSection) {
+    const merged = deepClone(defaultSection || {});
+
+    if (!overrideSection || typeof overrideSection !== 'object') {
+        return merged;
+    }
+
+    Object.keys(overrideSection).forEach((key) => {
+        const value = overrideSection[key];
+        const definition = schemaSection && schemaSection[key] ? schemaSection[key] : null;
+        const type = definition && typeof definition.type === 'string' ? definition.type : 'text';
+
+        switch (type) {
+            case 'boolean':
+                merged[key] = !!value;
+                break;
+            case 'number':
+                if (Number.isFinite(Number(value))) {
+                    merged[key] = Number(value);
+                }
+                break;
+            case 'dimension':
+                if (value && typeof value === 'object') {
+                    const defaultDimension = merged[key] || {};
+                    const units = Array.isArray(definition && definition.units) && definition.units.length
+                        ? definition.units
+                        : ['px'];
+                    const unitFallback = typeof defaultDimension.unit === 'string' && defaultDimension.unit !== ''
+                        ? defaultDimension.unit
+                        : units[0];
+                    const nextValue = value.value !== undefined ? value.value : defaultDimension.value;
+                    const nextUnit = value.unit !== undefined ? value.unit : unitFallback;
+
+                    merged[key] = {
+                        value: typeof nextValue === 'string' ? nextValue : String(nextValue || ''),
+                        unit: typeof nextUnit === 'string' && nextUnit !== '' ? nextUnit : unitFallback,
+                    };
+                }
+                break;
+            case 'repeater':
+                if (Array.isArray(value)) {
+                    merged[key] = deepClone(value);
+                }
+                break;
+            default:
+                if (typeof value === 'string') {
+                    merged[key] = value;
+                }
+        }
+    });
+
+    return merged;
+}
+
+function normalizeWidgetCollection(rawWidgets, schemas) {
+    if (!Array.isArray(rawWidgets)) {
+        return [];
+    }
+
+    const normalized = [];
+
+    rawWidgets.forEach((widget) => {
+        if (!widget || typeof widget !== 'object') {
+            return;
+        }
+
+        const sanitizedType = sanitizeWidgetType(widget.type);
+        if (sanitizedType === '' || !schemas[sanitizedType]) {
+            return;
+        }
+
+        const schema = schemas[sanitizedType];
+        const base = createWidgetFromSchema(sanitizedType, schema);
+
+        const merged = {
+            ...base,
+            id: typeof widget.id === 'string' && widget.id !== '' ? widget.id : base.id,
+            title: typeof widget.title === 'string' && widget.title !== '' ? widget.title : base.title,
+            is_enabled: widget.is_enabled !== undefined ? !!widget.is_enabled : base.is_enabled,
+        };
+
+        merged.content = mergeSectionDefaults(base.content, widget.content, schema && schema.content ? schema.content : {});
+        merged.style = mergeSectionDefaults(base.style, widget.style, schema && schema.style ? schema.style : {});
+
+        const trackingSchema = schema && schema.tracking && schema.tracking.fields ? schema.tracking.fields : {};
+        const baseTracking = { events: { ...base.tracking.events } };
+
+        Object.keys(base.tracking).forEach((key) => {
+            if (key !== 'events') {
+                baseTracking[key] = base.tracking[key];
+            }
+        });
+
+        const normalizedTracking = mergeSectionDefaults(baseTracking, widget.tracking, trackingSchema);
+
+        if (widget.tracking && typeof widget.tracking === 'object' && widget.tracking.events && typeof widget.tracking.events === 'object') {
+            Object.keys(widget.tracking.events).forEach((eventKey) => {
+                const eventName = widget.tracking.events[eventKey];
+                if (typeof eventName === 'string' && eventName.trim() !== '') {
+                    const normalizedEvent = eventName.trim().replace(/[^a-z0-9_]+/gi, '_').toLowerCase();
+                    if (normalizedEvent !== '') {
+                        normalizedTracking.events[eventKey] = normalizedEvent;
+                    }
+                }
+            });
+        }
+
+        merged.tracking = normalizedTracking;
+
+        normalized.push(merged);
+    });
+
+    return normalized;
+}
+
+function reorderWidgets(list, fromIndex, toIndex) {
+    if (!Array.isArray(list)) {
+        return [];
+    }
+
+    const copy = list.slice();
+    const length = copy.length;
+
+    if (
+        typeof fromIndex !== 'number' ||
+        typeof toIndex !== 'number' ||
+        fromIndex < 0 ||
+        fromIndex >= length ||
+        toIndex < 0 ||
+        toIndex >= length
+    ) {
+        return copy;
+    }
+
+    const [item] = copy.splice(fromIndex, 1);
+    copy.splice(toIndex, 0, item);
+
+    return copy;
+}
+
+function serializeWidgetsForInput(widgets) {
+    try {
+        return JSON.stringify(Array.isArray(widgets) ? widgets : []);
+    } catch (error) {
+        return '[]';
+    }
+}
+
+function escapeHtmlString(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, (match) => {
+        switch (match) {
+            case '&':
+                return '&amp;';
+            case '<':
+                return '&lt;';
+            case '>':
+                return '&gt;';
+            case '"':
+                return '&quot;';
+            case "'":
+                return '&#039;';
+            default:
+                return match;
+        }
+    });
+}
+
+function initializeWidgetBuilderInterface({ container, hiddenField, schemas: providedSchemas }) {
+    if (!container || typeof container !== 'object') {
+        return null;
+    }
+
+    const datasetSchemas = container.getAttribute('data-widget-schemas');
+    const datasetWidgets = container.getAttribute('data-widget-options');
+
+    let parsedSchemas = {};
+    let parsedWidgets = [];
+
+    if (providedSchemas && typeof providedSchemas === 'object') {
+        parsedSchemas = { ...providedSchemas };
+    }
+
+    if (datasetSchemas) {
+        try {
+            const decodedSchemas = JSON.parse(datasetSchemas);
+            if (decodedSchemas && typeof decodedSchemas === 'object') {
+                parsedSchemas = { ...decodedSchemas };
+            }
+        } catch (error) {
+            // Ignore JSON parsing errors and keep fallback schemas.
+        }
+    }
+
+    if (datasetWidgets) {
+        try {
+            const decodedWidgets = JSON.parse(datasetWidgets);
+            if (Array.isArray(decodedWidgets)) {
+                parsedWidgets = decodedWidgets;
+            }
+        } catch (error) {
+            parsedWidgets = [];
+        }
+    }
+
+    const normalizedSchemas = {};
+    Object.keys(parsedSchemas).forEach((key) => {
+        const normalizedKey = sanitizeWidgetType(key);
+        if (normalizedKey === '') {
+            return;
+        }
+
+        const schema = parsedSchemas[key];
+        if (schema && typeof schema === 'object') {
+            normalizedSchemas[normalizedKey] = schema;
+        }
+    });
+
+    const listElement = container.querySelector('[data-widget-list]');
+    const editorElement = container.querySelector('[data-widget-editor]');
+    const editorPlaceholder = editorElement ? editorElement.querySelector('[data-widget-editor-empty]') : null;
+    const previewContainer = container.querySelector('[data-widget-preview-frame]');
+    const typeSelect = container.querySelector('[data-widget-type]');
+    const addButton = container.querySelector('[data-widget-add]');
+
+    let widgets = normalizeWidgetCollection(parsedWidgets, normalizedSchemas);
+    let selectedId = widgets.length > 0 ? widgets[0].id : '';
+
+    function syncHiddenField() {
+        if (hiddenField) {
+            hiddenField.value = serializeWidgetsForInput(widgets);
+        }
+    }
+
+    function ensureSelectionIntegrity() {
+        if (!selectedId || !widgets.some((widget) => widget.id === selectedId)) {
+            selectedId = widgets.length > 0 ? widgets[0].id : '';
+        }
+    }
+
+    function renderList() {
+        if (!listElement) {
+            return;
+        }
+
+        ensureSelectionIntegrity();
+        const previousScroll = listElement.scrollTop;
+        const previouslySelected = selectedId;
+
+        listElement.innerHTML = '';
+
+        widgets.forEach((widget, index) => {
+            const schema = normalizedSchemas[widget.type] || {};
+            const item = document.createElement('div');
+            item.className = 'sidebar-jlg-widget-card';
+            item.dataset.index = String(index);
+            item.dataset.widgetId = widget.id;
+            item.setAttribute('role', 'listitem');
+
+            if (widget.id === selectedId) {
+                item.classList.add('is-active');
+            }
+
+            const header = document.createElement('div');
+            header.className = 'sidebar-jlg-widget-card__header';
+
+            const handle = document.createElement('span');
+            handle.className = 'sidebar-jlg-widget-card__handle';
+            handle.setAttribute('aria-hidden', 'true');
+            handle.textContent = '⋮⋮';
+
+            const selectButton = document.createElement('button');
+            selectButton.type = 'button';
+            selectButton.className = 'sidebar-jlg-widget-card__select';
+            const titleSource = widget.title && widget.title.trim() !== ''
+                ? widget.title
+                : (schema.label || widget.type);
+            selectButton.textContent = titleSource;
+            selectButton.addEventListener('click', () => {
+                selectedId = widget.id;
+                renderAll();
+            });
+
+            const toggleLabel = document.createElement('label');
+            toggleLabel.className = 'sidebar-jlg-widget-card__toggle';
+            const toggleInput = document.createElement('input');
+            toggleInput.type = 'checkbox';
+            toggleInput.checked = !!widget.is_enabled;
+            toggleInput.setAttribute('aria-label', getI18nString('widgetsToggleLabel', 'Activer le widget'));
+            toggleInput.addEventListener('change', () => {
+                widget.is_enabled = toggleInput.checked;
+                syncHiddenField();
+                renderPreview();
+            });
+            toggleLabel.appendChild(toggleInput);
+            const toggleText = document.createElement('span');
+            toggleText.className = 'sidebar-jlg-widget-card__toggle-text';
+            toggleText.textContent = getI18nString('widgetsToggleText', 'Actif');
+            toggleLabel.appendChild(toggleText);
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'button-link sidebar-jlg-widget-card__delete';
+            removeButton.textContent = getI18nString('widgetsDelete', 'Supprimer');
+            removeButton.addEventListener('click', () => {
+                const confirmMessage = getI18nString('widgetsDeleteConfirm', 'Supprimer ce widget ?');
+                if (window.confirm(confirmMessage)) {
+                    widgets = widgets.filter((candidate) => candidate.id !== widget.id);
+                    if (selectedId === widget.id) {
+                        selectedId = previouslySelected;
+                    }
+                    syncHiddenField();
+                    renderAll();
+                }
+            });
+
+            header.appendChild(handle);
+            header.appendChild(selectButton);
+            header.appendChild(toggleLabel);
+            header.appendChild(removeButton);
+
+            item.appendChild(header);
+
+            listElement.appendChild(item);
+        });
+
+        listElement.scrollTop = previousScroll;
+        initSortable();
+    }
+
+    function renderPreview() {
+        if (!previewContainer) {
+            return;
+        }
+
+        ensureSelectionIntegrity();
+        const activeWidget = widgets.find((widget) => widget.id === selectedId);
+
+        if (!activeWidget) {
+            previewContainer.innerHTML = '<p class="description">' + escapeHtmlString(getI18nString('widgetsPreviewEmpty', 'Ajoutez un widget pour afficher un aperçu.')) + '</p>';
+            return;
+        }
+
+        const schema = normalizedSchemas[activeWidget.type] || {};
+        const markup = buildWidgetPreviewMarkup(activeWidget, schema);
+        previewContainer.innerHTML = markup;
+    }
+
+    function buildWidgetPreviewMarkup(widget, schema) {
+        const safeTitle = escapeHtmlString(widget.content && widget.content.title ? widget.content.title : widget.title || schema.label || widget.type);
+        const accentColor = widget.style && widget.style.accent_color ? widget.style.accent_color : '#2563eb';
+        const background = widget.style && widget.style.background_color ? widget.style.background_color : 'rgba(15,23,42,0.92)';
+        const textColor = widget.style && widget.style.text_color ? widget.style.text_color : '#f8fafc';
+
+        switch (widget.type) {
+            case 'cta': {
+                const description = widget.content && widget.content.message ? widget.content.message : '';
+                const buttonLabel = widget.content && widget.content.button_label ? widget.content.button_label : getI18nString('widgetsCtaButton', 'En savoir plus');
+                return `
+                    <div class="sidebar-jlg-widget-preview sidebar-jlg-widget-preview--cta" style="background:${background};color:${textColor}">
+                        <h4>${safeTitle}</h4>
+                        ${description ? `<div class="sidebar-jlg-widget-preview__content">${description}</div>` : ''}
+                        <div class="sidebar-jlg-widget-preview__actions">
+                            <span class="sidebar-jlg-widget-preview__button" style="background:${accentColor}">${escapeHtmlString(buttonLabel)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            case 'form': {
+                const intro = widget.content && widget.content.intro ? widget.content.intro : '';
+                const shortcode = widget.content && widget.content.shortcode ? widget.content.shortcode : '';
+                return `
+                    <div class="sidebar-jlg-widget-preview sidebar-jlg-widget-preview--form" style="background:${background};color:${textColor}">
+                        <h4>${safeTitle}</h4>
+                        ${intro ? `<p>${escapeHtmlString(intro)}</p>` : ''}
+                        <div class="sidebar-jlg-widget-preview__form">
+                            <label><span>${escapeHtmlString(getI18nString('widgetsFormLabel', 'Email'))}</span><input type="email" placeholder="${escapeHtmlString(getI18nString('widgetsFormPlaceholder', 'vous@example.com'))}" /></label>
+                            <button type="button" class="button" style="background:${accentColor}">${escapeHtmlString(getI18nString('widgetsFormSubmit', 'Envoyer'))}</button>
+                        </div>
+                        ${shortcode ? `<code class="sidebar-jlg-widget-preview__shortcode">${escapeHtmlString(shortcode)}</code>` : ''}
+                    </div>
+                `;
+            }
+            case 'slider': {
+                const items = Array.isArray(widget.content && widget.content.items ? widget.content.items : [])
+                    ? widget.content.items.slice(0, 3)
+                    : [];
+                const slides = items.map((item) => {
+                    const heading = escapeHtmlString(item && item.heading ? item.heading : getI18nString('widgetsSliderHeading', 'Slide'));
+                    const text = escapeHtmlString(item && item.text ? item.text : '');
+                    return `<li><strong>${heading}</strong>${text ? `<p>${text}</p>` : ''}</li>`;
+                }).join('');
+
+                return `
+                    <div class="sidebar-jlg-widget-preview sidebar-jlg-widget-preview--slider" style="background:${background};color:${textColor}">
+                        <h4>${safeTitle}</h4>
+                        <ul>${slides}</ul>
+                        <p class="sidebar-jlg-widget-preview__hint">${escapeHtmlString(getI18nString('widgetsSliderHint', 'Lecture automatique activée'))}</p>
+                    </div>
+                `;
+            }
+            case 'woocommerce': {
+                const mode = widget.content && widget.content.mode ? widget.content.mode : 'product';
+                const ids = widget.content && widget.content.ids ? widget.content.ids : '';
+                return `
+                    <div class="sidebar-jlg-widget-preview sidebar-jlg-widget-preview--woocommerce" style="background:${background};color:${textColor}">
+                        <h4>${safeTitle}</h4>
+                        <p>${escapeHtmlString(getI18nString('widgetsWooMode', 'Mode'))}: <strong>${escapeHtmlString(mode)}</strong></p>
+                        ${ids ? `<p>${escapeHtmlString(getI18nString('widgetsWooIds', 'Cibles'))}: ${escapeHtmlString(ids)}</p>` : ''}
+                        <div class="sidebar-jlg-widget-preview__products">
+                            <span class="sidebar-jlg-widget-preview__pill">${escapeHtmlString(getI18nString('widgetsWooSample', 'Produit en avant'))}</span>
+                            <span class="sidebar-jlg-widget-preview__pill">${escapeHtmlString(getI18nString('widgetsWooSample', 'Produit en avant'))}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            default:
+                return `<div class="sidebar-jlg-widget-preview"><h4>${safeTitle}</h4></div>`;
+        }
+    }
+
+    function createFieldWrapper(labelText, description) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sidebar-jlg-widget-field';
+
+        if (labelText) {
+            const label = document.createElement('label');
+            label.textContent = labelText;
+            wrapper.appendChild(label);
+        }
+
+        if (description) {
+            const hint = document.createElement('p');
+            hint.className = 'description';
+            hint.textContent = description;
+            wrapper.appendChild(hint);
+        }
+
+        return wrapper;
+    }
+
+    function updateWidgetValue(widgetId, path, value) {
+        const widgetIndex = widgets.findIndex((widget) => widget.id === widgetId);
+        if (widgetIndex === -1) {
+            return;
+        }
+
+        let target = widgets[widgetIndex];
+        for (let i = 0; i < path.length - 1; i += 1) {
+            const key = path[i];
+            if (!target[key] || typeof target[key] !== 'object') {
+                target[key] = {};
+            }
+            target = target[key];
+        }
+
+        target[path[path.length - 1]] = value;
+
+        syncHiddenField();
+        renderList();
+        renderPreview();
+    }
+
+    function createWidgetField(widget, sectionKey, fieldKey, definition, value) {
+        if (!definition || typeof definition !== 'object') {
+            return null;
+        }
+
+        const fieldWrapper = createFieldWrapper(definition.label || fieldKey, definition.description || '');
+        const type = definition.type || 'text';
+        const path = [sectionKey, fieldKey];
+
+        switch (type) {
+            case 'textarea':
+            case 'richtext': {
+                const textarea = document.createElement('textarea');
+                textarea.value = typeof value === 'string' ? value : '';
+                textarea.addEventListener('input', () => {
+                    updateWidgetValue(widget.id, path, textarea.value);
+                });
+                fieldWrapper.appendChild(textarea);
+                break;
+            }
+            case 'url':
+            case 'text': {
+                const input = document.createElement('input');
+                input.type = type === 'url' ? 'url' : 'text';
+                input.value = typeof value === 'string' ? value : '';
+                if (definition.placeholder) {
+                    input.placeholder = definition.placeholder;
+                }
+                input.addEventListener('input', () => {
+                    updateWidgetValue(widget.id, path, input.value);
+                });
+                fieldWrapper.appendChild(input);
+                break;
+            }
+            case 'select': {
+                const select = document.createElement('select');
+                const choices = Array.isArray(definition.choices) ? definition.choices : [];
+                choices.forEach((choice) => {
+                    const option = document.createElement('option');
+                    option.value = choice;
+                    option.textContent = choice;
+                    select.appendChild(option);
+                });
+                select.value = typeof value === 'string' && value !== '' ? value : (choices[0] || '');
+                select.addEventListener('change', () => {
+                    updateWidgetValue(widget.id, path, select.value);
+                });
+                fieldWrapper.appendChild(select);
+                break;
+            }
+            case 'boolean': {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = !!value;
+                checkbox.addEventListener('change', () => {
+                    updateWidgetValue(widget.id, path, checkbox.checked);
+                });
+                fieldWrapper.appendChild(checkbox);
+                break;
+            }
+            case 'number': {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.value = Number.isFinite(Number(value)) ? Number(value) : (definition.default || 0);
+                input.addEventListener('input', () => {
+                    const numeric = Number(input.value);
+                    updateWidgetValue(widget.id, path, Number.isFinite(numeric) ? numeric : 0);
+                });
+                fieldWrapper.appendChild(input);
+                break;
+            }
+            case 'dimension': {
+                const dimension = (value && typeof value === 'object') ? value : { value: '', unit: '' };
+                const units = Array.isArray(definition.units) && definition.units.length ? definition.units : ['px'];
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = typeof dimension.value === 'string' ? dimension.value : String(dimension.value || '');
+                input.style.marginRight = '8px';
+
+                const select = document.createElement('select');
+                units.forEach((unit) => {
+                    const option = document.createElement('option');
+                    option.value = unit;
+                    option.textContent = unit;
+                    select.appendChild(option);
+                });
+                select.value = typeof dimension.unit === 'string' && dimension.unit !== '' ? dimension.unit : units[0];
+
+                const commit = () => {
+                    updateWidgetValue(widget.id, path, {
+                        value: input.value,
+                        unit: select.value,
+                    });
+                };
+
+                input.addEventListener('input', commit);
+                select.addEventListener('change', commit);
+
+                fieldWrapper.appendChild(input);
+                fieldWrapper.appendChild(select);
+                break;
+            }
+            case 'repeater': {
+                const items = Array.isArray(value) ? value : [];
+                const list = document.createElement('div');
+                list.className = 'sidebar-jlg-widget-field__repeater';
+
+                const renderItems = () => {
+                    list.innerHTML = '';
+                    items.forEach((item, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'sidebar-jlg-widget-field__repeater-item';
+                        const headingInput = document.createElement('input');
+                        headingInput.type = 'text';
+                        headingInput.placeholder = getI18nString('widgetsRepeaterHeading', 'Titre');
+                        headingInput.value = typeof item.heading === 'string' ? item.heading : '';
+                        headingInput.addEventListener('input', () => {
+                            item.heading = headingInput.value;
+                            updateWidgetValue(widget.id, path, items);
+                        });
+
+                        const textArea = document.createElement('textarea');
+                        textArea.placeholder = getI18nString('widgetsRepeaterContent', 'Contenu');
+                        textArea.value = typeof item.text === 'string' ? item.text : '';
+                        textArea.addEventListener('input', () => {
+                            item.text = textArea.value;
+                            updateWidgetValue(widget.id, path, items);
+                        });
+
+                        const removeButton = document.createElement('button');
+                        removeButton.type = 'button';
+                        removeButton.className = 'button-link';
+                        removeButton.textContent = getI18nString('widgetsRepeaterRemove', 'Supprimer');
+                        removeButton.addEventListener('click', () => {
+                            items.splice(index, 1);
+                            updateWidgetValue(widget.id, path, items);
+                            renderItems();
+                        });
+
+                        card.appendChild(headingInput);
+                        card.appendChild(textArea);
+                        card.appendChild(removeButton);
+
+                        list.appendChild(card);
+                    });
+                };
+
+                renderItems();
+
+                const addItemButton = document.createElement('button');
+                addItemButton.type = 'button';
+                addItemButton.className = 'button';
+                addItemButton.textContent = getI18nString('widgetsRepeaterAdd', 'Ajouter un élément');
+                addItemButton.addEventListener('click', () => {
+                    items.push({ heading: '', text: '' });
+                    updateWidgetValue(widget.id, path, items);
+                    renderItems();
+                });
+
+                fieldWrapper.appendChild(list);
+                fieldWrapper.appendChild(addItemButton);
+                break;
+            }
+            default:
+                break;
+        }
+
+        return fieldWrapper;
+    }
+
+    function renderEditor() {
+        if (!editorElement) {
+            return;
+        }
+
+        ensureSelectionIntegrity();
+        const activeWidget = widgets.find((widget) => widget.id === selectedId);
+
+        editorElement.innerHTML = '';
+
+        if (!activeWidget) {
+            if (editorPlaceholder) {
+                editorPlaceholder.style.display = '';
+            }
+            return;
+        }
+
+        if (editorPlaceholder) {
+            editorPlaceholder.style.display = 'none';
+        }
+
+        const schema = normalizedSchemas[activeWidget.type] || {};
+        const sections = [
+            { key: 'content', schema: schema.content || {}, label: getI18nString('widgetsSectionContent', 'Contenu') },
+            { key: 'style', schema: schema.style || {}, label: getI18nString('widgetsSectionStyle', 'Style') },
+            { key: 'tracking', schema: schema.tracking && schema.tracking.fields ? schema.tracking.fields : {}, label: getI18nString('widgetsSectionTracking', 'Tracking') },
+        ];
+
+        sections.forEach((section) => {
+            if (!section.schema || Object.keys(section.schema).length === 0) {
+                return;
+            }
+
+            const fieldset = document.createElement('fieldset');
+            fieldset.className = 'sidebar-jlg-widgets-fieldset';
+            const legend = document.createElement('legend');
+            legend.textContent = section.label;
+            fieldset.appendChild(legend);
+
+            Object.keys(section.schema).forEach((fieldKey) => {
+                const field = createWidgetField(
+                    activeWidget,
+                    section.key,
+                    fieldKey,
+                    section.schema[fieldKey],
+                    activeWidget[section.key] ? activeWidget[section.key][fieldKey] : undefined
+                );
+                if (field) {
+                    fieldset.appendChild(field);
+                }
+            });
+
+            editorElement.appendChild(fieldset);
+        });
+    }
+
+    function initSortable() {
+        if (!listElement || !window.jQuery) {
+            return;
+        }
+
+        const $list = window.jQuery(listElement);
+        if (typeof $list.sortable !== 'function') {
+            return;
+        }
+
+        if ($list.data('ui-sortable')) {
+            $list.sortable('destroy');
+        }
+
+        $list.sortable({
+            handle: '.sidebar-jlg-widget-card__handle',
+            placeholder: 'sidebar-jlg-widget-card__placeholder',
+            update: () => {
+                const orderedIds = [];
+                $list.children().each(function collect() {
+                    const id = this.getAttribute('data-widget-id');
+                    if (id) {
+                        orderedIds.push(id);
+                    }
+                });
+
+                if (orderedIds.length !== widgets.length) {
+                    return;
+                }
+
+                const reordered = [];
+                orderedIds.forEach((id) => {
+                    const match = widgets.find((widget) => widget.id === id);
+                    if (match) {
+                        reordered.push(match);
+                    }
+                });
+
+                if (reordered.length === widgets.length) {
+                    widgets = reordered;
+                    syncHiddenField();
+                    renderAll();
+                }
+            },
+        });
+    }
+
+    function renderAll() {
+        renderList();
+        renderEditor();
+        renderPreview();
+        syncHiddenField();
+    }
+
+    if (addButton) {
+        addButton.addEventListener('click', () => {
+            if (!typeSelect) {
+                return;
+            }
+
+            const selectedType = sanitizeWidgetType(typeSelect.value);
+            if (!selectedType || !normalizedSchemas[selectedType]) {
+                typeSelect.focus();
+                return;
+            }
+
+            const newWidget = createWidgetFromSchema(selectedType, normalizedSchemas[selectedType]);
+            widgets.push(newWidget);
+            selectedId = newWidget.id;
+            renderAll();
+
+            if (typeSelect.options.length > 0) {
+                typeSelect.selectedIndex = 0;
+            }
+        });
+    }
+
+    renderAll();
+
+    return {
+        getWidgets: () => widgets.slice(),
+        setSelectedId: (id) => {
+            selectedId = id;
+            renderAll();
+        },
+        refresh: renderAll,
+    };
+}
+
 function normalizeNumericString(value) {
     if (typeof value === 'number') {
         if (!Number.isFinite(value)) {
@@ -2139,6 +3038,12 @@ jQuery(document).ready(function($) {
     const pendingIconRequests = {};
     const iconEntryByExactKey = {};
     const iconKeyLookup = {};
+
+    initializeWidgetBuilderInterface({
+        container: document.querySelector('[data-widget-builder]'),
+        hiddenField: document.getElementById('sidebar-jlg-widgets-field'),
+        schemas: sidebarJLG.widget_schemas || {},
+    });
 
     const EXPERIENCE_STORAGE_KEY = 'sidebarJlgExperienceMode';
     const experienceDom = {

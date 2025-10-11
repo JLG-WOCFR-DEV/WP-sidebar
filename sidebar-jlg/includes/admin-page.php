@@ -238,6 +238,7 @@ $textTransformLabels = [
         <a href="#tab-profiles" class="nav-tab" id="tab-profiles-tab" role="tab" aria-controls="tab-profiles" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Profils', 'sidebar-jlg' ); ?></a>
         <a href="#tab-presets" class="nav-tab" id="tab-presets-tab" role="tab" aria-controls="tab-presets" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Style & Préréglages', 'sidebar-jlg' ); ?></a>
         <a href="#tab-menu" class="nav-tab" id="tab-menu-tab" role="tab" aria-controls="tab-menu" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Contenu du Menu', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-widgets" class="nav-tab" id="tab-widgets-tab" role="tab" aria-controls="tab-widgets" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Widgets', 'sidebar-jlg' ); ?></a>
         <a href="#tab-social" class="nav-tab" id="tab-social-tab" role="tab" aria-controls="tab-social" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Réseaux Sociaux', 'sidebar-jlg' ); ?></a>
         <a href="#tab-effects" class="nav-tab" id="tab-effects-tab" role="tab" aria-controls="tab-effects" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Effets & Animations', 'sidebar-jlg' ); ?></a>
         <a href="#tab-analytics" class="nav-tab" id="tab-analytics-tab" role="tab" aria-controls="tab-analytics" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Insights & Analytics', 'sidebar-jlg' ); ?></a>
@@ -1286,6 +1287,58 @@ $textTransformLabels = [
             </table>
         </div>
 
+        <?php
+        $widgetSchemas = isset( $options['widget_schemas'] ) && is_array( $options['widget_schemas'] ) ? $options['widget_schemas'] : [];
+        $registeredWidgets = isset( $options['widgets'] ) && is_array( $options['widgets'] ) ? $options['widgets'] : [];
+        $widgetSchemasJson = wp_json_encode( $widgetSchemas );
+        $widgetsJson = wp_json_encode( $registeredWidgets );
+        ?>
+
+        <div id="tab-widgets" class="tab-content" role="tabpanel" aria-labelledby="tab-widgets-tab" aria-hidden="true" hidden>
+            <h2><?php esc_html_e( 'Widgets enrichis', 'sidebar-jlg' ); ?></h2>
+            <p class="description"><?php esc_html_e( 'Ajoutez des blocs CTA, formulaires, sliders ou intégrations WooCommerce à votre sidebar et personnalisez leur style.', 'sidebar-jlg' ); ?></p>
+
+            <input type="hidden" name="sidebar_jlg_settings[widgets]" id="sidebar-jlg-widgets-field" value="<?php echo esc_attr( $widgetsJson ); ?>" />
+
+            <div
+                class="sidebar-jlg-widgets-builder"
+                data-widget-builder
+                data-widget-schemas="<?php echo esc_attr( $widgetSchemasJson ); ?>"
+                data-widget-options="<?php echo esc_attr( $widgetsJson ); ?>"
+            >
+                <div class="sidebar-jlg-widgets-toolbar">
+                    <label for="sidebar-jlg-widget-type" class="screen-reader-text"><?php esc_html_e( 'Type de widget', 'sidebar-jlg' ); ?></label>
+                    <select id="sidebar-jlg-widget-type" data-widget-type>
+                        <option value="" disabled selected><?php esc_html_e( 'Sélectionnez un type de widget…', 'sidebar-jlg' ); ?></option>
+                        <?php foreach ( $widgetSchemas as $key => $schema ) :
+                            if ( ! is_string( $key ) ) {
+                                continue;
+                            }
+
+                            $label = isset( $schema['label'] ) && is_string( $schema['label'] ) ? $schema['label'] : ucfirst( $key );
+                            ?>
+                            <option value="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="button" data-widget-add><?php esc_html_e( 'Ajouter le widget', 'sidebar-jlg' ); ?></button>
+                </div>
+
+                <div class="sidebar-jlg-widgets-layout">
+                    <div class="sidebar-jlg-widgets-list" id="sidebar-jlg-widgets-list" data-widget-list role="list" aria-label="<?php esc_attr_e( 'Liste des widgets configurés', 'sidebar-jlg' ); ?>"></div>
+
+                    <div class="sidebar-jlg-widgets-editor" data-widget-editor>
+                        <h3><?php esc_html_e( 'Configuration du widget', 'sidebar-jlg' ); ?></h3>
+                        <p class="description" data-widget-editor-empty><?php esc_html_e( 'Sélectionnez un widget pour modifier son contenu et son apparence.', 'sidebar-jlg' ); ?></p>
+                    </div>
+
+                    <aside class="sidebar-jlg-widgets-preview" data-widget-preview>
+                        <h3><?php esc_html_e( 'Aperçu', 'sidebar-jlg' ); ?></h3>
+                        <div class="sidebar-jlg-widgets-preview-frame" data-widget-preview-frame></div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+
         <!-- Onglet Réseaux Sociaux -->
         <div id="tab-social" class="tab-content" role="tabpanel" aria-labelledby="tab-social-tab" aria-hidden="true" hidden>
             <h2><?php esc_html_e('Icônes des réseaux sociaux', 'sidebar-jlg'); ?></h2>
@@ -1560,6 +1613,9 @@ $textTransformLabels = [
                         'menu_link'      => __( 'Navigation principale', 'sidebar-jlg' ),
                         'social_link'    => __( 'Icônes sociales', 'sidebar-jlg' ),
                         'cta_button'     => __( 'Bouton CTA', 'sidebar-jlg' ),
+                        'form_submit'    => __( 'Soumission formulaire', 'sidebar-jlg' ),
+                        'slider_interaction' => __( 'Interaction slider', 'sidebar-jlg' ),
+                        'product'        => __( 'Produit WooCommerce', 'sidebar-jlg' ),
                         'toggle_button'  => __( 'Bouton hamburger', 'sidebar-jlg' ),
                         'gesture_swipe'  => __( 'Geste tactile', 'sidebar-jlg' ),
                         'auto_timer'     => __( 'Déclencheur minuterie', 'sidebar-jlg' ),
@@ -1571,6 +1627,10 @@ $textTransformLabels = [
                         'menu_link_click' => __( 'Clics de navigation', 'sidebar-jlg' ),
                         'cta_view'        => __( 'Vues CTA', 'sidebar-jlg' ),
                         'cta_click'       => __( 'Clics CTA', 'sidebar-jlg' ),
+                        'cta_conversion'  => __( 'Conversions CTA', 'sidebar-jlg' ),
+                        'form_submit'     => __( 'Soumissions formulaire', 'sidebar-jlg' ),
+                        'slider_interaction' => __( 'Interactions slider', 'sidebar-jlg' ),
+                        'woocommerce_widget_click' => __( 'Interactions WooCommerce', 'sidebar-jlg' ),
                         'sidebar_session' => __( 'Sessions suivies', 'sidebar-jlg' ),
                     ];
                     $windowLast7 = isset( $analyticsWindows['last7'] ) && is_array( $analyticsWindows['last7'] ) ? $analyticsWindows['last7'] : [];
@@ -1603,9 +1663,13 @@ $textTransformLabels = [
                             <tbody>
                                 <tr><td><?php esc_html_e( 'Ouvertures', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $sidebarOpensTotal ) ); ?></td></tr>
                                 <tr><td><?php esc_html_e( 'Clics de navigation', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $menuClicksTotal ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Taux de clic navigation / ouverture', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_percentage_label( $clickRate ) ); ?></td></tr>
                                 <tr><td><?php esc_html_e( 'Vues CTA', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $ctaViewsTotal ) ); ?></td></tr>
                                 <tr><td><?php esc_html_e( 'Clics CTA', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $ctaClicksTotal ) ); ?></td></tr>
-                                <tr><td><?php esc_html_e( 'Taux de clic navigation / ouverture', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_percentage_label( $clickRate ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Conversions CTA', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $ctaConversionsTotal ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Soumissions formulaire', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $formSubmitsTotal ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Interactions slider', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $sliderInteractions ) ); ?></td></tr>
+                                <tr><td><?php esc_html_e( 'Interactions WooCommerce', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $woocommerceClicksTotal ) ); ?></td></tr>
                                 <tr><td><?php esc_html_e( 'Sessions suivies', 'sidebar-jlg' ); ?></td><td><?php echo esc_html( sidebar_jlg_format_metric_number( $analyticsTotals['sidebar_session'] ?? 0 ) ); ?></td></tr>
                             </tbody>
                         </table>

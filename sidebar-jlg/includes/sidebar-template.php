@@ -30,6 +30,19 @@ $menuClassAttr = implode(' ', array_map('sanitize_html_class', $menuClasses));
 $currentRequestContext = SidebarRenderer::getCurrentRequestContext();
 $menuNodes = SidebarRenderer::buildMenuTree($options, $allIcons, $currentRequestContext);
 
+$registeredWidgets = [];
+if (!empty($options['widgets']) && is_array($options['widgets'])) {
+    $registeredWidgets = $options['widgets'];
+}
+
+$widgetTemplateDirectory = __DIR__ . '/../templates/widgets/';
+$widgetTemplates = [
+    'cta' => $widgetTemplateDirectory . 'widget-cta.php',
+    'form' => $widgetTemplateDirectory . 'widget-form.php',
+    'slider' => $widgetTemplateDirectory . 'widget-slider.php',
+    'woocommerce' => $widgetTemplateDirectory . 'widget-woocommerce.php',
+];
+
 $socialOrientation = '';
 if (isset($options['social_orientation']) && is_string($options['social_orientation'])) {
     $socialOrientation = $options['social_orientation'];
@@ -271,6 +284,49 @@ ob_start();
 </nav>
 
 <?php
+$widgetsMarkup = '';
+if ($registeredWidgets !== []) {
+    foreach ($registeredWidgets as $widgetIndex => $widgetConfig) {
+        if (!is_array($widgetConfig)) {
+            continue;
+        }
+
+        $widgetType = isset($widgetConfig['type']) ? sanitize_key((string) $widgetConfig['type']) : '';
+        if ($widgetType === '' || !isset($widgetTemplates[$widgetType])) {
+            continue;
+        }
+
+        $templatePath = $widgetTemplates[$widgetType];
+        if (!is_string($templatePath) || $templatePath === '' || !file_exists($templatePath)) {
+            continue;
+        }
+
+        $widgetId = isset($widgetConfig['id']) && is_string($widgetConfig['id']) && $widgetConfig['id'] !== ''
+            ? sanitize_html_class($widgetConfig['id'])
+            : $widgetType . '-' . ($widgetIndex + 1);
+
+        $widgetData = $widgetConfig;
+        $widgetData['type'] = $widgetType;
+        $widgetData['id'] = $widgetId;
+
+        ob_start();
+        $widget = $widgetData;
+        $widget_index = $widgetIndex;
+        include $templatePath;
+        $widgetMarkup = ob_get_clean();
+
+        if (is_string($widgetMarkup) && $widgetMarkup !== '') {
+            $widgetsMarkup .= $widgetMarkup;
+        }
+    }
+}
+
+if ($widgetsMarkup !== '') {
+    echo '<section class="sidebar-widgets" data-widgets-count="' . esc_attr((string) count($registeredWidgets)) . '">';
+    echo $widgetsMarkup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Widgets already escaped in partials.
+    echo '</section>';
+}
+
 if ($socialPosition === 'footer' && $socialIcons !== []) {
     $footerSocialIcons = Templating::renderSocialIcons($socialIcons, $allIcons, $socialOrientation);
     if ($footerSocialIcons !== '') {

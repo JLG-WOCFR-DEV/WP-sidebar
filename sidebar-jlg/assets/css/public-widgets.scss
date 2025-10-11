@@ -1,0 +1,196 @@
+.sidebar-widgets {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.sidebar-widget {
+  --widget-background: rgba(15, 23, 42, 0.92);
+  --widget-text: #f8fafc;
+  --widget-accent: #2563eb;
+  --widget-radius: 16px;
+  --widget-padding: 1.25rem;
+  background: var(--widget-background);
+  color: var(--widget-text);
+  padding: var(--widget-padding);
+  border-radius: var(--widget-radius);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sidebar-widget__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.sidebar-widget__content {
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.sidebar-widget__actions {
+  margin-top: 0.75rem;
+}
+
+.sidebar-widget__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  background: var(--widget-accent);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sidebar-widget__button:hover,
+.sidebar-widget__button:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
+}
+
+.sidebar-widget__embed {
+  background: rgba(15, 23, 42, 0.35);
+  border-radius: calc(var(--widget-radius) - 4px);
+  padding: 0.75rem;
+}
+
+.sidebar-widget--form {
+  --widget-background: rgba(15, 118, 110, 0.08);
+  --widget-text: #0f172a;
+  box-shadow: none;
+  border: 1px solid rgba(15, 118, 110, 0.15);
+}
+
+.sidebar-widget--form .sidebar-widget__form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sidebar-widget--form input[type="email"],
+.sidebar-widget--form input[type="text"],
+.sidebar-widget--form textarea {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+.sidebar-widget__success {
+  display: none;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(34, 197, 94, 0.15);
+  color: #166534;
+}
+
+.sidebar-widget__success.is-visible {
+  display: block;
+}
+
+.sidebar-widget--slider {
+  --widget-background: rgba(30, 41, 59, 0.95);
+  --widget-text: #e2e8f0;
+}
+
+.sidebar-widget__slides {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.sidebar-widget__slide {
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: calc(var(--widget-radius) - 6px);
+  padding: 0.85rem;
+}
+
+.sidebar-widget__slide-title {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.sidebar-widget--woocommerce {
+  --widget-background: #fff;
+  --widget-text: #0f172a;
+  color: var(--widget-text);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.08);
+}
+
+.sidebar-widget--woocommerce .sidebar-widget__products {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sidebar-widget--woocommerce .sidebar-widget__product-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.sidebar-widget--woocommerce .sidebar-widget__fallback {
+  font-size: 0.9rem;
+  color: rgba(15, 23, 42, 0.7);
+}
+
+.sidebar-widget__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.sidebar-widget--woocommerce .sidebar-widget__meta {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.sidebar-widget__meta strong {
+  font-weight: 600;
+  color: inherit;
+}
+
+.sidebar-widget__products li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: calc(var(--widget-radius) - 8px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-widget--woocommerce .sidebar-widget__products li {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.sidebar-widget[data-widget-highlight-badges="true"] .sidebar-widget__products li:first-child {
+  border: 1px solid var(--widget-accent, rgba(59, 130, 246, 0.55));
+}
+
+.sidebar-widget--slider .sidebar-widget__slides li {
+  cursor: pointer;
+}
+
+.sidebar-widget--slider .sidebar-widget__slides li:hover,
+.sidebar-widget--slider .sidebar-widget__slides li:focus {
+  background: rgba(37, 99, 235, 0.35);
+}

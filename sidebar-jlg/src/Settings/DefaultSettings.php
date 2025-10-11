@@ -4,6 +4,327 @@ namespace JLG\Sidebar\Settings;
 
 class DefaultSettings
 {
+    public const WIDGET_SCHEMAS = [
+        'cta' => [
+            'label' => 'Bloc CTA',
+            'description' => 'Encourage une action clé avec un titre, un texte descriptif et un bouton de conversion.',
+            'content' => [
+                'title' => [
+                    'type' => 'text',
+                    'label' => 'Titre',
+                    'default' => '',
+                    'placeholder' => 'Boostez vos conversions',
+                ],
+                'message' => [
+                    'type' => 'richtext',
+                    'label' => 'Message',
+                    'default' => '',
+                    'placeholder' => 'Présentez votre offre en quelques phrases.',
+                ],
+                'button_label' => [
+                    'type' => 'text',
+                    'label' => 'Libellé du bouton',
+                    'default' => '',
+                    'placeholder' => 'Je découvre',
+                ],
+                'button_url' => [
+                    'type' => 'url',
+                    'label' => 'Lien du bouton',
+                    'default' => '',
+                ],
+                'shortcode' => [
+                    'type' => 'textarea',
+                    'label' => 'Shortcode complémentaire',
+                    'default' => '',
+                    'placeholder' => '[contact-form-7 id="123"]',
+                ],
+            ],
+            'style' => [
+                'layout' => [
+                    'type' => 'select',
+                    'label' => 'Disposition',
+                    'choices' => ['stacked', 'inline', 'badge'],
+                    'default' => 'stacked',
+                ],
+                'background_color' => [
+                    'type' => 'color',
+                    'label' => 'Couleur de fond',
+                    'default' => 'rgba(15, 23, 42, 0.95)',
+                ],
+                'accent_color' => [
+                    'type' => 'color',
+                    'label' => 'Couleur d\'accent',
+                    'default' => 'rgba(37, 99, 235, 1)',
+                ],
+                'text_color' => [
+                    'type' => 'color',
+                    'label' => 'Couleur de texte',
+                    'default' => 'rgba(241, 245, 249, 1)',
+                ],
+                'border_radius' => [
+                    'type' => 'dimension',
+                    'label' => 'Rayon des bords',
+                    'default' => ['value' => '20', 'unit' => 'px'],
+                    'units' => ['px', 'rem', 'em'],
+                ],
+                'shadow' => [
+                    'type' => 'select',
+                    'label' => 'Ombre',
+                    'choices' => ['none', 'soft', 'emphasis'],
+                    'default' => 'soft',
+                ],
+            ],
+            'tracking' => [
+                'events' => [
+                    'view' => 'cta_view',
+                    'interaction' => 'cta_click',
+                    'conversion' => 'cta_conversion',
+                ],
+                'fields' => [
+                    'goal_id' => [
+                        'type' => 'text',
+                        'label' => 'Identifiant de l\'objectif',
+                        'default' => '',
+                    ],
+                    'conversion_label' => [
+                        'type' => 'text',
+                        'label' => 'Label de conversion',
+                        'default' => '',
+                    ],
+                    'enable_goal' => [
+                        'type' => 'boolean',
+                        'label' => 'Activer le suivi de conversion',
+                        'default' => true,
+                    ],
+                ],
+            ],
+        ],
+        'form' => [
+            'label' => 'Formulaire',
+            'description' => 'Intègre un formulaire HTML ou un shortcode de collecte de leads.',
+            'content' => [
+                'title' => [
+                    'type' => 'text',
+                    'label' => 'Titre',
+                    'default' => '',
+                    'placeholder' => 'Restons en contact',
+                ],
+                'intro' => [
+                    'type' => 'richtext',
+                    'label' => 'Accroche',
+                    'default' => '',
+                    'placeholder' => 'Expliquez l\'intérêt du formulaire en une phrase.',
+                ],
+                'shortcode' => [
+                    'type' => 'textarea',
+                    'label' => 'Shortcode de formulaire',
+                    'default' => '',
+                ],
+                'success_message' => [
+                    'type' => 'textarea',
+                    'label' => 'Message de succès',
+                    'default' => '',
+                    'placeholder' => 'Merci ! Nous revenons vers vous rapidement.',
+                ],
+            ],
+            'style' => [
+                'background_color' => [
+                    'type' => 'color',
+                    'label' => 'Couleur de fond',
+                    'default' => 'rgba(15, 118, 110, 0.08)',
+                ],
+                'text_color' => [
+                    'type' => 'color',
+                    'label' => 'Texte',
+                    'default' => 'rgba(15, 23, 42, 1)',
+                ],
+                'button_style' => [
+                    'type' => 'select',
+                    'label' => 'Style des boutons',
+                    'choices' => ['solid', 'outline', 'ghost'],
+                    'default' => 'solid',
+                ],
+                'padding' => [
+                    'type' => 'dimension',
+                    'label' => 'Marges internes',
+                    'default' => ['value' => '24', 'unit' => 'px'],
+                    'units' => ['px', 'rem', 'em'],
+                ],
+                'border_radius' => [
+                    'type' => 'dimension',
+                    'label' => 'Arrondi',
+                    'default' => ['value' => '16', 'unit' => 'px'],
+                    'units' => ['px', 'rem', 'em'],
+                ],
+            ],
+            'tracking' => [
+                'events' => [
+                    'view' => 'form_view',
+                    'interaction' => 'form_start',
+                    'conversion' => 'form_submit',
+                ],
+                'fields' => [
+                    'integration' => [
+                        'type' => 'select',
+                        'label' => 'Type d\'intégration',
+                        'choices' => ['shortcode', 'html', 'hubspot', 'mailchimp'],
+                        'default' => 'shortcode',
+                    ],
+                    'goal_id' => [
+                        'type' => 'text',
+                        'label' => 'Identifiant de conversion',
+                        'default' => '',
+                    ],
+                    'enable_goal' => [
+                        'type' => 'boolean',
+                        'label' => 'Activer le suivi de soumission',
+                        'default' => true,
+                    ],
+                ],
+            ],
+        ],
+        'slider' => [
+            'label' => 'Slider',
+            'description' => 'Affiche un carrousel de témoignages, logos ou contenus personnalisés.',
+            'content' => [
+                'title' => [
+                    'type' => 'text',
+                    'label' => 'Titre du slider',
+                    'default' => '',
+                ],
+                'items' => [
+                    'type' => 'repeater',
+                    'label' => 'Éléments du slider',
+                    'default' => [
+                        [
+                            'heading' => 'Satisfaction client',
+                            'text' => '95% des utilisateurs recommandent notre solution.',
+                        ],
+                    ],
+                    'schema' => [
+                        'heading' => [
+                            'type' => 'text',
+                            'label' => 'Titre',
+                            'default' => '',
+                        ],
+                        'text' => [
+                            'type' => 'textarea',
+                            'label' => 'Description',
+                            'default' => '',
+                        ],
+                        'media' => [
+                            'type' => 'url',
+                            'label' => 'Image (URL)',
+                            'default' => '',
+                        ],
+                    ],
+                ],
+            ],
+            'style' => [
+                'theme' => [
+                    'type' => 'select',
+                    'label' => 'Thème visuel',
+                    'choices' => ['minimal', 'cards', 'highlight'],
+                    'default' => 'cards',
+                ],
+                'autoplay' => [
+                    'type' => 'boolean',
+                    'label' => 'Lecture automatique',
+                    'default' => true,
+                ],
+                'autoplay_delay' => [
+                    'type' => 'number',
+                    'label' => 'Délai (ms)',
+                    'default' => 4500,
+                ],
+            ],
+            'tracking' => [
+                'events' => [
+                    'view' => 'slider_view',
+                    'interaction' => 'slider_interaction',
+                    'conversion' => 'slider_cta',
+                ],
+                'fields' => [
+                    'enable_goal' => [
+                        'type' => 'boolean',
+                        'label' => 'Suivre les interactions',
+                        'default' => true,
+                    ],
+                    'goal_id' => [
+                        'type' => 'text',
+                        'label' => 'Identifiant analytique',
+                        'default' => '',
+                    ],
+                ],
+            ],
+        ],
+        'woocommerce' => [
+            'label' => 'WooCommerce',
+            'description' => 'Met en avant des produits, catégories ou le panier WooCommerce.',
+            'content' => [
+                'mode' => [
+                    'type' => 'select',
+                    'label' => 'Mode d\'intégration',
+                    'choices' => ['product', 'category', 'cart', 'checkout'],
+                    'default' => 'product',
+                ],
+                'ids' => [
+                    'type' => 'text',
+                    'label' => 'Identifiants cibles',
+                    'default' => '',
+                    'placeholder' => '42,51,87',
+                ],
+                'fallback_message' => [
+                    'type' => 'textarea',
+                    'label' => 'Message alternatif',
+                    'default' => '',
+                ],
+            ],
+            'style' => [
+                'display' => [
+                    'type' => 'select',
+                    'label' => 'Affichage',
+                    'choices' => ['list', 'grid', 'compact'],
+                    'default' => 'compact',
+                ],
+                'highlight_badges' => [
+                    'type' => 'boolean',
+                    'label' => 'Mettre en avant les promotions',
+                    'default' => true,
+                ],
+                'background_color' => [
+                    'type' => 'color',
+                    'label' => 'Fond',
+                    'default' => 'rgba(255, 255, 255, 1)',
+                ],
+            ],
+            'tracking' => [
+                'events' => [
+                    'view' => 'woocommerce_widget_view',
+                    'interaction' => 'woocommerce_widget_click',
+                    'conversion' => 'woocommerce_widget_purchase',
+                ],
+                'fields' => [
+                    'enable_goal' => [
+                        'type' => 'boolean',
+                        'label' => 'Suivre les clics produits',
+                        'default' => true,
+                    ],
+                    'goal_id' => [
+                        'type' => 'text',
+                        'label' => 'Identifiant de l\'objectif',
+                        'default' => '',
+                    ],
+                    'integration' => [
+                        'type' => 'select',
+                        'label' => 'Source des données',
+                        'choices' => ['products', 'cart', 'checkout', 'recommendations'],
+                        'default' => 'products',
+                    ],
+                ],
+            ],
+        ],
+    ];
     public const STYLE_PRESETS = [
         'headless_minimal' => [
             'label' => 'Headless Minimal',
@@ -552,6 +873,8 @@ class DefaultSettings
             'social_position'   => 'footer',
             'social_icon_size'  => 100,
             'style_presets'     => self::STYLE_PRESETS,
+            'widgets'           => [],
+            'widget_schemas'    => self::WIDGET_SCHEMAS,
         ];
     }
 
