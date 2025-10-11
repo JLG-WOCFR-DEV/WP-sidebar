@@ -201,25 +201,41 @@ $cachedLocales = get_option('sidebar_jlg_cached_locales', []);
 $postEntryRetained = false;
 $pageEntryStored = false;
 
-foreach ($cachedLocales as $entry) {
-    if (!is_array($entry)) {
-        continue;
+if (is_array($cachedLocales) && isset($cachedLocales['en_US']) && is_array($cachedLocales['en_US'])) {
+    foreach ($cachedLocales['en_US'] as $suffixKey => $_value) {
+        if (!is_string($suffixKey) || $suffixKey === '__default__') {
+            continue;
+        }
+
+        if ($suffixKey === 'post-profile') {
+            $postEntryRetained = true;
+        }
+
+        if ($suffixKey === 'page-profile') {
+            $pageEntryStored = true;
+        }
     }
+} elseif (is_array($cachedLocales)) {
+    foreach ($cachedLocales as $entry) {
+        if (!is_array($entry)) {
+            continue;
+        }
 
-    $entryLocale = isset($entry['locale']) ? (string) $entry['locale'] : '';
+        $entryLocale = isset($entry['locale']) ? (string) $entry['locale'] : '';
 
-    if ($entryLocale !== 'en_US') {
-        continue;
-    }
+        if ($entryLocale !== 'en_US') {
+            continue;
+        }
 
-    $entrySuffix = $entry['suffix'] ?? null;
+        $entrySuffix = $entry['suffix'] ?? null;
 
-    if ($entrySuffix === 'post-profile') {
-        $postEntryRetained = true;
-    }
+        if ($entrySuffix === 'post-profile') {
+            $postEntryRetained = true;
+        }
 
-    if ($entrySuffix === 'page-profile') {
-        $pageEntryStored = true;
+        if ($entrySuffix === 'page-profile') {
+            $pageEntryStored = true;
+        }
     }
 }
 
