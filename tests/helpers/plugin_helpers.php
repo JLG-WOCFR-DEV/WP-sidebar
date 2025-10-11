@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\ProfileSelector;
 use JLG\Sidebar\Frontend\RequestContextResolver;
@@ -18,7 +19,8 @@ function sidebar_jlg_create_test_sidebar_renderer(): SidebarRenderer
 
     $defaults = new DefaultSettings();
     $icons = new IconLibrary($pluginFile);
-    $settings = new SettingsRepository($defaults, $icons);
+    $sanitizer = new SettingsSanitizer($defaults, $icons);
+    $settings = new SettingsRepository($defaults, $icons, $sanitizer);
     $cache = new MenuCache();
     $requestContextResolver = new RequestContextResolver();
     $profileSelector = new ProfileSelector($settings, $requestContextResolver);

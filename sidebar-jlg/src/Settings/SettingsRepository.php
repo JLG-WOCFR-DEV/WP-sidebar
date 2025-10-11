@@ -71,13 +71,15 @@ class SettingsRepository
 
     private DefaultSettings $defaults;
     private IconLibrary $icons;
+    private SettingsSanitizer $sanitizer;
     private ?array $optionsCache = null;
     private ?array $optionsCacheRaw = null;
 
-    public function __construct(DefaultSettings $defaults, IconLibrary $icons)
+    public function __construct(DefaultSettings $defaults, IconLibrary $icons, SettingsSanitizer $sanitizer)
     {
         $this->defaults = $defaults;
         $this->icons = $icons;
+        $this->sanitizer = $sanitizer;
         $this->registerCacheInvalidationHooks();
     }
 
@@ -144,7 +146,10 @@ class SettingsRepository
 
     public function saveOptions(array $options): void
     {
-        update_option('sidebar_jlg_settings', $options);
+        $existingOptions = $this->getStoredOptions();
+        $sanitized = $this->sanitizer->sanitize_settings($options, $existingOptions);
+
+        update_option('sidebar_jlg_settings', $sanitized);
         $this->invalidateCache();
     }
 

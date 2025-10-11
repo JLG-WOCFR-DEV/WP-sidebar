@@ -45,9 +45,9 @@ class Plugin
         $this->version = $version;
         $this->defaults = new DefaultSettings();
         $this->icons = new IconLibrary($pluginFile);
-        $this->settings = new SettingsRepository($this->defaults, $this->icons);
-        $this->cache = new MenuCache();
         $this->sanitizer = new SettingsSanitizer($this->defaults, $this->icons);
+        $this->settings = new SettingsRepository($this->defaults, $this->icons, $this->sanitizer);
+        $this->cache = new MenuCache();
         $this->analytics = new AnalyticsRepository();
         $this->analyticsQueue = new AnalyticsEventQueue($this->analytics);
         $this->requestContextResolver = new RequestContextResolver();
