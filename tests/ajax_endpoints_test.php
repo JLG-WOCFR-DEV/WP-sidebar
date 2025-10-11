@@ -18,6 +18,7 @@ namespace JLG\Sidebar\Icons {
 }
 
 namespace {
+    use JLG\Sidebar\Accessibility\AuditRunner;
     use JLG\Sidebar\Ajax\Endpoints;
     use function JLG\Sidebar\plugin;
 
@@ -43,6 +44,7 @@ $GLOBALS['test_get_categories_requests'] = [];
 $GLOBALS['triggered_actions'] = [];
 $GLOBALS['logged_errors'] = [];
 $GLOBALS['test_nonce_results'] = [];
+$GLOBALS['wp_test_cron_events'] = [];
 
 function register_activation_hook($file, $callback): void {}
 function wp_upload_dir(): array
@@ -116,6 +118,47 @@ function wp_localize_script(...$args): void {}
 function wp_create_nonce($action): string
 {
     return 'nonce-' . $action;
+}
+function wp_schedule_single_event($timestamp, $hook, $args = []): bool
+{
+    if (!isset($GLOBALS['wp_test_cron_events'][$hook])) {
+        $GLOBALS['wp_test_cron_events'][$hook] = [];
+    }
+
+    $GLOBALS['wp_test_cron_events'][$hook][] = [
+        'timestamp' => (int) $timestamp,
+        'args' => $args,
+    ];
+
+    return true;
+}
+function wp_next_scheduled($hook, $args = [])
+{
+    if (empty($GLOBALS['wp_test_cron_events'][$hook])) {
+        return false;
+    }
+
+    $timestamps = array_map(static function ($event) {
+        return (int) ($event['timestamp'] ?? 0);
+    }, $GLOBALS['wp_test_cron_events'][$hook]);
+
+    $timestamps = array_filter($timestamps, static function ($value) {
+        return $value > 0;
+    });
+
+    if ($timestamps === []) {
+        return false;
+    }
+
+    sort($timestamps);
+
+    return $timestamps[0];
+}
+function wp_clear_scheduled_hook($hook, $args = []): bool
+{
+    unset($GLOBALS['wp_test_cron_events'][$hook]);
+
+    return true;
 }
 function admin_url($path = ''): string
 {
@@ -297,14 +340,17 @@ function get_categories($args = []): array
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
 $pluginInstance = plugin();
+$auditRunner = new AuditRunner($pluginInstance->getPluginFile());
 $endpoints = new Endpoints(
     $pluginInstance->getSettingsRepository(),
     $pluginInstance->getMenuCache(),
     $pluginInstance->getIconLibrary(),
     $pluginInstance->getSanitizer(),
     $pluginInstance->getAnalyticsRepository(),
+    $pluginInstance->getAnalyticsQueue(),
     $pluginInstance->getPluginFile(),
-    $pluginInstance->getSidebarRenderer()
+    $pluginInstance->getSidebarRenderer(),
+    $auditRunner
 );
 
 $testsPassed = true;
@@ -339,6 +385,7 @@ function reset_test_environment(): void
     $GLOBALS['test_nonce_results'] = [];
     $GLOBALS['triggered_actions'] = [];
     $GLOBALS['logged_errors'] = [];
+    $GLOBALS['wp_test_cron_events'] = [];
     $_POST = [];
 }
 
@@ -656,8 +703,15 @@ invoke_endpoint($endpoints, 'ajax_track_event');
 $analyticsSuccess = $GLOBALS['json_success_payloads'][0] ?? [];
 assertSame('Événement enregistré.', $analyticsSuccess['message'] ?? null, 'Analytics event records success message');
 $analyticsSummary = $analyticsSuccess['summary'] ?? [];
-assertSame(1, $analyticsSummary['totals']['sidebar_open'] ?? null, 'Analytics summary counts sidebar opens');
-assertSame('toggle_button', array_key_first($analyticsSummary['targets']['sidebar_open'] ?? []) ?? null, 'Analytics target captured for sidebar opens');
+$queuedEvents = get_option('sidebar_jlg_analytics_queue', []);
+assertSame(1, count($queuedEvents ?? []), 'Analytics event is enqueued for deferred flush');
+assertTrue(wp_next_scheduled('sidebar_jlg_flush_analytics_queue') !== false, 'Analytics flush job scheduled after enqueue');
+assertSame(0, $analyticsSummary['totals']['sidebar_open'] ?? null, 'Immediate analytics summary remains unchanged before flush');
+
+$pluginInstance->getAnalyticsQueue()->flushQueuedEvents();
+$finalSummary = $pluginInstance->getAnalyticsRepository()->getSummary();
+assertSame(1, $finalSummary['totals']['sidebar_open'] ?? null, 'Analytics totals updated after queue flush');
+assertSame('toggle_button', array_key_first($finalSummary['targets']['sidebar_open'] ?? []) ?? null, 'Analytics target captured after flush');
 
 if ($testsPassed) {
     echo "AJAX endpoints tests passed.\n";

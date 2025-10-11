@@ -22,6 +22,7 @@ $GLOBALS['wp_test_translations'] = $GLOBALS['wp_test_translations'] ?? [
 $GLOBALS['wp_test_function_overrides'] = $GLOBALS['wp_test_function_overrides'] ?? [];
 $GLOBALS['wp_test_inline_styles'] = $GLOBALS['wp_test_inline_styles'] ?? [];
 $GLOBALS['wp_test_available_languages'] = $GLOBALS['wp_test_available_languages'] ?? ['fr_FR', 'en_US'];
+$GLOBALS['wp_test_cron_events'] = $GLOBALS['wp_test_cron_events'] ?? [];
 
 if (!function_exists('wp_test_call_override')) {
     function wp_test_call_override(string $function, array $args, ?bool &$handled = null)
@@ -92,6 +93,75 @@ if (!function_exists('register_setting')) {
         if ($handled) {
             return $result;
         }
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_schedule_single_event')) {
+    function wp_schedule_single_event($timestamp, $hook, $args = []): bool
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return (bool) $result;
+        }
+
+        if (!isset($GLOBALS['wp_test_cron_events'][$hook])) {
+            $GLOBALS['wp_test_cron_events'][$hook] = [];
+        }
+
+        $GLOBALS['wp_test_cron_events'][$hook][] = [
+            'timestamp' => (int) $timestamp,
+            'args' => $args,
+        ];
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_next_scheduled')) {
+    function wp_next_scheduled($hook, $args = [])
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return $result;
+        }
+
+        if (empty($GLOBALS['wp_test_cron_events'][$hook])) {
+            return false;
+        }
+
+        $timestamps = [];
+        foreach ($GLOBALS['wp_test_cron_events'][$hook] as $event) {
+            $timestamps[] = (int) ($event['timestamp'] ?? 0);
+        }
+
+        $timestamps = array_filter($timestamps, static function ($value) {
+            return $value > 0;
+        });
+
+        if ($timestamps === []) {
+            return false;
+        }
+
+        sort($timestamps);
+
+        return $timestamps[0];
+    }
+}
+
+if (!function_exists('wp_clear_scheduled_hook')) {
+    function wp_clear_scheduled_hook($hook, $args = []): bool
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return (bool) $result;
+        }
+
+        unset($GLOBALS['wp_test_cron_events'][$hook]);
 
         return true;
     }

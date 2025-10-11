@@ -120,6 +120,15 @@ namespace {
     $postUnknownSummary = $repository->getSummary();
     assertTrue(!isset($postUnknownSummary['totals']['unknown_event']), 'Unknown events are ignored');
 
+    $repository->recordEvents([
+        ['event' => 'cta_view', 'context' => ['profile_id' => 'profile-alpha']],
+        ['event' => 'cta_click', 'context' => ['profile_id' => 'profile-alpha']],
+    ]);
+    $batchSummary = $repository->getSummary();
+    assertSame(2, $batchSummary['totals']['cta_view'] ?? null, 'Batch recording increments CTA views');
+    assertSame(2, $batchSummary['totals']['cta_click'] ?? null, 'Batch recording increments CTA clicks');
+    assertSame(2, $batchSummary['profiles']['profile-alpha']['totals']['cta_click'] ?? null, 'Profile totals updated during batch recording');
+
     unset($GLOBALS['analytics_test_current_time']);
 
     if ($testsPassed) {

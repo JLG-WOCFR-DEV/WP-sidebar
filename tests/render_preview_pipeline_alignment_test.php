@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use JLG\Sidebar\Accessibility\AuditRunner;
 use JLG\Sidebar\Ajax\Endpoints;
 use function JLG\Sidebar\plugin;
 
@@ -57,14 +58,20 @@ $cache = $plugin->getMenuCache();
 $icons = $plugin->getIconLibrary();
 $sanitizer = $plugin->getSanitizer();
 $renderer = $plugin->getSidebarRenderer();
+$analytics = $plugin->getAnalyticsRepository();
+$queue = $plugin->getAnalyticsQueue();
+$auditRunner = new AuditRunner($plugin->getPluginFile());
 
 $endpoints = new Endpoints(
     $settings,
     $cache,
     $icons,
     $sanitizer,
+    $analytics,
+    $queue,
     $plugin->getPluginFile(),
-    $renderer
+    $renderer,
+    $auditRunner
 );
 
 $options = $settings->getDefaultSettings();

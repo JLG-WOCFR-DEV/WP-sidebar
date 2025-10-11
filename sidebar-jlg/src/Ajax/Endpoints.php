@@ -4,6 +4,7 @@ namespace JLG\Sidebar\Ajax;
 
 use JLG\Sidebar\Accessibility\AuditRunner;
 use JLG\Sidebar\Admin\SettingsSanitizer;
+use JLG\Sidebar\Analytics\AnalyticsEventQueue;
 use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\SidebarRenderer;
@@ -11,6 +12,7 @@ use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
 use function __;
 use function current_time;
+use function esc_attr;
 use function esc_url_raw;
 use function gmdate;
 use function home_url;
@@ -39,6 +41,7 @@ class Endpoints
     private IconLibrary $icons;
     private SettingsSanitizer $sanitizer;
     private AnalyticsRepository $analytics;
+    private AnalyticsEventQueue $analyticsQueue;
     private string $pluginFile;
     private SidebarRenderer $renderer;
     private AuditRunner $auditRunner;
@@ -49,6 +52,7 @@ class Endpoints
         IconLibrary $icons,
         SettingsSanitizer $sanitizer,
         AnalyticsRepository $analytics,
+        AnalyticsEventQueue $analyticsQueue,
         string $pluginFile,
         SidebarRenderer $renderer,
         AuditRunner $auditRunner
@@ -59,6 +63,7 @@ class Endpoints
         $this->icons = $icons;
         $this->sanitizer = $sanitizer;
         $this->analytics = $analytics;
+        $this->analyticsQueue = $analyticsQueue;
         $this->pluginFile = $pluginFile;
         $this->renderer = $renderer;
         $this->auditRunner = $auditRunner;
@@ -795,6 +800,29 @@ class Endpoints
             ]);
         }
 
+        $profileKey = isset($options['active_profile']) ? sanitize_key((string) $options['active_profile']) : 'default';
+        if ($profileKey === '') {
+            $profileKey = 'default';
+        }
+
+        $layoutStyle = isset($options['layout_style']) ? sanitize_key((string) $options['layout_style']) : 'full';
+        if ($layoutStyle === '') {
+            $layoutStyle = 'full';
+        }
+
+        $position = isset($options['sidebar_position']) ? sanitize_key((string) $options['sidebar_position']) : 'left';
+        if ($position !== 'right') {
+            $position = 'left';
+        }
+
+        $html = sprintf(
+            '<div class="sidebar-jlg" data-sidebar-profile="%s" data-sidebar-layout="%s" data-sidebar-position="%s">%s</div>',
+            esc_attr($profileKey),
+            esc_attr($layoutStyle),
+            esc_attr($position),
+            $html
+        );
+
         wp_send_json_success([
             'html' => $html,
             'options' => $options,
@@ -856,7 +884,8 @@ class Endpoints
             $recordContext['interactions'] = $contextPayload['interactions'];
         }
 
-        $summary = $this->analytics->recordEvent($eventType, $recordContext);
+        $this->analyticsQueue->enqueue($eventType, $recordContext);
+        $summary = $this->analytics->getSummary();
 
         wp_send_json_success([
             'message' => __('Événement enregistré.', 'sidebar-jlg'),

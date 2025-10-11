@@ -6,6 +6,7 @@ use JLG\Sidebar\Accessibility\AuditRunner;
 use JLG\Sidebar\Admin\MenuPage;
 use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Admin\View\ColorPickerField;
+use JLG\Sidebar\Analytics\AnalyticsEventQueue;
 use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Ajax\Endpoints;
 use JLG\Sidebar\Cache\MenuCache;
@@ -28,6 +29,7 @@ class Plugin
     private MenuCache $cache;
     private SettingsSanitizer $sanitizer;
     private AnalyticsRepository $analytics;
+    private AnalyticsEventQueue $analyticsQueue;
     private bool $maintenanceCompleted = false;
     private MenuPage $menuPage;
     private ProfileSelector $profileSelector;
@@ -47,6 +49,7 @@ class Plugin
         $this->cache = new MenuCache();
         $this->sanitizer = new SettingsSanitizer($this->defaults, $this->icons);
         $this->analytics = new AnalyticsRepository();
+        $this->analyticsQueue = new AnalyticsEventQueue($this->analytics);
         $this->requestContextResolver = new RequestContextResolver();
         $this->profileSelector = new ProfileSelector($this->settings, $this->requestContextResolver);
         $this->auditRunner = new AuditRunner($pluginFile);
@@ -76,6 +79,7 @@ class Plugin
             $this->icons,
             $this->sanitizer,
             $this->analytics,
+            $this->analyticsQueue,
             $pluginFile,
             $this->renderer,
             $this->auditRunner
@@ -100,6 +104,7 @@ class Plugin
         add_action('sidebar_jlg_custom_icons_changed', [$this->cache, 'clear'], 10, 0);
         add_action('wp_update_nav_menu', [$this->cache, 'clear'], 10, 0);
 
+        $this->analyticsQueue->registerHooks();
         $this->menuPage->registerHooks();
         $this->renderer->registerHooks();
         $this->ajax->registerHooks();
@@ -249,6 +254,11 @@ class Plugin
     public function getAnalyticsRepository(): AnalyticsRepository
     {
         return $this->analytics;
+    }
+
+    public function getAnalyticsQueue(): AnalyticsEventQueue
+    {
+        return $this->analyticsQueue;
     }
 
     public function getSidebarRenderer(): SidebarRenderer
