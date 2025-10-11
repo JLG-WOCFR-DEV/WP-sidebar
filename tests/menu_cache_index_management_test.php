@@ -10,6 +10,13 @@ $cache = new MenuCache();
 
 $GLOBALS['wp_test_options'] = [];
 $GLOBALS['wp_test_transients'] = [];
+$recordedEvents = [];
+
+$GLOBALS['wp_test_function_overrides']['do_action'] = static function (string $hook, ...$args) use (&$recordedEvents): void {
+    if ($hook === 'sidebar_jlg_cache_event') {
+        $recordedEvents[] = $args;
+    }
+};
 
 $testsPassed = true;
 
@@ -55,6 +62,9 @@ $expectedLocales = [
 
 assertSame($expectedLocales, $cache->getCachedLocales(), 'Locale index deduplicates entries across repeated cache writes.');
 
+$cachedHtml = $cache->get('en_US', 'profile-b');
+assertSame('<div>EN profile B update</div>', $cachedHtml, 'Cache returns the latest stored HTML for locale/profile combination.');
+
 // Ensure clear() removes all stored transients and the locale option.
 $legacyKey = 'sidebar_jlg_full_html';
 set_transient($legacyKey, '<div>legacy</div>', 3600);
@@ -77,10 +87,30 @@ assertTrue(!isset($GLOBALS['wp_test_transients'][$enProfileKey]), 'EN profile ca
 assertTrue(!isset($GLOBALS['wp_test_transients'][$legacyKey]), 'Legacy cached HTML cleared.');
 assertSame([], get_option('sidebar_jlg_cached_locales', []), 'Locale index option removed on cache clear.');
 
+$eventsByType = [];
+foreach ($recordedEvents as $eventArgs) {
+    $eventName = $eventArgs[0] ?? null;
+    if (!is_string($eventName)) {
+        continue;
+    }
+
+    if (!isset($eventsByType[$eventName])) {
+        $eventsByType[$eventName] = 0;
+    }
+
+    $eventsByType[$eventName]++;
+}
+
+assertTrue(($eventsByType['set'] ?? 0) >= 1, 'Cache instrumentation records set events.');
+assertTrue(($eventsByType['hit'] ?? 0) >= 1, 'Cache instrumentation records hit events.');
+assertTrue(($eventsByType['clear'] ?? 0) >= 1, 'Cache instrumentation records clear events.');
+
 if ($testsPassed) {
     echo "Menu cache index management tests passed.\n";
+    unset($GLOBALS['wp_test_function_overrides']['do_action']);
     exit(0);
 }
 
 echo "Menu cache index management tests failed.\n";
+unset($GLOBALS['wp_test_function_overrides']['do_action']);
 exit(1);
