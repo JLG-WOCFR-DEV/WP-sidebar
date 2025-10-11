@@ -19,6 +19,11 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 delete_option( 'sidebar_jlg_settings' );
 delete_option( 'sidebar_jlg_plugin_version' );
 delete_option( 'sidebar_jlg_pending_maintenance' );
+delete_option( 'sidebar_jlg_analytics_queue' );
+
+if ( function_exists( 'wp_clear_scheduled_hook' ) ) {
+    wp_clear_scheduled_hook( 'sidebar_jlg_flush_analytics_queue' );
+}
 
 // 2. Supprimer tous les transients de cache générés pour les locales mémorisées.
 $cached_locales = get_option( 'sidebar_jlg_cached_locales', [] );

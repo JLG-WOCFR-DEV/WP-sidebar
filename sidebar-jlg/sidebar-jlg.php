@@ -13,6 +13,8 @@
 
 namespace JLG\Sidebar;
 
+use JLG\Sidebar\Analytics\AnalyticsEventQueue;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -30,6 +32,14 @@ register_activation_hook(__FILE__, static function () {
     );
 
     $handler->handle();
+
+    if (function_exists('wp_clear_scheduled_hook')) {
+        wp_clear_scheduled_hook(AnalyticsEventQueue::CRON_HOOK);
+    }
+
+    if (function_exists('delete_option')) {
+        delete_option(AnalyticsEventQueue::OPTION_NAME);
+    }
 });
 
 function plugin(): Plugin

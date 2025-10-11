@@ -10,6 +10,7 @@ use function gmdate;
 use function in_array;
 use function is_array;
 use function is_numeric;
+use function is_string;
 use function ksort;
 use function max;
 use function preg_match;
@@ -103,19 +104,76 @@ class AnalyticsRepository
      */
     public function recordEvent(string $event, array $context = []): array
     {
-        $normalizedEvent = $this->normalizeEventKey($event);
+        return $this->recordEvents([
+            [
+                'event' => $event,
+                'context' => $context,
+            ],
+        ]);
+    }
 
-        if ($normalizedEvent === null) {
-            return $this->getSummary();
+    /**
+     * @param array<int, array<string, mixed>> $events
+     */
+    public function recordEvents(array $events): array
+    {
+        $data = $this->readOption();
+        $processed = false;
+
+        foreach ($events as $event) {
+            if (!is_array($event)) {
+                continue;
+            }
+
+            $eventType = $event['event'] ?? null;
+            if (!is_string($eventType)) {
+                continue;
+            }
+
+            $normalizedEvent = $this->normalizeEventKey($eventType);
+            if ($normalizedEvent === null) {
+                continue;
+            }
+
+            $context = [];
+            if (isset($event['context']) && is_array($event['context'])) {
+                $context = $event['context'];
+            }
+
+            $timestamp = null;
+            if (isset($event['timestamp']) && is_numeric($event['timestamp'])) {
+                $timestamp = (int) $event['timestamp'];
+            }
+
+            if ($timestamp === null) {
+                $timestamp = $this->resolveTimestamp();
+            }
+
+            $data = $this->applyEventData($data, $normalizedEvent, $context, $timestamp);
+            $processed = true;
         }
 
-        $data = $this->readOption();
+        if (!$processed) {
+            return $this->buildSummaryFromData($data);
+        }
 
+        update_option(self::OPTION_NAME, $data);
+
+        return $this->buildSummaryFromData($data);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @param array<string, mixed> $context
+     *
+     * @return array<string, mixed>
+     */
+    private function applyEventData(array $data, string $normalizedEvent, array $context, int $timestamp): array
+    {
         $totals = $this->normalizeTotals($data['totals'] ?? []);
         $totals[$normalizedEvent] = ($totals[$normalizedEvent] ?? 0) + 1;
         $data['totals'] = $totals;
 
-        $timestamp = $this->resolveTimestamp();
         $dateKey = gmdate('Y-m-d', $timestamp);
 
         $daily = $this->normalizeDaily($data['daily'] ?? []);
@@ -183,9 +241,7 @@ class AnalyticsRepository
         $data['last_event_at'] = gmdate('c', $timestamp);
         $data['last_event_type'] = $normalizedEvent;
 
-        update_option(self::OPTION_NAME, $data);
-
-        return $this->buildSummaryFromData($data);
+        return $data;
     }
 
     /**
