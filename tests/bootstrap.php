@@ -10,6 +10,7 @@ if (!defined('SIDEBAR_JLG_SKIP_BOOTSTRAP')) {
 }
 
 $GLOBALS['wp_test_options'] = $GLOBALS['wp_test_options'] ?? [];
+$GLOBALS['wp_test_object_cache'] = $GLOBALS['wp_test_object_cache'] ?? [];
 $GLOBALS['wp_test_transients'] = $GLOBALS['wp_test_transients'] ?? [];
 $GLOBALS['wp_test_current_locale'] = $GLOBALS['wp_test_current_locale'] ?? 'fr_FR';
 $GLOBALS['wp_test_translations'] = $GLOBALS['wp_test_translations'] ?? [
@@ -508,6 +509,96 @@ if (!function_exists('delete_option')) {
         if (array_key_exists($name, $GLOBALS['wp_test_options'])) {
             unset($GLOBALS['wp_test_options'][$name]);
         }
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_cache_get')) {
+    function wp_cache_get($key, $group = '', $force = false, &$found = null)
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            if ($found !== null) {
+                $found = true;
+            }
+
+            return $result;
+        }
+
+        $groupKey = $group !== '' ? $group : 'default';
+        $store = $GLOBALS['wp_test_object_cache'][$groupKey] ?? [];
+
+        if (!array_key_exists($key, $store)) {
+            if ($found !== null) {
+                $found = false;
+            }
+
+            return false;
+        }
+
+        $item = $store[$key];
+        $expiration = $item['expiration'];
+
+        if ($expiration > 0 && $expiration < time()) {
+            unset($GLOBALS['wp_test_object_cache'][$groupKey][$key]);
+            if ($found !== null) {
+                $found = false;
+            }
+
+            return false;
+        }
+
+        if ($found !== null) {
+            $found = true;
+        }
+
+        return $item['value'];
+    }
+}
+
+if (!function_exists('wp_cache_set')) {
+    function wp_cache_set($key, $data, $group = '', $expire = 0): bool
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return (bool) $result;
+        }
+
+        $groupKey = $group !== '' ? $group : 'default';
+        $expiration = $expire > 0 ? (time() + (int) $expire) : 0;
+
+        if (!isset($GLOBALS['wp_test_object_cache'][$groupKey])) {
+            $GLOBALS['wp_test_object_cache'][$groupKey] = [];
+        }
+
+        $GLOBALS['wp_test_object_cache'][$groupKey][$key] = [
+            'value' => $data,
+            'expiration' => $expiration,
+        ];
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_cache_delete')) {
+    function wp_cache_delete($key, $group = ''): bool
+    {
+        $handled = false;
+        $result = wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return (bool) $result;
+        }
+
+        $groupKey = $group !== '' ? $group : 'default';
+
+        if (!isset($GLOBALS['wp_test_object_cache'][$groupKey][$key])) {
+            return false;
+        }
+
+        unset($GLOBALS['wp_test_object_cache'][$groupKey][$key]);
 
         return true;
     }

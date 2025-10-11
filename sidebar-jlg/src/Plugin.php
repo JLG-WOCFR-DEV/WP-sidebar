@@ -99,6 +99,8 @@ class Plugin
         add_action('delete_option_sidebar_jlg_active_profile', [$this, 'handleActiveProfileChanged'], 10, 1);
         add_action('sidebar_jlg_custom_icons_changed', [$this->cache, 'clear'], 10, 0);
         add_action('wp_update_nav_menu', [$this->cache, 'clear'], 10, 0);
+        add_action('wp_update_nav_menu', [SettingsRepository::class, 'invalidateCachedNavMenu'], 10, 1);
+        add_action('wp_delete_nav_menu', [SettingsRepository::class, 'invalidateCachedNavMenu'], 10, 1);
 
         $this->menuPage->registerHooks();
         $this->renderer->registerHooks();
