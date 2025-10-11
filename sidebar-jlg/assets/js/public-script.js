@@ -163,6 +163,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const seenCtaElements = analyticsEnabled
         ? (typeof WeakSet === 'function' ? new WeakSet() : new Set())
         : null;
+    const seenWidgetElements = analyticsEnabled
+        ? (typeof WeakSet === 'function' ? new WeakSet() : new Set())
+        : null;
+    const interactedWidgetElements = analyticsEnabled
+        ? (typeof WeakSet === 'function' ? new WeakSet() : new Set())
+        : null;
 
     const sidebarInner = sidebar ? sidebar.querySelector('.sidebar-inner') : null;
     const rememberTruthyValues = new Set([true, 'true', 1, '1']);
@@ -688,6 +694,86 @@ document.addEventListener('DOMContentLoaded', function() {
         persistState({ clickedCtas: Array.from(updated) });
     }
 
+    function getWidgetAnalyticsTarget(element) {
+        if (!element) {
+            return 'widget';
+        }
+
+        const explicitId = element.getAttribute('data-widget-id');
+        if (explicitId && explicitId.trim() !== '') {
+            return explicitId.trim();
+        }
+
+        const type = element.getAttribute('data-widget-type');
+        if (type && type.trim() !== '') {
+            return type.trim();
+        }
+
+        return 'widget';
+    }
+
+    function markWidgetView(element) {
+        if (!analyticsEnabled || !seenWidgetElements || !element) {
+            return;
+        }
+
+        if (typeof seenWidgetElements.has === 'function' && seenWidgetElements.has(element)) {
+            return;
+        }
+
+        if (typeof seenWidgetElements.add === 'function') {
+            seenWidgetElements.add(element);
+        }
+
+        const eventName = element.getAttribute('data-widget-view-event');
+        if (eventName && eventName.trim() !== '') {
+            dispatchAnalytics(eventName.trim(), { target: getWidgetAnalyticsTarget(element) });
+        }
+    }
+
+    function markWidgetInteraction(element) {
+        if (!analyticsEnabled || !interactedWidgetElements || !element) {
+            return;
+        }
+
+        if (typeof interactedWidgetElements.has === 'function' && interactedWidgetElements.has(element)) {
+            return;
+        }
+
+        if (typeof interactedWidgetElements.add === 'function') {
+            interactedWidgetElements.add(element);
+        }
+
+        const eventName = element.getAttribute('data-widget-interaction-event');
+        if (eventName && eventName.trim() !== '') {
+            dispatchAnalytics(eventName.trim(), { target: getWidgetAnalyticsTarget(element) });
+            recordSessionInteraction('widget_interaction');
+        }
+    }
+
+    function dispatchWidgetConversion(element, detail = {}) {
+        if (!analyticsEnabled || !element) {
+            return;
+        }
+
+        const eventName = element.getAttribute('data-widget-conversion-event');
+        if (!eventName || eventName.trim() === '') {
+            return;
+        }
+
+        const payload = { target: getWidgetAnalyticsTarget(element) };
+        if (detail && typeof detail === 'object') {
+            Object.keys(detail).forEach((key) => {
+                if (detail[key] !== undefined && detail[key] !== null) {
+                    payload[key] = detail[key];
+                }
+            });
+        }
+
+        dispatchAnalytics(eventName.trim(), payload);
+        recordSessionInteraction('widget_conversion');
+    }
+
     function restorePersistedState() {
         if (!shouldRememberState) {
             return;
@@ -793,6 +879,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.classList.add('sidebar-js-enhanced');
 
     let ctaObserver = null;
+    let widgetObserver = null;
     if (analyticsEnabled) {
         const ctaBlocks = Array.from(sidebar.querySelectorAll('.menu-cta[data-cta-analytics]'));
         if (ctaBlocks.length) {
@@ -822,6 +909,43 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 ctaBlocks.forEach((element) => {
                     markCtaView(element);
+                });
+            }
+        }
+
+        const widgetBlocks = Array.from(sidebar.querySelectorAll('.sidebar-widget'));
+        if (widgetBlocks.length) {
+            if (typeof window !== 'undefined' && typeof window.IntersectionObserver === 'function') {
+                widgetObserver = new IntersectionObserver((entries) => {
+                    entries.forEach((entry) => {
+                        if (!entry || !entry.isIntersecting) {
+                            return;
+                        }
+
+                        const target = entry.target;
+                        markWidgetView(target);
+                        if (widgetObserver && typeof widgetObserver.unobserve === 'function') {
+                            widgetObserver.unobserve(target);
+                        }
+                    });
+                }, { threshold: 0.4 });
+
+                widgetBlocks.forEach((element) => {
+                    const existingId = element.getAttribute('data-widget-id');
+                    if (!existingId || existingId.trim() === '') {
+                        element.setAttribute('data-widget-id', `widget-${Math.random().toString(36).slice(2)}`);
+                    }
+
+                    widgetObserver.observe(element);
+                });
+            } else {
+                widgetBlocks.forEach((element) => {
+                    const existingId = element.getAttribute('data-widget-id');
+                    if (!existingId || existingId.trim() === '') {
+                        element.setAttribute('data-widget-id', `widget-${Math.random().toString(36).slice(2)}`);
+                    }
+
+                    markWidgetView(element);
                 });
             }
         }
@@ -1523,6 +1647,24 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        const actionTarget = analyticsEnabled && typeof event.target.closest === 'function'
+            ? event.target.closest('[data-widget-action]')
+            : null;
+        if (actionTarget) {
+            const widgetElement = actionTarget.closest('.sidebar-widget');
+            if (widgetElement) {
+                const actionType = actionTarget.getAttribute('data-widget-action') || '';
+                if (analyticsEnabled) {
+                    markWidgetView(widgetElement);
+                    if (actionType === 'cta_button' || actionType === 'product') {
+                        dispatchWidgetConversion(widgetElement, { action: actionType });
+                    } else {
+                        markWidgetInteraction(widgetElement);
+                    }
+                }
+            }
+        }
+
         const link = event.target.closest('a');
         if (!link || !sidebar.contains(link)) {
             return;
@@ -1554,6 +1696,65 @@ document.addEventListener('DOMContentLoaded', function() {
             recordSessionInteraction('menu_link_click');
         }
     }, true);
+
+    sidebar.addEventListener('submit', (event) => {
+        if (!event || !event.target || typeof event.target.closest !== 'function') {
+            return;
+        }
+
+        const form = event.target.closest('form');
+        if (!form) {
+            return;
+        }
+
+        const widgetElement = form.closest('.sidebar-widget--form');
+        if (!widgetElement) {
+            return;
+        }
+
+        if (analyticsEnabled) {
+            markWidgetView(widgetElement);
+            dispatchWidgetConversion(widgetElement, { action: 'form_submit' });
+        }
+
+        recordSessionInteraction('widget_form_submit');
+
+        const successMessage = widgetElement.querySelector('[data-widget-success-message]');
+        if (successMessage) {
+            successMessage.classList.add('is-visible');
+            successMessage.setAttribute('role', 'status');
+            successMessage.setAttribute('aria-live', 'polite');
+        }
+
+        if (form.hasAttribute('data-widget-form')) {
+            event.preventDefault();
+            form.reset();
+        }
+    });
+
+    if (analyticsEnabled) {
+        sidebar.addEventListener('focusin', (event) => {
+            if (!event || !event.target || typeof event.target.closest !== 'function') {
+                return;
+            }
+
+            const widgetElement = event.target.closest('.sidebar-widget--slider');
+            if (widgetElement) {
+                markWidgetInteraction(widgetElement);
+            }
+        });
+
+        sidebar.addEventListener('pointerenter', (event) => {
+            if (!event || !event.target || typeof event.target.closest !== 'function') {
+                return;
+            }
+
+            const widgetElement = event.target.closest('.sidebar-widget--slider');
+            if (widgetElement) {
+                markWidgetInteraction(widgetElement);
+            }
+        }, true);
+    }
 
     const closeOnClickTruthyValues = new Set([true, 1, '1', 'true']);
     const shouldCloseOnLinkClick = typeof sidebarSettings !== 'undefined'

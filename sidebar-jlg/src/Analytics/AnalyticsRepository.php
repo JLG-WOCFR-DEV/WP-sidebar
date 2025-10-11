@@ -36,7 +36,17 @@ class AnalyticsRepository
         'menu_link_click',
         'cta_view',
         'cta_click',
+        'cta_conversion',
         'sidebar_session',
+        'form_view',
+        'form_start',
+        'form_submit',
+        'slider_view',
+        'slider_interaction',
+        'slider_cta',
+        'woocommerce_widget_view',
+        'woocommerce_widget_click',
+        'woocommerce_widget_purchase',
     ];
 
     /**

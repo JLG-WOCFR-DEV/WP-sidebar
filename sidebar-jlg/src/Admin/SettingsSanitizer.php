@@ -118,7 +118,8 @@ class SettingsSanitizer
             $this->sanitize_style_settings($preparedInput, $existingOptions) ?: [],
             $this->sanitize_effects_settings($preparedInput, $existingOptions) ?: [],
             $this->sanitize_menu_settings($preparedInput, $existingOptions) ?: [],
-            $this->sanitize_social_settings($preparedInput, $existingOptions) ?: []
+            $this->sanitize_social_settings($preparedInput, $existingOptions) ?: [],
+            $this->sanitize_widget_settings($preparedInput, $existingOptions) ?: []
         );
 
         $sanitizedInput = array_intersect_key($sanitizedInput, $allowedKeys);
@@ -684,6 +685,254 @@ class SettingsSanitizer
         $sanitized['menu_items'] = $sanitizedMenuItems;
 
         return $sanitized;
+    }
+
+    private function sanitize_widget_settings(array $input, array $existingOptions): array
+    {
+        $sanitized = [];
+        $defaults = $this->defaults->all();
+        $schemas = [];
+
+        if (isset($defaults['widget_schemas']) && is_array($defaults['widget_schemas'])) {
+            $schemas = $defaults['widget_schemas'];
+        }
+
+        if ($schemas === []) {
+            $sanitized['widgets'] = [];
+
+            return $sanitized;
+        }
+
+        $existingWidgets = [];
+        if (isset($existingOptions['widgets']) && is_array($existingOptions['widgets'])) {
+            $existingWidgets = $existingOptions['widgets'];
+        }
+
+        $rawWidgets = [];
+        if (isset($input['widgets']) && is_array($input['widgets'])) {
+            $rawWidgets = $input['widgets'];
+        } elseif (isset($input['widgets']) && is_string($input['widgets'])) {
+            $decoded = json_decode($input['widgets'], true);
+            if (is_array($decoded)) {
+                $rawWidgets = $decoded;
+            }
+        }
+
+        $sanitizedWidgets = [];
+
+        foreach ($rawWidgets as $index => $widget) {
+            if (!is_array($widget)) {
+                continue;
+            }
+
+            $existingWidget = [];
+            if (isset($existingWidgets[$index]) && is_array($existingWidgets[$index])) {
+                $existingWidget = $existingWidgets[$index];
+            }
+
+            $rawType = $widget['type'] ?? ($existingWidget['type'] ?? '');
+            $type = is_string($rawType) ? sanitize_key($rawType) : '';
+
+            if ($type === '' || !isset($schemas[$type]) || !is_array($schemas[$type])) {
+                continue;
+            }
+
+            $schema = $schemas[$type];
+
+            $rawId = $widget['id'] ?? ($existingWidget['id'] ?? '');
+            $id = is_string($rawId) ? sanitize_key($rawId) : '';
+            if ($id === '') {
+                $id = sprintf('%s-%d', $type, count($sanitizedWidgets) + 1);
+            }
+
+            $rawTitle = $widget['title'] ?? ($existingWidget['title'] ?? '');
+            $title = is_string($rawTitle) ? sanitize_text_field($rawTitle) : '';
+
+            $isEnabled = !empty($widget['is_enabled']);
+            if (!$isEnabled && !empty($existingWidget['is_enabled'])) {
+                $isEnabled = true;
+            }
+
+            $contentExisting = isset($existingWidget['content']) && is_array($existingWidget['content'])
+                ? $existingWidget['content']
+                : [];
+            $styleExisting = isset($existingWidget['style']) && is_array($existingWidget['style'])
+                ? $existingWidget['style']
+                : [];
+            $trackingExisting = isset($existingWidget['tracking']) && is_array($existingWidget['tracking'])
+                ? $existingWidget['tracking']
+                : [];
+
+            $contentInput = isset($widget['content']) && is_array($widget['content']) ? $widget['content'] : [];
+            $styleInput = isset($widget['style']) && is_array($widget['style']) ? $widget['style'] : [];
+            $trackingInput = isset($widget['tracking']) && is_array($widget['tracking']) ? $widget['tracking'] : $widget;
+
+            $contentSchema = isset($schema['content']) && is_array($schema['content']) ? $schema['content'] : [];
+            $styleSchema = isset($schema['style']) && is_array($schema['style']) ? $schema['style'] : [];
+            $trackingSchema = isset($schema['tracking']) && is_array($schema['tracking']) ? $schema['tracking'] : [];
+
+            $sanitizedWidget = [
+                'id' => $id,
+                'type' => $type,
+                'title' => $title,
+                'is_enabled' => $isEnabled,
+                'content' => $this->sanitizeWidgetSection($contentSchema, $contentInput, $contentExisting),
+                'style' => $this->sanitizeWidgetSection($styleSchema, $styleInput, $styleExisting),
+                'tracking' => $this->sanitizeWidgetTracking($trackingSchema, $trackingInput, $trackingExisting),
+            ];
+
+            $sanitizedWidgets[] = $sanitizedWidget;
+        }
+
+        $sanitized['widgets'] = $sanitizedWidgets;
+
+        return $sanitized;
+    }
+
+    private function sanitizeWidgetTracking(array $schema, array $input, array $existing): array
+    {
+        $tracking = [];
+
+        $events = [];
+        if (isset($schema['events']) && is_array($schema['events'])) {
+            foreach ($schema['events'] as $key => $eventName) {
+                if (!is_string($key) || $key === '') {
+                    continue;
+                }
+
+                $normalized = is_string($eventName) ? sanitize_key($eventName) : '';
+                if ($normalized === '') {
+                    continue;
+                }
+
+                $events[$key] = $normalized;
+            }
+        }
+
+        if ($events !== []) {
+            $tracking['events'] = $events;
+        }
+
+        $fieldsSchema = isset($schema['fields']) && is_array($schema['fields']) ? $schema['fields'] : [];
+        $existingFields = [];
+        if (isset($existing['fields']) && is_array($existing['fields'])) {
+            $existingFields = $existing['fields'];
+        }
+
+        $fields = $this->sanitizeWidgetSection($fieldsSchema, $input, $existingFields);
+
+        foreach ($fields as $fieldKey => $value) {
+            $tracking[$fieldKey] = $value;
+        }
+
+        return $tracking;
+    }
+
+    private function sanitizeWidgetSection(array $schema, $input, array $existingSection): array
+    {
+        $sanitized = [];
+        $preparedInput = is_array($input) ? $input : [];
+
+        foreach ($schema as $field => $definition) {
+            if (!is_string($field) || $field === '' || !is_array($definition)) {
+                continue;
+            }
+
+            $rawValue = $preparedInput[$field] ?? ($existingSection[$field] ?? ($definition['default'] ?? null));
+            $type = isset($definition['type']) ? (string) $definition['type'] : 'text';
+
+            switch ($type) {
+                case 'textarea':
+                case 'richtext':
+                    $sanitized[$field] = is_string($rawValue) ? wp_kses_post($rawValue) : '';
+                    break;
+                case 'url':
+                    $sanitized[$field] = is_string($rawValue) ? esc_url_raw($rawValue) : '';
+                    break;
+                case 'boolean':
+                    $sanitized[$field] = !empty($rawValue);
+                    break;
+                case 'select':
+                    $choices = isset($definition['choices']) && is_array($definition['choices']) ? $definition['choices'] : [];
+                    $sanitized[$field] = $this->sanitizeWidgetChoice($rawValue, $choices, $definition['default'] ?? '');
+                    break;
+                case 'dimension':
+                    $defaultDimension = isset($definition['default']) && is_array($definition['default']) ? $definition['default'] : ['value' => '', 'unit' => 'px'];
+                    $existingDimension = isset($existingSection[$field]) && is_array($existingSection[$field]) ? $existingSection[$field] : $defaultDimension;
+                    $units = isset($definition['units']) && is_array($definition['units']) ? $definition['units'] : null;
+                    $sanitized[$field] = ValueNormalizer::normalizeDimensionStructure(
+                        $rawValue,
+                        $existingDimension,
+                        $defaultDimension,
+                        $units
+                    );
+                    break;
+                case 'number':
+                    if (is_numeric($rawValue)) {
+                        $sanitized[$field] = (int) round((float) $rawValue);
+                    } else {
+                        $sanitized[$field] = isset($definition['default']) && is_numeric($definition['default'])
+                            ? (int) round((float) $definition['default'])
+                            : 0;
+                    }
+                    break;
+                case 'repeater':
+                    $items = [];
+                    $itemSchema = isset($definition['schema']) && is_array($definition['schema']) ? $definition['schema'] : [];
+                    $rawItems = is_array($rawValue) ? $rawValue : [];
+
+                    foreach ($rawItems as $itemIndex => $itemValue) {
+                        if (!is_array($itemValue)) {
+                            continue;
+                        }
+
+                    $existingItem = [];
+                    if (isset($existingSection[$field][$itemIndex]) && is_array($existingSection[$field][$itemIndex])) {
+                        $existingItem = $existingSection[$field][$itemIndex];
+                    }
+
+                    $items[] = $this->sanitizeWidgetSection($itemSchema, $itemValue, $existingItem);
+                    }
+
+                    if ($items === [] && isset($definition['default']) && is_array($definition['default'])) {
+                        $items = $definition['default'];
+                    }
+
+                    $sanitized[$field] = $items;
+                    break;
+                default:
+                    $sanitized[$field] = is_string($rawValue) ? sanitize_text_field($rawValue) : '';
+            }
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * @param mixed $value
+     * @param array<int, string> $choices
+     * @param mixed $default
+     */
+    private function sanitizeWidgetChoice($value, array $choices, $default): string
+    {
+        $normalizedChoices = array_values(array_filter(array_map(static function ($choice) {
+            return is_string($choice) ? sanitize_key($choice) : '';
+        }, $choices)));
+
+        $normalized = is_string($value) ? sanitize_key($value) : '';
+
+        if ($normalized !== '' && in_array($normalized, $normalizedChoices, true)) {
+            return $normalized;
+        }
+
+        if (is_string($default)) {
+            $fallback = sanitize_key($default);
+            if ($fallback !== '') {
+                return $fallback;
+            }
+        }
+
+        return $normalizedChoices[0] ?? '';
     }
 
     public static function getAllowedNavMenuFilters(): array
