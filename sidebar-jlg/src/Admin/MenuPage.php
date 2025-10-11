@@ -275,10 +275,25 @@ class MenuPage
             $this->version
         );
 
+        wp_enqueue_style(
+            'sidebar-jlg-admin-canvas-css',
+            plugin_dir_url($this->pluginFile) . 'assets/css/admin-canvas.css',
+            ['sidebar-jlg-admin-css'],
+            $this->version
+        );
+
         wp_enqueue_script(
             'sidebar-jlg-admin-js',
             plugin_dir_url($this->pluginFile) . 'assets/js/admin-script.js',
             ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'wp-data', 'wp-api-fetch', 'wp-element', 'wp-components'],
+            $this->version,
+            true
+        );
+
+        wp_enqueue_script(
+            'sidebar-jlg-admin-canvas-js',
+            plugin_dir_url($this->pluginFile) . 'assets/js/admin-canvas.js',
+            ['sidebar-jlg-admin-js'],
             $this->version,
             true
         );
@@ -370,6 +385,19 @@ class MenuPage
                 'searchNoResults' => __('Aucun résultat ne correspond aux mots-clés saisis.', 'sidebar-jlg'),
                 'experienceModeSimpleSummary' => __('Mode simple : %d option(s) avancée(s) masquée(s).', 'sidebar-jlg'),
                 'experienceModeExpertSummary' => __('Mode expert : toutes les options sont visibles.', 'sidebar-jlg'),
+                'canvasModeSummary' => __('Mode canvas : pilotez la sidebar en glisser-déposer.', 'sidebar-jlg'),
+                'canvasModeLabel' => __('Éditeur Canvas', 'sidebar-jlg'),
+                'canvasSwitchForm' => __('Formulaire', 'sidebar-jlg'),
+                'canvasSwitchCanvas' => __('Canvas', 'sidebar-jlg'),
+                'canvasToolbarUndo' => __('Annuler', 'sidebar-jlg'),
+                'canvasToolbarRedo' => __('Rétablir', 'sidebar-jlg'),
+                'canvasToolbarRefresh' => __('Rafraîchir l’aperçu', 'sidebar-jlg'),
+                'canvasEmptyState' => __('Aucun élément actif. Ajoutez un élément pour commencer.', 'sidebar-jlg'),
+                'canvasInspectorApply' => __('Appliquer', 'sidebar-jlg'),
+                'canvasInspectorClose' => __('Fermer', 'sidebar-jlg'),
+                'canvasDuplicateSuffix' => __('(copie)', 'sidebar-jlg'),
+                'canvasUpdateSuccess' => __('Élément mis à jour.', 'sidebar-jlg'),
+                'canvasUpdateError' => __('Impossible d’enregistrer la modification.', 'sidebar-jlg'),
                 'guidedModeNext' => __('Suivant', 'sidebar-jlg'),
                 'guidedModeFinish' => __('Terminer', 'sidebar-jlg'),
                 'guidedModeStepLabel' => __('Étape %1$s sur %2$s', 'sidebar-jlg'),
@@ -446,6 +474,18 @@ class MenuPage
                 'stylePresetCompareExit' => __('Revenir à l’après', 'sidebar-jlg'),
                 'stylePresetCompareBefore' => __('Affichage : avant', 'sidebar-jlg'),
                 'stylePresetCompareAfter' => __('Affichage : après', 'sidebar-jlg'),
+            ],
+            'canvas' => [
+                'nonce' => wp_create_nonce('jlg_canvas_nonce'),
+                'update_action' => 'jlg_canvas_update_item',
+                'reorder_action' => 'jlg_canvas_reorder_items',
+                'events' => [
+                    'viewChange' => 'sidebarJlgCanvasViewChange',
+                    'itemsHydrated' => 'sidebarJlgCanvasHydrated',
+                    'itemsUpdated' => 'sidebarJlgCanvasItemsUpdated',
+                    'historyUpdate' => 'sidebarJlgCanvasHistoryUpdate',
+                    'error' => 'sidebarJlgCanvasError',
+                ],
             ],
             'preview_messages' => [
                 'loading' => __('Chargement de l’aperçu…', 'sidebar-jlg'),

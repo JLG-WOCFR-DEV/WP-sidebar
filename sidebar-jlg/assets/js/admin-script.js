@@ -3056,10 +3056,27 @@ jQuery(document).ready(function($) {
         : [];
     const experienceState = {
         mode: 'simple',
+        view: 'form',
     };
 
     function normalizeExperienceMode(value) {
         return value === 'expert' ? 'expert' : 'simple';
+    }
+
+    function normalizeExperienceView(value) {
+        return value === 'canvas' ? 'canvas' : 'form';
+    }
+
+    if (experienceDom.root) {
+        const initialView = experienceDom.root.getAttribute('data-sidebar-experience-mode');
+        if (initialView === 'canvas') {
+            experienceState.view = 'canvas';
+        }
+
+        const storedFormMode = experienceDom.root.getAttribute('data-sidebar-form-mode');
+        if (typeof storedFormMode === 'string' && storedFormMode !== '') {
+            experienceState.mode = normalizeExperienceMode(storedFormMode);
+        }
     }
 
     function readStoredExperienceMode() {
@@ -3067,6 +3084,12 @@ jQuery(document).ready(function($) {
             if (window.localStorage) {
                 const stored = window.localStorage.getItem(EXPERIENCE_STORAGE_KEY);
                 if (typeof stored === 'string' && stored !== '') {
+                    if (stored === 'canvas') {
+                        experienceState.view = 'canvas';
+
+                        return 'simple';
+                    }
+
                     return normalizeExperienceMode(stored);
                 }
             }
@@ -3077,6 +3100,12 @@ jQuery(document).ready(function($) {
         if (experienceDom.root && typeof experienceDom.root.getAttribute === 'function') {
             const initial = experienceDom.root.getAttribute('data-sidebar-experience-mode');
             if (typeof initial === 'string' && initial !== '') {
+                if (initial === 'canvas') {
+                    experienceState.view = 'canvas';
+
+                    return 'simple';
+                }
+
                 return normalizeExperienceMode(initial);
             }
         }
@@ -3085,6 +3114,10 @@ jQuery(document).ready(function($) {
     }
 
     function persistExperienceMode(mode) {
+        if (mode === 'canvas') {
+            return;
+        }
+
         try {
             if (window.localStorage) {
                 window.localStorage.setItem(EXPERIENCE_STORAGE_KEY, mode);
@@ -3101,7 +3134,7 @@ jQuery(document).ready(function($) {
 
         experienceButtons.forEach((button) => {
             const value = normalizeExperienceMode(button.getAttribute('data-mode-value'));
-            const isActive = value === experienceState.mode;
+            const isActive = experienceState.view === 'form' && value === experienceState.mode;
             button.classList.toggle('is-active', isActive);
             button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
@@ -3117,6 +3150,16 @@ jQuery(document).ready(function($) {
 
     function updateExperienceSummary() {
         if (!experienceDom.summary) {
+            return;
+        }
+
+        if (experienceState.view === 'canvas') {
+            const canvasSummary = getI18nString(
+                'canvasModeSummary',
+                'Mode canvas : pilotez la sidebar en glisser-déposer.'
+            );
+            experienceDom.summary.textContent = canvasSummary;
+
             return;
         }
 
@@ -3142,22 +3185,37 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        experienceDom.root.setAttribute('data-sidebar-experience-mode', experienceState.mode);
-        getAdvancedElements().forEach((element) => {
-            if (experienceState.mode === 'simple') {
-                element.setAttribute('aria-hidden', 'true');
-                element.classList.add('is-experience-hidden');
-            } else {
-                element.removeAttribute('aria-hidden');
-                element.classList.remove('is-experience-hidden');
-            }
-        });
+        const attributeValue = experienceState.view === 'canvas' ? 'canvas' : experienceState.mode;
+        experienceDom.root.setAttribute('data-sidebar-experience-mode', attributeValue);
+        experienceDom.root.setAttribute('data-sidebar-experience-view', experienceState.view);
+
+        if (experienceState.view !== 'canvas') {
+            experienceDom.root.setAttribute('data-sidebar-form-mode', experienceState.mode);
+        }
+
+        if (experienceState.view === 'form') {
+            getAdvancedElements().forEach((element) => {
+                if (experienceState.mode === 'simple') {
+                    element.setAttribute('aria-hidden', 'true');
+                    element.classList.add('is-experience-hidden');
+                } else {
+                    element.removeAttribute('aria-hidden');
+                    element.classList.remove('is-experience-hidden');
+                }
+            });
+        }
 
         updateExperienceButtons();
         updateExperienceSummary();
     }
 
     function setExperienceMode(nextMode, { persist = false } = {}) {
+        if (nextMode === 'canvas') {
+            setExperienceView('canvas');
+
+            return;
+        }
+
         const normalized = normalizeExperienceMode(nextMode);
 
         if (experienceState.mode !== normalized) {
@@ -3167,7 +3225,23 @@ jQuery(document).ready(function($) {
             }
         }
 
+        if (experienceState.view !== 'form') {
+            setExperienceView('form');
+
+            return;
+        }
+
         syncExperienceModeVisibility();
+    }
+
+    function setExperienceView(nextView) {
+        const normalized = normalizeExperienceView(nextView);
+        if (experienceState.view !== normalized) {
+            experienceState.view = normalized;
+            syncExperienceModeVisibility();
+        }
+
+        return experienceState.view;
     }
 
     function bindExperienceModeToggle() {
@@ -3229,6 +3303,21 @@ jQuery(document).ready(function($) {
 
     if (typeof window !== 'undefined') {
         window.SidebarJLGPreview = previewModule;
+    }
+
+    const experienceApi = {
+        getMode: () => experienceState.mode,
+        setMode: (mode, options = {}) => setExperienceMode(mode, options),
+        getView: () => experienceState.view,
+        setView: (view) => setExperienceView(view),
+    };
+
+    if (typeof window !== 'undefined') {
+        window.SidebarJLGExperience = experienceApi;
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports.SidebarJLGExperience = experienceApi;
     }
 
     function setupPreviewCompare(previewModuleInstance) {

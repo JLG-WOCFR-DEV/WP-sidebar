@@ -45,6 +45,58 @@ $GLOBALS['triggered_actions'] = [];
 $GLOBALS['logged_errors'] = [];
 $GLOBALS['test_nonce_results'] = [];
 $GLOBALS['wp_test_cron_events'] = [];
+$GLOBALS['registered_rest_routes'] = [];
+
+if (!class_exists('WP_REST_Request')) {
+    class WP_REST_Request
+    {
+        /** @var array<string, mixed> */
+        private $params;
+
+        /**
+         * @param array<string, mixed> $params
+         */
+        public function __construct(array $params = [])
+        {
+            $this->params = $params;
+        }
+
+        /**
+         * @return array<string, mixed>
+         */
+        public function get_json_params(): array
+        {
+            return $this->params;
+        }
+    }
+}
+
+if (!class_exists('WP_REST_Response')) {
+    class WP_REST_Response
+    {
+        /** @var mixed */
+        private $data;
+
+        /** @var int */
+        private $status;
+
+        public function __construct($data = null, int $status = 200)
+        {
+            $this->data = $data;
+            $this->status = $status;
+        }
+
+        public function get_data()
+        {
+            return $this->data;
+        }
+
+        public function get_status(): int
+        {
+            return $this->status;
+        }
+    }
+}
 
 function register_activation_hook($file, $callback): void {}
 function wp_upload_dir(): array
@@ -118,6 +170,17 @@ function wp_localize_script(...$args): void {}
 function wp_create_nonce($action): string
 {
     return 'nonce-' . $action;
+}
+function register_rest_route($namespace, $route, $args, $override = false)
+{
+    $GLOBALS['registered_rest_routes'][] = [
+        'namespace' => $namespace,
+        'route' => $route,
+        'args' => $args,
+        'override' => $override,
+    ];
+
+    return true;
 }
 function wp_schedule_single_event($timestamp, $hook, $args = []): bool
 {
@@ -353,6 +416,24 @@ $endpoints = new Endpoints(
     $auditRunner
 );
 
+$endpoints->registerHooks();
+
+foreach ($GLOBALS['registered_actions'] as $registeredAction) {
+    if (($registeredAction['hook'] ?? '') !== 'rest_api_init') {
+        continue;
+    }
+
+    $callback = $registeredAction['callback'];
+    if (is_callable($callback)) {
+        $accepted = (int) ($registeredAction['accepted_args'] ?? 0);
+        if ($accepted > 0) {
+            $callback();
+        } else {
+            $callback();
+        }
+    }
+}
+
 $testsPassed = true;
 
 function assertTrue($condition, string $message): void
@@ -372,6 +453,114 @@ function assertSame($expected, $actual, string $message): void
     assertTrue($expected === $actual, $message . ' (expected ' . var_export($expected, true) . ', got ' . var_export($actual, true) . ')');
 }
 
+$registeredHooks = array_column($GLOBALS['registered_actions'], 'hook');
+assertTrue(in_array('wp_ajax_jlg_canvas_update_item', $registeredHooks, true), 'Canvas update AJAX hook registered');
+assertTrue(in_array('wp_ajax_jlg_canvas_reorder_items', $registeredHooks, true), 'Canvas reorder AJAX hook registered');
+$restRoutes = array_column($GLOBALS['registered_rest_routes'], 'route');
+assertTrue(in_array('/canvas/item', $restRoutes, true), 'Canvas update REST route registered');
+assertTrue(in_array('/canvas/order', $restRoutes, true), 'Canvas reorder REST route registered');
+
+reset_test_environment();
+$defaultsForCanvas = $pluginInstance->getSettingsRepository()->getDefaultSettings();
+$defaultsForCanvas['menu_items'] = [
+    [
+        'type' => 'custom',
+        'label' => 'Accueil',
+        'value' => 12,
+        'icon' => 'home_white',
+        'icon_type' => 'svg_inline',
+    ],
+    [
+        'type' => 'cta',
+        'label' => 'CTA',
+        'cta_title' => 'Titre CTA',
+        'cta_description' => 'Description CTA',
+        'cta_button_label' => 'Agir',
+        'cta_button_url' => 'https://example.com',
+        'icon' => 'star',
+        'icon_type' => 'svg_inline',
+        'cta_button_color' => 'rgba(0,0,0,1)',
+    ],
+];
+$pluginInstance->getSettingsRepository()->saveOptions($defaultsForCanvas);
+$_POST = [
+    'nonce' => 'nonce-jlg_canvas_nonce',
+    'index' => '1',
+    'item' => json_encode([
+        'label' => 'CTA Hero',
+        'icon' => 'sparkle',
+        'cta_button_color' => 'rgba(255,0,0,1)',
+    ]),
+];
+invoke_endpoint($endpoints, 'ajax_canvas_update_item');
+$canvasUpdatePayload = $GLOBALS['json_success_payloads'][0] ?? [];
+assertSame('CTA Hero', $canvasUpdatePayload['items'][1]['label'] ?? null, 'Canvas AJAX update applies new label');
+assertSame('rgba(255,0,0,1)', $canvasUpdatePayload['items'][1]['cta_button_color'] ?? null, 'Canvas AJAX update returns updated color');
+$canvasStored = $pluginInstance->getSettingsRepository()->getOptions();
+assertSame('rgba(255,0,0,1)', $canvasStored['menu_items'][1]['cta_button_color'] ?? null, 'Canvas AJAX update persists CTA color');
+
+reset_test_environment();
+$defaultsForReorder = $pluginInstance->getSettingsRepository()->getDefaultSettings();
+$defaultsForReorder['menu_items'] = [
+    [
+        'type' => 'custom',
+        'label' => 'Un',
+        'value' => 1,
+        'icon' => 'home_white',
+        'icon_type' => 'svg_inline',
+    ],
+    [
+        'type' => 'custom',
+        'label' => 'Deux',
+        'value' => 2,
+        'icon' => 'menu_white',
+        'icon_type' => 'svg_inline',
+    ],
+    [
+        'type' => 'cta',
+        'label' => 'Trois',
+        'cta_title' => 'Trois CTA',
+        'cta_button_label' => 'Essayer',
+        'cta_button_url' => 'https://example.com/cta',
+        'icon' => 'star',
+        'icon_type' => 'svg_inline',
+        'cta_button_color' => 'rgba(10,10,10,1)',
+    ],
+];
+$pluginInstance->getSettingsRepository()->saveOptions($defaultsForReorder);
+$_POST = [
+    'nonce' => 'nonce-jlg_canvas_nonce',
+    'items' => json_encode(array_reverse($defaultsForReorder['menu_items'])),
+];
+invoke_endpoint($endpoints, 'ajax_canvas_reorder_items');
+$canvasReorderPayload = $GLOBALS['json_success_payloads'][0] ?? [];
+assertSame('Trois', $canvasReorderPayload['items'][0]['label'] ?? null, 'Canvas AJAX reorder returns first item swapped');
+$canvasReordered = $pluginInstance->getSettingsRepository()->getOptions();
+assertSame('Trois', $canvasReordered['menu_items'][0]['label'] ?? null, 'Canvas AJAX reorder persists order');
+
+reset_test_environment();
+$defaultsForRest = $pluginInstance->getSettingsRepository()->getDefaultSettings();
+$defaultsForRest['menu_items'] = [
+    [
+        'type' => 'custom',
+        'label' => 'Accueil',
+        'value' => 42,
+        'icon' => 'home_white',
+        'icon_type' => 'svg_inline',
+    ],
+];
+$pluginInstance->getSettingsRepository()->saveOptions($defaultsForRest);
+$restResponse = $endpoints->rest_canvas_update_item(new \WP_REST_Request([
+    'index' => 0,
+    'item' => [
+        'label' => 'Accueil Canvas',
+        'icon' => 'sparkle',
+    ],
+]));
+assertSame(200, $restResponse->get_status(), 'Canvas REST update returns success status');
+$restData = $restResponse->get_data();
+assertSame('Accueil Canvas', $restData['items'][0]['label'] ?? null, 'Canvas REST update payload updated label');
+
 function reset_test_environment(): void
 {
     $GLOBALS['json_success_payloads'] = [];
@@ -386,6 +575,7 @@ function reset_test_environment(): void
     $GLOBALS['triggered_actions'] = [];
     $GLOBALS['logged_errors'] = [];
     $GLOBALS['wp_test_cron_events'] = [];
+    $GLOBALS['registered_rest_routes'] = [];
     $_POST = [];
 }
 
