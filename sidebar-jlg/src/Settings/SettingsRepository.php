@@ -61,6 +61,14 @@ class SettingsRepository
         'hamburger_color',
     ];
 
+    private const NAV_MENU_CACHE_GROUP = 'sidebar_jlg';
+    private const NAV_MENU_CACHE_TTL = 300;
+
+    /**
+     * @var array<int, bool>
+     */
+    private static array $navMenuExistenceCache = [];
+
     private DefaultSettings $defaults;
     private IconLibrary $icons;
     private ?array $optionsCache = null;
@@ -328,9 +336,9 @@ class SettingsRepository
                     $rawMenuId = isset($item['value']) ? $item['value'] : 0;
                     $menuId = absint($rawMenuId);
 
-                    if ($menuId > 0 && function_exists('wp_get_nav_menu_object')) {
-                        $menuObject = wp_get_nav_menu_object($menuId);
-                        if (!$menuObject) {
+                    if ($menuId > 0) {
+                        $menuExists = $this->navMenuExists($menuId);
+                        if ($menuExists === false) {
                             $menuId = 0;
                         }
                     }
@@ -432,6 +440,65 @@ class SettingsRepository
 
         add_action('update_option_sidebar_jlg_settings', [$this, 'invalidateCache'], 0, 0);
         add_action('delete_option_sidebar_jlg_settings', [$this, 'invalidateCache'], 0, 0);
+    }
+
+    private function navMenuExists(int $menuId): ?bool
+    {
+        if ($menuId <= 0 || !function_exists('wp_get_nav_menu_object')) {
+            return null;
+        }
+
+        if (array_key_exists($menuId, self::$navMenuExistenceCache)) {
+            return self::$navMenuExistenceCache[$menuId];
+        }
+
+        $cacheKey = self::getNavMenuCacheKey($menuId);
+
+        if (function_exists('wp_cache_get')) {
+            $found = false;
+            $cached = wp_cache_get($cacheKey, self::NAV_MENU_CACHE_GROUP, false, $found);
+            if ($found) {
+                $value = is_bool($cached) ? $cached : (bool) $cached;
+                self::$navMenuExistenceCache[$menuId] = $value;
+
+                return $value;
+            }
+        }
+
+        $menuObject = wp_get_nav_menu_object($menuId);
+        $exists = (bool) $menuObject;
+        self::$navMenuExistenceCache[$menuId] = $exists;
+
+        if (function_exists('wp_cache_set')) {
+            wp_cache_set($cacheKey, $exists, self::NAV_MENU_CACHE_GROUP, self::NAV_MENU_CACHE_TTL);
+        }
+
+        return $exists;
+    }
+
+    public static function invalidateCachedNavMenu($menuId = null, ...$unused): void
+    {
+        if ($menuId !== null) {
+            $menuId = absint($menuId);
+            if ($menuId <= 0) {
+                return;
+            }
+
+            unset(self::$navMenuExistenceCache[$menuId]);
+
+            if (function_exists('wp_cache_delete')) {
+                wp_cache_delete(self::getNavMenuCacheKey($menuId), self::NAV_MENU_CACHE_GROUP);
+            }
+
+            return;
+        }
+
+        self::$navMenuExistenceCache = [];
+    }
+
+    private static function getNavMenuCacheKey(int $menuId): string
+    {
+        return 'nav_menu_' . $menuId;
     }
 
     private function normalizeRuntimeChoices(array $options): array
