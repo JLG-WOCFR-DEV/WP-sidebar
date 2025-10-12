@@ -304,8 +304,8 @@ class MenuPage
             ? $this->formatStylePresetsForScript($defaults['style_presets'])
             : [];
         $options = $this->settings->getOptionsWithRevalidation();
-        $widgetSchemas = isset($defaults['widget_schemas']) && is_array($defaults['widget_schemas'])
-            ? $defaults['widget_schemas']
+        $widgetSchemas = isset($options['widget_schemas']) && is_array($options['widget_schemas'])
+            ? $options['widget_schemas']
             : [];
         $registeredWidgets = isset($options['widgets']) && is_array($options['widgets'])
             ? $options['widgets']
