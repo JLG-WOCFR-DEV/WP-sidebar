@@ -108,12 +108,13 @@ class MenuPage
             'sidebar_jlg_options_group',
             'sidebar_jlg_accessibility_checklist',
             [
-                'type' => 'array',
+                'type' => 'object',
                 'sanitize_callback' => [$this->sanitizer, 'sanitize_accessibility_checklist'],
                 'default' => Checklist::getDefaultStatuses(),
                 'show_in_rest' => [
                     'schema' => [
                         'type' => 'object',
+                        'description' => __('Statuts individuels pour chaque contrôle de la checklist accessibilité.', 'sidebar-jlg'),
                         'properties' => $this->buildAccessibilityChecklistSchema(),
                     ],
                 ],
