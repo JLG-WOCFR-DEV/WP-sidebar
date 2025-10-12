@@ -304,6 +304,12 @@ class MenuPage
             ? $this->formatStylePresetsForScript($defaults['style_presets'])
             : [];
         $options = $this->settings->getOptionsWithRevalidation();
+        $widgetSchemas = isset($options['widget_schemas']) && is_array($options['widget_schemas'])
+            ? $options['widget_schemas']
+            : [];
+        $registeredWidgets = isset($options['widgets']) && is_array($options['widgets'])
+            ? $options['widgets']
+            : [];
         $rawProfiles = get_option('sidebar_jlg_profiles', []);
         $profiles = $this->sanitizer->sanitize_profiles_collection($rawProfiles);
         $activeProfile = get_option('sidebar_jlg_active_profile', '');
