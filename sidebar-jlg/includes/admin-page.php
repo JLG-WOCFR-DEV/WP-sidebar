@@ -163,6 +163,16 @@ $textTransformLabels = [
     data-sidebar-experience-mode="simple"
     data-sidebar-form-mode="simple"
 >
+    <div id="sidebar-jlg-admin-app-root" class="sidebar-jlg-admin-app__root">
+        <div class="sidebar-jlg-admin-app__fallback" role="status" aria-live="polite">
+            <p><?php esc_html_e( 'Chargement de la nouvelle interface Sidebar JLG…', 'sidebar-jlg' ); ?></p>
+            <p><?php esc_html_e( 'Si elle ne s’affiche pas, utilisez le formulaire historique ci-dessous.', 'sidebar-jlg' ); ?></p>
+            <noscript>
+                <p><?php esc_html_e( 'Activez JavaScript pour profiter de l’édition réactive. Le formulaire ci-dessous reste disponible.', 'sidebar-jlg' ); ?></p>
+            </noscript>
+        </div>
+    </div>
+    <div id="sidebar-jlg-legacy-settings" class="sidebar-jlg-admin-legacy">
     <h1><?php esc_html_e( 'Réglages de la Sidebar JLG', 'sidebar-jlg' ); ?></h1>
 
     <?php
@@ -2208,6 +2218,7 @@ $textTransformLabels = [
 
         <?php submit_button(); ?>
     </form>
+</div>
 </div>
 
 <div id="icon-library-modal" style="display:none;">
