@@ -65,7 +65,10 @@ assertSame($expectedLocales, $cache->getCachedLocales(), 'Locale index deduplica
 $cachedHtml = $cache->get('en_US', 'profile-b');
 assertSame('<div>EN profile B update</div>', $cachedHtml, 'Cache returns the latest stored HTML for locale/profile combination.');
 
-// Ensure clear() removes all stored transients and the locale option.
+// Touch another locale to ensure metrics are tracked across profiles.
+$cache->get('fr_FR', 'profile-a');
+
+// Ensure targeted clear removes only the requested entry.
 $legacyKey = 'sidebar_jlg_full_html';
 set_transient($legacyKey, '<div>legacy</div>', 3600);
 
@@ -79,6 +82,30 @@ assertTrue(isset($GLOBALS['wp_test_transients'][$enProfileKey]), 'EN profile cac
 assertTrue(isset($GLOBALS['wp_test_transients'][$legacyKey]), 'Legacy cached HTML stored.');
 assertTrue(get_option('sidebar_jlg_cached_locales') !== [], 'Locale index option stored before clearing.');
 
+$cache->clearEntry('fr_FR', 'profile-a');
+
+assertTrue(!isset($GLOBALS['wp_test_transients'][$frKey]), 'FR cached HTML cleared without touching other locales.');
+assertTrue(isset($GLOBALS['wp_test_transients'][$enDefaultKey]), 'EN default cached HTML preserved after targeted clear.');
+assertTrue(isset($GLOBALS['wp_test_transients'][$enProfileKey]), 'EN profile cached HTML preserved after targeted clear.');
+assertTrue(isset($GLOBALS['wp_test_transients'][$legacyKey]), 'Legacy cached HTML untouched by targeted clear.');
+
+$expectedAfterTargetedClear = [
+    ['locale' => 'en_US', 'suffix' => null],
+    ['locale' => 'en_US', 'suffix' => 'profile-b'],
+];
+
+assertSame($expectedAfterTargetedClear, $cache->getCachedLocales(), 'Targeted clear keeps other locales cached.');
+
+delete_transient($enProfileKey);
+$missResult = $cache->get('en_US', 'profile-b');
+assertSame(false, $missResult, 'Cache miss recorded after transient removal.');
+
+$cache->set('fr_FR', '<div>FR after purge</div>', 'profile-a');
+$cache->set('en_US', '<div>EN profile B refreshed</div>', 'profile-b');
+
+assertTrue(isset($GLOBALS['wp_test_transients'][$frKey]), 'FR cached HTML stored after repopulating.');
+assertTrue(isset($GLOBALS['wp_test_transients'][$enProfileKey]), 'EN profile cached HTML stored after repopulating.');
+
 $cache->clear();
 
 assertTrue(!isset($GLOBALS['wp_test_transients'][$frKey]), 'FR cached HTML cleared.');
@@ -88,8 +115,13 @@ assertTrue(!isset($GLOBALS['wp_test_transients'][$legacyKey]), 'Legacy cached HT
 assertSame([], get_option('sidebar_jlg_cached_locales', []), 'Locale index option removed on cache clear.');
 
 $eventsByType = [];
+$hitMetrics = null;
+$missMetrics = null;
+
 foreach ($recordedEvents as $eventArgs) {
     $eventName = $eventArgs[0] ?? null;
+    $payload = $eventArgs[1] ?? null;
+
     if (!is_string($eventName)) {
         continue;
     }
@@ -99,11 +131,26 @@ foreach ($recordedEvents as $eventArgs) {
     }
 
     $eventsByType[$eventName]++;
+
+    if (!is_array($payload) || !isset($payload['metrics']) || !is_array($payload['metrics'])) {
+        continue;
+    }
+
+    if ($eventName === 'hit') {
+        $hitMetrics = $payload['metrics'];
+    }
+
+    if ($eventName === 'miss') {
+        $missMetrics = $payload['metrics'];
+    }
 }
 
 assertTrue(($eventsByType['set'] ?? 0) >= 1, 'Cache instrumentation records set events.');
 assertTrue(($eventsByType['hit'] ?? 0) >= 1, 'Cache instrumentation records hit events.');
+assertTrue(($eventsByType['miss'] ?? 0) >= 1, 'Cache instrumentation records miss events.');
 assertTrue(($eventsByType['clear'] ?? 0) >= 1, 'Cache instrumentation records clear events.');
+assertTrue(is_array($hitMetrics) && ($hitMetrics['hits'] ?? 0) >= 1, 'Hit events expose cumulative metrics.');
+assertTrue(is_array($missMetrics) && ($missMetrics['misses'] ?? 0) >= 1, 'Miss events expose cumulative metrics.');
 
 if ($testsPassed) {
     echo "Menu cache index management tests passed.\n";
