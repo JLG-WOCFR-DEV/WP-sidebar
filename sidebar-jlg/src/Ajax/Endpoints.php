@@ -6,6 +6,7 @@ use JLG\Sidebar\Accessibility\AuditRunner;
 use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Analytics\AnalyticsEventQueue;
 use JLG\Sidebar\Analytics\AnalyticsRepository;
+use JLG\Sidebar\Analytics\EventRateLimiter;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
@@ -46,6 +47,7 @@ class Endpoints
     private SettingsSanitizer $sanitizer;
     private AnalyticsRepository $analytics;
     private AnalyticsEventQueue $analyticsQueue;
+    private EventRateLimiter $rateLimiter;
     private string $pluginFile;
     private SidebarRenderer $renderer;
     private AuditRunner $auditRunner;
@@ -57,6 +59,7 @@ class Endpoints
         SettingsSanitizer $sanitizer,
         AnalyticsRepository $analytics,
         AnalyticsEventQueue $analyticsQueue,
+        EventRateLimiter $rateLimiter,
         string $pluginFile,
         SidebarRenderer $renderer,
         AuditRunner $auditRunner
@@ -68,6 +71,7 @@ class Endpoints
         $this->sanitizer = $sanitizer;
         $this->analytics = $analytics;
         $this->analyticsQueue = $analyticsQueue;
+        $this->rateLimiter = $rateLimiter;
         $this->pluginFile = $pluginFile;
         $this->renderer = $renderer;
         $this->auditRunner = $auditRunner;
@@ -1023,6 +1027,15 @@ class Endpoints
             'profile_label' => $this->resolveProfileLabel($profileId),
             'is_fallback_profile' => $this->isFallbackProfile($profileId),
         ];
+
+        $rawNonce = isset($_POST['nonce']) ? wp_unslash($_POST['nonce']) : '';
+        $nonceValue = is_string($rawNonce) ? sanitize_text_field($rawNonce) : '';
+
+        if ($this->rateLimiter->registerHit($nonceValue)) {
+            wp_send_json_error([
+                'message' => __('Trop de requêtes, veuillez patienter avant de réessayer.', 'sidebar-jlg'),
+            ], 429);
+        }
 
         if (isset($contextPayload['target']) && is_string($contextPayload['target'])) {
             $recordContext['target'] = $contextPayload['target'];

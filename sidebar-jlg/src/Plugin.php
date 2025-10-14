@@ -8,6 +8,7 @@ use JLG\Sidebar\Admin\SettingsSanitizer;
 use JLG\Sidebar\Admin\View\ColorPickerField;
 use JLG\Sidebar\Analytics\AnalyticsEventQueue;
 use JLG\Sidebar\Analytics\AnalyticsRepository;
+use JLG\Sidebar\Analytics\EventRateLimiter;
 use JLG\Sidebar\Ajax\Endpoints;
 use JLG\Sidebar\Cache\MenuCache;
 use JLG\Sidebar\Frontend\Blocks\SearchBlock;
@@ -30,6 +31,7 @@ class Plugin
     private SettingsSanitizer $sanitizer;
     private AnalyticsRepository $analytics;
     private AnalyticsEventQueue $analyticsQueue;
+    private EventRateLimiter $eventRateLimiter;
     private bool $maintenanceCompleted = false;
     private MenuPage $menuPage;
     private ProfileSelector $profileSelector;
@@ -50,6 +52,7 @@ class Plugin
         $this->cache = new MenuCache();
         $this->analytics = new AnalyticsRepository();
         $this->analyticsQueue = new AnalyticsEventQueue($this->analytics);
+        $this->eventRateLimiter = new EventRateLimiter();
         $this->requestContextResolver = new RequestContextResolver();
         $this->profileSelector = new ProfileSelector($this->settings, $this->requestContextResolver);
         $this->auditRunner = new AuditRunner($pluginFile);
@@ -80,6 +83,7 @@ class Plugin
             $this->sanitizer,
             $this->analytics,
             $this->analyticsQueue,
+            $this->eventRateLimiter,
             $pluginFile,
             $this->renderer,
             $this->auditRunner

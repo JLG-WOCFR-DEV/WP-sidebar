@@ -20,6 +20,8 @@ namespace JLG\Sidebar\Icons {
 namespace {
     use JLG\Sidebar\Accessibility\AuditRunner;
     use JLG\Sidebar\Ajax\Endpoints;
+    use JLG\Sidebar\Analytics\AnalyticsEventQueue;
+    use JLG\Sidebar\Analytics\EventRateLimiter;
     use function JLG\Sidebar\plugin;
 
 if (!defined('ABSPATH')) {
@@ -46,6 +48,147 @@ $GLOBALS['logged_errors'] = [];
 $GLOBALS['test_nonce_results'] = [];
 $GLOBALS['wp_test_cron_events'] = [];
 $GLOBALS['registered_rest_routes'] = [];
+$GLOBALS['wp_test_object_cache'] = [];
+
+if (!function_exists('sanitize_hex_color')) {
+    function sanitize_hex_color($color)
+    {
+        $color = trim((string) $color);
+        if (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $color)) {
+            return strtolower($color);
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('wp_parse_url')) {
+    function wp_parse_url($url, $component = -1)
+    {
+        return parse_url((string) $url, $component);
+    }
+}
+
+if (!function_exists('wp_normalize_path')) {
+    function wp_normalize_path($path)
+    {
+        $normalized = str_replace('\\', '/', (string) $path);
+
+        return preg_replace('#/+#', '/', $normalized);
+    }
+}
+
+if (!function_exists('wp_kses_post')) {
+    function wp_kses_post($string)
+    {
+        return $string;
+    }
+}
+
+if (!function_exists('wp_cache_get')) {
+    function wp_cache_get($key, $group = '', $force = false, &$found = null)
+    {
+        $groupKey = $group !== '' ? $group : 'default';
+        $store = $GLOBALS['wp_test_object_cache'][$groupKey] ?? [];
+
+        if (!array_key_exists($key, $store)) {
+            if ($found !== null) {
+                $found = false;
+            }
+
+            return false;
+        }
+
+        $item = $store[$key];
+        $expiration = $item['expiration'] ?? 0;
+
+        if ($expiration > 0 && $expiration < time()) {
+            unset($GLOBALS['wp_test_object_cache'][$groupKey][$key]);
+            if ($found !== null) {
+                $found = false;
+            }
+
+            return false;
+        }
+
+        if ($found !== null) {
+            $found = true;
+        }
+
+        return $item['value'];
+    }
+}
+
+if (!function_exists('wp_cache_set')) {
+    function wp_cache_set($key, $data, $group = '', $expire = 0): bool
+    {
+        $groupKey = $group !== '' ? $group : 'default';
+        $expiration = $expire > 0 ? time() + (int) $expire : 0;
+
+        if (!isset($GLOBALS['wp_test_object_cache'][$groupKey])) {
+            $GLOBALS['wp_test_object_cache'][$groupKey] = [];
+        }
+
+        $GLOBALS['wp_test_object_cache'][$groupKey][$key] = [
+            'value' => $data,
+            'expiration' => $expiration,
+        ];
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_cache_delete')) {
+    function wp_cache_delete($key, $group = ''): bool
+    {
+        $groupKey = $group !== '' ? $group : 'default';
+
+        if (!isset($GLOBALS['wp_test_object_cache'][$groupKey][$key])) {
+            return false;
+        }
+
+        unset($GLOBALS['wp_test_object_cache'][$groupKey][$key]);
+
+        return true;
+    }
+}
+
+if (!class_exists('WP_Error')) {
+    class WP_Error
+    {
+        /** @var array<string, array<int, string>> */
+        private array $errors = [];
+
+        public function __construct($code = '', $message = '')
+        {
+            if ($code !== '') {
+                $this->errors[(string) $code][] = is_string($message) ? $message : '';
+            }
+        }
+
+        public function get_error_message($code = ''): string
+        {
+            if ($code !== '' && isset($this->errors[$code][0])) {
+                return $this->errors[$code][0];
+            }
+
+            foreach ($this->errors as $messages) {
+                if (!empty($messages[0])) {
+                    return $messages[0];
+                }
+            }
+
+            return '';
+        }
+    }
+}
+
+if (!function_exists('is_wp_error')) {
+    function is_wp_error($thing): bool
+    {
+        return $thing instanceof WP_Error;
+    }
+}
 
 if (!class_exists('WP_REST_Request')) {
     class WP_REST_Request
@@ -403,7 +546,9 @@ function get_categories($args = []): array
 require_once __DIR__ . '/../sidebar-jlg/sidebar-jlg.php';
 
 $pluginInstance = plugin();
+$GLOBALS['pluginInstance'] = $pluginInstance;
 $auditRunner = new AuditRunner($pluginInstance->getPluginFile());
+$rateLimiter = new EventRateLimiter();
 $endpoints = new Endpoints(
     $pluginInstance->getSettingsRepository(),
     $pluginInstance->getMenuCache(),
@@ -411,6 +556,7 @@ $endpoints = new Endpoints(
     $pluginInstance->getSanitizer(),
     $pluginInstance->getAnalyticsRepository(),
     $pluginInstance->getAnalyticsQueue(),
+    $rateLimiter,
     $pluginInstance->getPluginFile(),
     $pluginInstance->getSidebarRenderer(),
     $auditRunner
@@ -576,7 +722,24 @@ function reset_test_environment(): void
     $GLOBALS['logged_errors'] = [];
     $GLOBALS['wp_test_cron_events'] = [];
     $GLOBALS['registered_rest_routes'] = [];
+    $GLOBALS['wp_test_object_cache'] = [];
+    $GLOBALS['wp_test_transients'] = [];
     $_POST = [];
+
+    if (isset($GLOBALS['pluginInstance'])) {
+        $cache = $GLOBALS['pluginInstance']->getMenuCache();
+        $resetLoadedIndex = \Closure::bind(
+            function () {
+                $this->loadedLocaleIndex = null;
+            },
+            $cache,
+            get_class($cache)
+        );
+
+        if ($resetLoadedIndex !== null) {
+            $resetLoadedIndex();
+        }
+    }
 }
 
 function invoke_endpoint(Endpoints $endpoints, string $method): void
@@ -893,8 +1056,9 @@ invoke_endpoint($endpoints, 'ajax_track_event');
 $analyticsSuccess = $GLOBALS['json_success_payloads'][0] ?? [];
 assertSame('Événement enregistré.', $analyticsSuccess['message'] ?? null, 'Analytics event records success message');
 $analyticsSummary = $analyticsSuccess['summary'] ?? [];
-$queuedEvents = get_option('sidebar_jlg_analytics_queue', []);
-assertSame(1, count($queuedEvents ?? []), 'Analytics event is enqueued for deferred flush');
+$queuedEvents = wp_cache_get(AnalyticsEventQueue::CACHE_KEY, AnalyticsEventQueue::CACHE_GROUP);
+assertSame(1, count($queuedEvents ?? []), 'Analytics event is buffered for deferred flush');
+assertSame([], get_option('sidebar_jlg_analytics_queue', []), 'Analytics queue option remains empty while buffering events');
 assertTrue(wp_next_scheduled('sidebar_jlg_flush_analytics_queue') !== false, 'Analytics flush job scheduled after enqueue');
 assertSame(0, $analyticsSummary['totals']['sidebar_open'] ?? null, 'Immediate analytics summary remains unchanged before flush');
 
@@ -902,6 +1066,42 @@ $pluginInstance->getAnalyticsQueue()->flushQueuedEvents();
 $finalSummary = $pluginInstance->getAnalyticsRepository()->getSummary();
 assertSame(1, $finalSummary['totals']['sidebar_open'] ?? null, 'Analytics totals updated after queue flush');
 assertSame('toggle_button', array_key_first($finalSummary['targets']['sidebar_open'] ?? []) ?? null, 'Analytics target captured after flush');
+
+reset_test_environment();
+delete_option('sidebar_jlg_analytics');
+$rateLimitOptions = $pluginInstance->getSettingsRepository()->getDefaultSettings();
+$rateLimitOptions['enable_analytics'] = true;
+$pluginInstance->getSettingsRepository()->saveOptions($rateLimitOptions);
+$GLOBALS['test_nonce_results']['jlg_track_event'] = true;
+$_SERVER['REMOTE_ADDR'] = '203.0.113.10';
+
+for ($i = 0; $i < 20; $i++) {
+    $_POST = [
+        'nonce' => 'nonce-jlg_track_event',
+        'event_type' => 'sidebar_open',
+        'profile_id' => 'default',
+    ];
+
+    invoke_endpoint($endpoints, 'ajax_track_event');
+}
+
+$bufferAfterBurst = wp_cache_get(AnalyticsEventQueue::CACHE_KEY, AnalyticsEventQueue::CACHE_GROUP);
+assertSame(20, count($bufferAfterBurst ?? []), 'Twenty events are buffered before hitting the rate limit');
+
+$_POST = [
+    'nonce' => 'nonce-jlg_track_event',
+    'event_type' => 'sidebar_open',
+    'profile_id' => 'default',
+];
+
+invoke_endpoint($endpoints, 'ajax_track_event');
+$rateLimitError = $GLOBALS['json_error_payloads'][0] ?? [];
+assertSame('Trop de requêtes, veuillez patienter avant de réessayer.', $rateLimitError['message'] ?? null, 'Rate limiter blocks analytics event when quota exceeded');
+$bufferAfterLimit = wp_cache_get(AnalyticsEventQueue::CACHE_KEY, AnalyticsEventQueue::CACHE_GROUP);
+assertSame(20, count($bufferAfterLimit ?? []), 'Rate-limited event does not increase buffered analytics queue');
+
+wp_cache_delete(AnalyticsEventQueue::CACHE_KEY, AnalyticsEventQueue::CACHE_GROUP);
+unset($_SERVER['REMOTE_ADDR']);
 
 if ($testsPassed) {
     echo "AJAX endpoints tests passed.\n";
