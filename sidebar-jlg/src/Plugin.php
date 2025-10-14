@@ -151,7 +151,7 @@ class Plugin
      */
     public function handleSettingsUpdated($oldValue = null, $value = null, string $optionName = ''): void
     {
-        $this->cache->clear();
+        $this->clearCachedEntries();
         $this->renderer->bumpDynamicStylesCacheSalt();
 
         if ($this->hasSidebarPositionChanged($oldValue, $value)) {
@@ -210,9 +210,20 @@ class Plugin
 
     private function resetProfileCaches(): void
     {
-        $this->cache->clear();
+        $this->clearCachedEntries();
         $this->cache->forgetLocaleIndex();
         $this->renderer->bumpDynamicStylesCacheSalt();
+    }
+
+    private function clearCachedEntries(): void
+    {
+        foreach ($this->cache->getCachedLocales() as $entry) {
+            $locale = isset($entry['locale']) && is_string($entry['locale']) ? $entry['locale'] : '';
+            $suffix = $entry['suffix'] ?? null;
+            $suffixValue = is_string($suffix) ? $suffix : null;
+
+            $this->cache->clearEntry($locale, $suffixValue);
+        }
     }
 
     private function registerContextInvalidationHooks(): void
