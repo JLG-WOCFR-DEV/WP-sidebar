@@ -17,12 +17,18 @@ use function update_option;
 use function wp_clear_scheduled_hook;
 use function wp_next_scheduled;
 use function wp_schedule_single_event;
+use function wp_cache_delete;
+use function wp_cache_get;
+use function wp_cache_set;
 
 class AnalyticsEventQueue
 {
     public const OPTION_NAME = 'sidebar_jlg_analytics_queue';
     public const CRON_HOOK = 'sidebar_jlg_flush_analytics_queue';
+    public const CACHE_KEY = 'analytics_event_queue_buffer';
+    public const CACHE_GROUP = 'sidebar_jlg';
     private const DEFAULT_FLUSH_DELAY = 60;
+    private const CACHE_TTL = 600;
 
     private AnalyticsRepository $repository;
 
@@ -41,20 +47,21 @@ class AnalyticsEventQueue
      */
     public function enqueue(string $event, array $context): void
     {
-        $queue = $this->readQueue();
+        $queue = $this->readCachedQueue();
         $queue[] = [
             'event' => $event,
             'context' => $context,
             'timestamp' => $this->resolveEventTimestamp($context),
         ];
 
-        update_option(self::OPTION_NAME, $queue);
+        $this->persistCachedQueue($queue);
         $this->scheduleFlushIfNeeded();
     }
 
     public function flushQueuedEvents(): void
     {
-        $queue = $this->readQueue();
+        $buffered = $this->drainCachedQueue();
+        $queue = array_merge($this->readQueue(), $buffered);
         if ($queue === []) {
             $this->clearScheduledFlush();
 
@@ -120,6 +127,41 @@ class AnalyticsEventQueue
         return array_values(array_filter($queue, static function ($item) {
             return is_array($item);
         }));
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function readCachedQueue(): array
+    {
+        $queue = wp_cache_get(self::CACHE_KEY, self::CACHE_GROUP);
+
+        if (!is_array($queue)) {
+            return [];
+        }
+
+        return array_values(array_filter($queue, static function ($item) {
+            return is_array($item);
+        }));
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $queue
+     */
+    private function persistCachedQueue(array $queue): void
+    {
+        wp_cache_set(self::CACHE_KEY, $queue, self::CACHE_GROUP, self::CACHE_TTL);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function drainCachedQueue(): array
+    {
+        $queue = $this->readCachedQueue();
+        wp_cache_delete(self::CACHE_KEY, self::CACHE_GROUP);
+
+        return $queue;
     }
 
     private function scheduleFlushIfNeeded(): void
