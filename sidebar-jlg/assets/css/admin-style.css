@@ -1229,3 +1229,210 @@ input:checked + .jlg-slider:before { transform: translateX(26px); }
     margin: 0;
     color: #50575e;
 }
+
+.sidebar-jlg-admin-app__root {
+    position: relative;
+    margin: 24px 0;
+    min-height: 64px;
+}
+
+.sidebar-jlg-admin-app__fallback {
+    display: grid;
+    gap: 8px;
+    padding: 24px;
+    background: #ffffff;
+    border: 1px solid #dcdcde;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px -32px rgba(12, 18, 36, 0.45);
+    color: #1d2327;
+}
+
+.sidebar-jlg-admin-app__root.is-mounted .sidebar-jlg-admin-app__fallback {
+    display: none;
+}
+
+.sidebar-jlg-admin-app__root.is-mounted + #sidebar-jlg-legacy-settings {
+    display: none;
+}
+
+#sidebar-jlg-legacy-settings {
+    margin-top: 32px;
+}
+
+.sidebar-jlg-admin-panel {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #dcdcde;
+    box-shadow: 0 24px 48px -32px rgba(12, 18, 36, 0.45);
+    padding: 24px;
+    display: grid;
+    gap: 24px;
+}
+
+.sidebar-jlg-admin-panel__header {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.sidebar-jlg-admin-panel__title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #101517;
+}
+
+.sidebar-jlg-admin-panel__subtitle {
+    margin: 4px 0 0;
+    color: #50575e;
+}
+
+.sidebar-jlg-admin-tabs .components-tab-panel__tabs {
+    display: inline-flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.sidebar-jlg-admin-tabs .components-tab-panel__tabs button {
+    border-radius: 999px;
+    padding-inline: 16px;
+}
+
+.sidebar-jlg-tab {
+    display: grid;
+    gap: 16px;
+}
+
+.sidebar-jlg-color-control {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+    align-items: start;
+}
+
+.sidebar-jlg-color-control__label {
+    font-weight: 600;
+    color: #101517;
+}
+
+.sidebar-jlg-profile-card {
+    border-radius: 12px;
+    border: 1px solid #dcdcde;
+    margin-bottom: 16px;
+}
+
+.sidebar-jlg-profile-card__title {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.sidebar-jlg-profile-card__badge {
+    margin-left: auto;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #2271b1;
+    color: #ffffff;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.sidebar-jlg-profile-card__description {
+    margin: 0 0 8px;
+    color: #50575e;
+}
+
+.sidebar-jlg-profile-card__meta {
+    margin: 0;
+    font-size: 12px;
+    color: #3c434a;
+}
+
+.sidebar-jlg-preview-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-jlg-preview-canvas__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(12, 18, 36, 0.55);
+    backdrop-filter: blur(4px);
+}
+
+.sidebar-jlg-preview-canvas__surface {
+    position: relative;
+    width: min(1180px, 96vw);
+    height: min(780px, 92vh);
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 24px 64px -32px rgba(12, 18, 36, 0.55);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sidebar-jlg-preview-canvas__toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid #dcdcde;
+    background: #f6f7f7;
+}
+
+.sidebar-jlg-preview-canvas__toolbar-group {
+    display: inline-flex;
+    gap: 8px;
+}
+
+.sidebar-jlg-preview-canvas__content {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    gap: 0;
+    position: relative;
+}
+
+.sidebar-jlg-preview-canvas__preview {
+    overflow: auto;
+    padding: 24px;
+    background: linear-gradient(135deg, #f8fafc, #eef2ff);
+}
+
+.sidebar-jlg-preview-canvas__inspector {
+    border-left: 1px solid #dcdcde;
+    padding: 24px;
+    background: #fdfefe;
+}
+
+.sidebar-jlg-preview-canvas__notice {
+    padding: 0 24px;
+}
+
+.sidebar-jlg-preview-canvas__loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.sidebar-jlg-onboarding-modal__intro {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.sidebar-jlg-onboarding-modal__actions {
+    margin-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

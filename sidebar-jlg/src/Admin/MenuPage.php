@@ -120,6 +120,64 @@ class MenuPage
                 ],
             ]
         );
+
+        register_setting(
+            'sidebar_jlg_options_group',
+            'sidebar_jlg_onboarding_state',
+            [
+                'type' => 'object',
+                'sanitize_callback' => [$this, 'sanitizeOnboardingState'],
+                'default' => [
+                    'currentStep' => 0,
+                    'completed' => false,
+                    'dismissed' => false,
+                ],
+                'show_in_rest' => [
+                    'schema' => [
+                        'type' => 'object',
+                        'description' => __('Progression de l’assistant de démarrage Sidebar JLG.', 'sidebar-jlg'),
+                        'properties' => [
+                            'currentStep' => [
+                                'type' => 'integer',
+                                'minimum' => 0,
+                            ],
+                            'completed' => [
+                                'type' => 'boolean',
+                            ],
+                            'dismissed' => [
+                                'type' => 'boolean',
+                            ],
+                        ],
+                        'additionalProperties' => true,
+                    ],
+                ],
+            ]
+        );
+    }
+
+    /**
+     * @param mixed $value
+     */
+    public function sanitizeOnboardingState($value): array
+    {
+        if (!is_array($value)) {
+            return [
+                'currentStep' => 0,
+                'completed' => false,
+                'dismissed' => false,
+            ];
+        }
+
+        $currentStep = isset($value['currentStep']) ? (int) $value['currentStep'] : 0;
+        if ($currentStep < 0) {
+            $currentStep = 0;
+        }
+
+        return [
+            'currentStep' => $currentStep,
+            'completed' => !empty($value['completed']),
+            'dismissed' => !empty($value['dismissed']),
+        ];
     }
 
     private function buildProfilesSchema(): array
@@ -330,6 +388,7 @@ class MenuPage
             ? $auditReport['checks']
             : [];
         $lastAudit = $this->getLastAccessibilityAudit();
+        $onboardingState = $this->getOnboardingState();
 
         wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php', 'relative'),
@@ -506,6 +565,78 @@ class MenuPage
                 Checklist::getDefaultStatuses()
             ),
         ]);
+
+        $adminAppAsset = [
+            'dependencies' => ['wp-element', 'wp-components', 'wp-api-fetch'],
+            'version' => $this->version,
+        ];
+
+        $assetFile = plugin_dir_path($this->pluginFile) . 'assets/build/admin-app.asset.php';
+        if (file_exists($assetFile)) {
+            $maybeAsset = include $assetFile;
+            if (is_array($maybeAsset)) {
+                $adminAppAsset = array_merge($adminAppAsset, $maybeAsset);
+            }
+        }
+
+        $dependencies = isset($adminAppAsset['dependencies']) && is_array($adminAppAsset['dependencies'])
+            ? $adminAppAsset['dependencies']
+            : ['wp-element', 'wp-components', 'wp-api-fetch'];
+        $version = isset($adminAppAsset['version']) ? (string) $adminAppAsset['version'] : $this->version;
+
+        wp_enqueue_script(
+            'sidebar-jlg-admin-app',
+            plugin_dir_url($this->pluginFile) . 'assets/build/admin-app.js',
+            $dependencies,
+            $version,
+            true
+        );
+
+        wp_localize_script(
+            'sidebar-jlg-admin-app',
+            'sidebarJLGApp',
+            [
+                'options' => wp_parse_args($options, $defaults),
+                'defaults' => $defaults,
+                'profiles' => $profiles,
+                'activeProfile' => $activeProfile,
+                'preview' => [
+                    'ajaxUrl' => admin_url('admin-ajax.php'),
+                    'action' => 'jlg_render_preview',
+                    'nonce' => wp_create_nonce('jlg_preview_nonce'),
+                ],
+                'onboarding' => $onboardingState,
+                'strings' => [
+                    'generalTab' => __('Général', 'sidebar-jlg'),
+                    'stylesTab' => __('Styles', 'sidebar-jlg'),
+                    'profilesTab' => __('Profils', 'sidebar-jlg'),
+                    'openCanvas' => __('Ouvrir le canvas interactif', 'sidebar-jlg'),
+                    'undo' => __('Annuler', 'sidebar-jlg'),
+                    'redo' => __('Rétablir', 'sidebar-jlg'),
+                    'closeCanvas' => __('Fermer', 'sidebar-jlg'),
+                    'previewError' => __('Impossible de charger l’aperçu.', 'sidebar-jlg'),
+                    'onboardingTitle' => __('Assistant de démarrage', 'sidebar-jlg'),
+                    'onboardingDescription' => __('Suivez ces étapes pour publier une première expérience engageante.', 'sidebar-jlg'),
+                    'onboardingSteps' => [
+                        __('Activez les options principales et les libellés d’accessibilité.', 'sidebar-jlg'),
+                        __('Sélectionnez vos couleurs et largeur pour coller à votre identité visuelle.', 'sidebar-jlg'),
+                        __('Personnalisez votre premier CTA directement dans le canvas.', 'sidebar-jlg'),
+                        __('Passez en revue les profils afin de cibler votre audience.', 'sidebar-jlg'),
+                        __('Vérifiez l’aperçu puis publiez la sidebar.', 'sidebar-jlg'),
+                    ],
+                    'onboardingCtaLabels' => [
+                        __('Configurer le général', 'sidebar-jlg'),
+                        __('Adapter les styles', 'sidebar-jlg'),
+                        __('Ouvrir le canvas', 'sidebar-jlg'),
+                        __('Parcourir les profils', 'sidebar-jlg'),
+                        __('Terminer', 'sidebar-jlg'),
+                    ],
+                    'onboardingSkip' => __('Ignorer', 'sidebar-jlg'),
+                    'onboardingFinish' => __('Terminer l’assistant', 'sidebar-jlg'),
+                ],
+                'restNonce' => wp_create_nonce('wp_rest'),
+            ]
+        );
     }
 
     private function buildAccessibilityChecklistSchema(): array
@@ -624,6 +755,26 @@ class MenuPage
             'readable' => $readable,
             'is_stale' => $isStale,
             'has_run' => $hasRun,
+        ];
+    }
+
+    private function getOnboardingState(): array
+    {
+        $state = get_option('sidebar_jlg_onboarding_state', []);
+
+        if (!is_array($state)) {
+            $state = [];
+        }
+
+        $currentStep = isset($state['currentStep']) ? (int) $state['currentStep'] : 0;
+        if ($currentStep < 0) {
+            $currentStep = 0;
+        }
+
+        return [
+            'currentStep' => $currentStep,
+            'completed' => !empty($state['completed']),
+            'dismissed' => !empty($state['dismissed']),
         ];
     }
 
