@@ -112,7 +112,7 @@ class Templating
         return ucwords($readable);
     }
 
-    private static function makeInlineSvgDecorative(string $markup): string
+    public static function makeInlineSvgDecorative(string $markup): string
     {
         if (stripos($markup, '<svg') === false) {
             return $markup;
