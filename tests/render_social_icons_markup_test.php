@@ -34,7 +34,7 @@ $resultWithStandardIcon = Templating::renderSocialIcons([
     ],
 ], $allIcons, 'horizontal');
 
-$expectedStandardMarkup = '<div class="social-icons horizontal"><a href="https://example.com/facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg class="facebook"></svg></a></div>';
+$expectedStandardMarkup = '<div class="social-icons horizontal"><a href="https://example.com/facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook – s’ouvre dans une nouvelle fenêtre"><svg class="facebook"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedStandardMarkup, $resultWithStandardIcon, 'renders markup for valid social icon with humanized label');
 
 $resultWithCustomLabel = Templating::renderSocialIcons([
@@ -45,7 +45,7 @@ $resultWithCustomLabel = Templating::renderSocialIcons([
     ],
 ], $allIcons, '');
 
-$expectedCustomMarkup = '<div class="social-icons"><a href="https://example.com/custom" target="_blank" rel="noopener noreferrer" aria-label="Mon Label Personnalisé"><svg class="custom"></svg></a></div>';
+$expectedCustomMarkup = '<div class="social-icons"><a href="https://example.com/custom" target="_blank" rel="noopener noreferrer" aria-label="Mon Label Personnalisé – s’ouvre dans une nouvelle fenêtre"><svg class="custom"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedCustomMarkup, $resultWithCustomLabel, 'uses trimmed custom label when provided');
 
 $resultWithCustomFallback = Templating::renderSocialIcons([
@@ -56,7 +56,7 @@ $resultWithCustomFallback = Templating::renderSocialIcons([
     ],
 ], $allIcons, 'vertical');
 
-$expectedCustomFallbackMarkup = '<div class="social-icons vertical"><a href="https://example.com/custom" target="_blank" rel="noopener noreferrer" aria-label="My Brand"><svg class="custom"></svg></a></div>';
+$expectedCustomFallbackMarkup = '<div class="social-icons vertical"><a href="https://example.com/custom" target="_blank" rel="noopener noreferrer" aria-label="My Brand – s’ouvre dans une nouvelle fenêtre"><svg class="custom"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedCustomFallbackMarkup, $resultWithCustomFallback, 'falls back to humanized label for custom icon');
 
 $resultWithMissingIconMarkup = Templating::renderSocialIcons([
@@ -67,7 +67,7 @@ $resultWithMissingIconMarkup = Templating::renderSocialIcons([
     ],
 ], $allIcons, 'horizontal');
 
-$expectedMissingIconMarkup = '<div class="social-icons horizontal"><a href="https://example.com/unknown" class="no-icon" target="_blank" rel="noopener noreferrer" aria-label="Unknown Icon"><span class="no-icon-label">Unknown Icon</span></a></div>';
+$expectedMissingIconMarkup = '<div class="social-icons horizontal"><a href="https://example.com/unknown" class="no-icon" target="_blank" rel="noopener noreferrer" aria-label="Unknown Icon – s’ouvre dans une nouvelle fenêtre"><span class="no-icon-label">Unknown Icon</span><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedMissingIconMarkup, $resultWithMissingIconMarkup, 'renders textual fallback when icon markup is missing');
 
 exit($testsPassed ? 0 : 1);

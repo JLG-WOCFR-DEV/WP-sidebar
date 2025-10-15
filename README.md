@@ -192,6 +192,18 @@ npm install
 npm run test:js
 ```
 
+### Audit accessibilité (Pa11y)
+
+Le script `npm run audit:accessibility` s'appuie sur Pa11y/Puppeteer. Sur une distribution minimale (CI, conteneur), installez les
+paquets système nécessaires avant d'exécuter la commande :
+
+```bash
+sudo ./scripts/install-puppeteer-deps.sh
+```
+
+Le script installe les bibliothèques graphiques (GTK, X11, Cairo, etc.) requises par Chrome headless. Il peut être relancé sans
+risque et s'intègre facilement dans un job CI.
+
 ### Service `RequestContextResolver`
 
 Le service `JLG\\Sidebar\\Frontend\\RequestContextResolver` centralise toutes les informations de contexte utilisées par le rendu de la sidebar et par la sélection de profil (URL normalisée, contenus consultés, taxonomies, rôles, langue, appareil, horaires, etc.). Il est injecté dans `SidebarRenderer` et `ProfileSelector` afin de garantir que les deux composants s’appuient sur la même source de vérité.
