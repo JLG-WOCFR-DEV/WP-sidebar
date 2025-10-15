@@ -728,8 +728,29 @@ body.sidebar-open .pro-sidebar::after {
 }
 
 /* Styles pour les icônes dans le menu */
-.sidebar-menu .menu-separator { padding: 0.5rem 0.75rem; margin: 0.65rem 0; }
-.sidebar-menu .menu-separator hr { border: none; border-top: 1px solid var(--jlg-divider-color); }
+.sidebar-menu .menu-separator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    margin: 0.65rem 0;
+    opacity: 0.85;
+}
+.sidebar-menu .menu-separator__line {
+    flex: 1;
+    height: 1px;
+    background: var(--jlg-divider-color);
+}
+.sidebar-menu .menu-separator__label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--jlg-muted-foreground);
+    white-space: nowrap;
+}
+.sidebar-menu .menu-separator:not(.menu-separator--labeled) .menu-separator__line {
+    flex-basis: 100%;
+}
 .sidebar-menu .social-icons-wrapper { padding-top: 0.75rem; }
 .sidebar-menu .social-icons-wrapper .social-icons { padding: 0 0.75rem; }
 .sidebar-menu .menu-item-cta {

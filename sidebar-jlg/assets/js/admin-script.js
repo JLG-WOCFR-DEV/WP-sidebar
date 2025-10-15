@@ -4877,7 +4877,7 @@ jQuery(document).ready(function($) {
     }
 
     function initializeAccessibilityChecklist() {
-        const containers = $('.sidebar-jlg-accessibility');
+        const containers = $('[data-sidebar-accessibility]');
         if (!containers.length) {
             return;
         }
@@ -4903,60 +4903,195 @@ jQuery(document).ready(function($) {
             return String(Math.round(value));
         };
 
+        const buildProgressText = (template, completed, total, percent) => {
+            if (!template) {
+                return `${formatNumber(completed)} / ${formatNumber(total)} (${formatNumber(percent)}%)`;
+            }
+
+            return template
+                .replace('%1$s', formatNumber(completed))
+                .replace('%2$s', formatNumber(total))
+                .replace('%3$s', formatNumber(percent));
+        };
+
+        const buildAriaLabel = (template, percent) => {
+            if (!template) {
+                return `${formatNumber(percent)}%`;
+            }
+
+            return template.replace('%1$s', formatNumber(percent));
+        };
+
+        const overviewTemplate = getI18nString(
+            'accessibilityOverviewValue',
+            '%1$s critères sur %2$s (%3$s%%)'
+        );
+
         containers.each(function() {
             const $container = $(this);
-            const $checkboxes = $container.find('input[type="checkbox"]');
-            const totalItemsData = parseInt($container.data('totalItems'), 10);
-            const totalItems = Number.isFinite(totalItemsData) && totalItemsData > 0
-                ? totalItemsData
-                : $checkboxes.length;
-            const $status = $container.find('.sidebar-jlg-accessibility__progress-status');
-            const $progress = $container.find('.sidebar-jlg-accessibility__progress-meter');
-            const template = String($container.data('progressTemplate') || '');
-            const ariaTemplate = String($container.data('progressAriaTemplate') || '');
+            const containerTemplate = String($container.data('progressTemplate') || '');
+            const containerAriaTemplate = String($container.data('progressAriaTemplate') || '');
+            const containerTotalItemsData = parseInt($container.data('totalItems'), 10);
+            const containerTotalItems = Number.isFinite(containerTotalItemsData) && containerTotalItemsData > 0
+                ? containerTotalItemsData
+                : 0;
 
-            const formatProgressText = (completed, total, percent) => {
-                if (!template) {
-                    return `${formatNumber(completed)} / ${formatNumber(total)} (${formatNumber(percent)}%)`;
+            const $contextSelect = $container.find('[data-accessibility-context-switcher]');
+            const $overview = $container.find('[data-accessibility-overview]');
+
+            const contexts = [];
+
+            $container.find('[data-accessibility-context]').each(function() {
+                const $context = $(this);
+                const contextKey = String($context.data('accessibilityContext') || '');
+                if (!contextKey) {
+                    return;
                 }
 
-                return template
+                const $checkboxes = $context.find('input[type="checkbox"]');
+                const progressTemplate = String($context.data('progressTemplate') || containerTemplate);
+                const progressAriaTemplate = String($context.data('progressAriaTemplate') || containerAriaTemplate);
+                const contextTotalItemsData = parseInt($context.data('totalItems'), 10);
+                const contextTotalItems = Number.isFinite(contextTotalItemsData) && contextTotalItemsData > 0
+                    ? contextTotalItemsData
+                    : (containerTotalItems > 0 ? containerTotalItems : $checkboxes.length);
+
+                contexts.push({
+                    key: contextKey,
+                    element: $context,
+                    checkboxes: $checkboxes,
+                    status: $context.find('[data-accessibility-progress-status]'),
+                    meter: $context.find('[data-accessibility-progress-meter]'),
+                    template: progressTemplate,
+                    ariaTemplate: progressAriaTemplate,
+                    totalItems: contextTotalItems,
+                });
+            });
+
+            if (!contexts.length) {
+                return;
+            }
+
+            const getOverviewItem = (contextKey) => {
+                if (!$overview.length) {
+                    return $();
+                }
+
+                return $overview.find(`[data-accessibility-overview-item="${contextKey}"]`);
+            };
+
+            const updateOverviewItem = (contextKey, completed, total, percent) => {
+                const $item = getOverviewItem(contextKey);
+                if (!$item.length) {
+                    return;
+                }
+
+                $item.attr('data-completed', completed);
+                $item.attr('data-percent', percent);
+
+                const formatted = overviewTemplate
                     .replace('%1$s', formatNumber(completed))
                     .replace('%2$s', formatNumber(total))
                     .replace('%3$s', formatNumber(percent));
+
+                const $value = $item.find('.sidebar-jlg-accessibility__context-overview-value');
+                if ($value.length) {
+                    $value.text(formatted);
+                } else {
+                    $item.text(formatted);
+                }
             };
 
-            const formatAriaLabel = (percent) => {
-                if (!ariaTemplate) {
-                    return `${formatNumber(percent)}%`;
+            const highlightOverviewItem = (contextKey) => {
+                if (!$overview.length) {
+                    return;
                 }
 
-                return ariaTemplate.replace('%1$s', formatNumber(percent));
+                $overview.find('[data-accessibility-overview-item]').each(function() {
+                    const $item = $(this);
+                    const itemKey = String($item.data('accessibilityOverviewItem') || '');
+                    $item.toggleClass('is-active', itemKey === contextKey);
+                });
             };
 
-            const updateProgress = () => {
+            const computeProgress = (context) => {
                 let completed = 0;
-                $checkboxes.each(function() {
+                context.checkboxes.each(function() {
                     if ($(this).prop('checked')) {
                         completed += 1;
                     }
                 });
 
-                const percent = totalItems > 0 ? Math.round((completed / totalItems) * 100) : 0;
+                const total = context.totalItems > 0 ? context.totalItems : context.checkboxes.length;
+                const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+                const progressText = buildProgressText(context.template, completed, total, percent);
+                const ariaLabel = buildAriaLabel(context.ariaTemplate, percent);
 
-                if ($status.length) {
-                    $status.text(formatProgressText(completed, totalItems, percent));
+                if (context.status.length) {
+                    context.status.text(progressText);
                 }
 
-                if ($progress.length) {
-                    $progress.attr('value', completed);
-                    $progress.attr('max', totalItems);
-                    $progress.attr('aria-label', formatAriaLabel(percent));
+                if (context.meter.length) {
+                    context.meter.attr('value', completed);
+                    context.meter.attr('max', total);
+                    context.meter.attr('aria-label', ariaLabel);
                 }
+
+                updateOverviewItem(context.key, completed, total, percent);
+
+                return { completed, total, percent };
             };
 
-            $checkboxes.on('change', updateProgress);
-            updateProgress();
+            let activeContextKey = '';
+
+            const showContext = (contextKey) => {
+                activeContextKey = contextKey;
+                contexts.forEach((context) => {
+                    const isActive = context.key === contextKey;
+                    context.element.toggleClass('is-active', isActive);
+                    if (isActive) {
+                        context.element.removeAttr('hidden');
+                        context.element.attr('aria-hidden', 'false');
+                    } else {
+                        context.element.attr('hidden', 'hidden');
+                        context.element.attr('aria-hidden', 'true');
+                    }
+                });
+
+                highlightOverviewItem(contextKey);
+            };
+
+            contexts.forEach((context) => {
+                const update = () => {
+                    computeProgress(context);
+                };
+
+                context.checkboxes.on('change', update);
+                update();
+            });
+
+            const initialContext = (() => {
+                if ($contextSelect.length) {
+                    const selected = String($contextSelect.val() || '');
+                    if (selected) {
+                        return selected;
+                    }
+                }
+
+                return contexts[0].key;
+            })();
+
+            showContext(initialContext);
+
+            if ($contextSelect.length) {
+                $contextSelect.on('change', function() {
+                    const nextKey = String($(this).val() || '');
+                    const exists = contexts.some((context) => context.key === nextKey);
+                    if (exists) {
+                        showContext(nextKey);
+                    }
+                });
+            }
         });
     }
 
@@ -7605,7 +7740,9 @@ jQuery(document).ready(function($) {
 
     // Fonction pour mettre à jour le champ icône
     function updateIconField($itemBox) {
-        const type = $itemBox.find('.menu-item-icon-type').val();
+        const menuItemType = $itemBox.find('.menu-item-type').val();
+        const iconTypeSelect = $itemBox.find('.menu-item-icon-type');
+        const type = iconTypeSelect.val();
         const iconWrapper = $itemBox.find('.menu-item-icon-wrapper');
         const index = $itemBox.index();
         const dataKey = $itemBox.parent().attr('id') === 'menu-items-container' ? 'menu_items' : 'social_icons';
@@ -7615,6 +7752,24 @@ jQuery(document).ready(function($) {
         const previousValue = typeof previousValueRaw === 'string' ? previousValueRaw : '';
 
         iconWrapper.empty();
+
+        if (menuItemType === 'separator') {
+            iconTypeSelect.prop('disabled', true);
+            iconTypeSelect.val('svg_inline');
+
+            const helperText = getI18nString(
+                'menuSeparatorIconDisabled',
+                'Les séparateurs n’affichent pas d’icône.'
+            );
+
+            iconWrapper.append($('<p>', {
+                class: 'description menu-item-icon-disabled'
+            }).text(helperText));
+
+            return;
+        }
+
+        iconTypeSelect.prop('disabled', false);
 
         if (type === 'svg_url') {
             iconWrapper.html(`
@@ -7848,6 +8003,25 @@ jQuery(document).ready(function($) {
         const valueWrapper = $itemBox.find('.menu-item-value-wrapper');
         const index = $itemBox.index();
         const value = itemData.value || '';
+        const $labelField = $itemBox.find('.item-label');
+        const defaultFallbackTitle = getI18nString('menuItemDefaultTitle', 'Nouvel élément');
+
+        const setItemFallback = (fallbackTitle) => {
+            const normalizedFallback = typeof fallbackTitle === 'string' && fallbackTitle.trim() !== ''
+                ? fallbackTitle.trim()
+                : defaultFallbackTitle;
+            $itemBox.data('fallbackTitle', normalizedFallback);
+            const labelValue = $labelField.length && typeof $labelField.val() === 'string'
+                ? $labelField.val().trim()
+                : '';
+            $itemBox.find('.item-title').text(labelValue || normalizedFallback);
+        };
+
+        const resetLabelPlaceholder = () => {
+            if ($labelField.length) {
+                $labelField.removeAttr('placeholder');
+            }
+        };
 
         let fieldContainer = valueWrapper.find('.menu-item-field-container');
         if (!fieldContainer.length) {
@@ -7882,6 +8056,44 @@ jQuery(document).ready(function($) {
 
         fieldContainer.empty();
 
+        if (type === 'separator') {
+            const separatorDescription = getI18nString(
+                'menuSeparatorDescription',
+                'Ce séparateur structure le menu sans lien cliquable.'
+            );
+            const separatorPlaceholder = getI18nString(
+                'menuSeparatorPlaceholder',
+                'Titre de section (optionnel)'
+            );
+            const fallbackTitle = getI18nString('menuSeparatorDefaultTitle', 'Séparateur');
+
+            const $hiddenValue = $('<input>', {
+                type: 'hidden',
+                name: `sidebar_jlg_settings[menu_items][${index}][value]`,
+                value: ''
+            });
+            const $description = $('<p>', {
+                class: 'description menu-item-separator-description'
+            }).text(separatorDescription);
+
+            fieldContainer.append($hiddenValue, $description);
+
+            if ($labelField.length) {
+                $labelField.attr('placeholder', separatorPlaceholder);
+            }
+
+            setItemFallback(fallbackTitle);
+            triggerFieldUpdate($hiddenValue[0]);
+
+            searchInput.val('');
+            statusElement.empty();
+            searchContainer.css('display', 'none');
+
+            return;
+        }
+
+        resetLabelPlaceholder();
+
         if (type === 'custom') {
             fieldContainer.html(`
                 <p><label>URL</label>
@@ -7892,6 +8104,8 @@ jQuery(document).ready(function($) {
             searchInput.val('');
             statusElement.empty();
             searchContainer.css('display', 'none');
+
+            setItemFallback(defaultFallbackTitle);
         } else if (type === 'cta') {
             const titleLabel = getI18nString('ctaTitleLabel', 'Titre du bloc');
             const descriptionLabel = getI18nString('ctaDescriptionLabel', 'Description');
@@ -7974,16 +8188,10 @@ jQuery(document).ready(function($) {
 
             fieldContainer.append($fields);
 
-            const defaultFallback = getI18nString('menuItemDefaultTitle', 'Nouvel élément');
             const updateFallbackTitle = (nextTitle) => {
                 const trimmed = typeof nextTitle === 'string' ? nextTitle.trim() : '';
-                const fallback = trimmed || defaultFallback;
-                $itemBox.data('fallbackTitle', fallback);
-                const $labelField = $itemBox.find('.item-label');
-                const labelValue = $labelField.length && typeof $labelField.val() === 'string'
-                    ? $labelField.val().trim()
-                    : '';
-                $itemBox.find('.item-title').text(labelValue || fallback);
+                const fallback = trimmed || defaultFallbackTitle;
+                setItemFallback(fallback);
             };
 
             updateFallbackTitle(ctaTitle);
@@ -8054,6 +8262,8 @@ jQuery(document).ready(function($) {
 
             searchContainer.css('display', 'flex');
             statusElement.empty();
+
+            setItemFallback(defaultFallbackTitle);
 
             const postsPerPage = 20;
 
@@ -8187,6 +8397,8 @@ jQuery(document).ready(function($) {
             statusElement.empty();
             searchContainer.css('display', 'none');
 
+            setItemFallback(defaultFallbackTitle);
+
             const $menuSelect = fieldContainer.find('.menu-item-nav-select');
             const $depthInput = fieldContainer.find('.menu-item-nav-depth');
 
@@ -8252,6 +8464,8 @@ jQuery(document).ready(function($) {
             searchInput.val('');
             statusElement.empty();
             searchContainer.css('display', 'none');
+
+            setItemFallback(defaultFallbackTitle);
         }
     }
 
@@ -8294,6 +8508,8 @@ jQuery(document).ready(function($) {
         } else {
             updateValueField($itemBox, { value: '' });
         }
+
+        updateIconField($itemBox);
     });
 
     // --- Builder pour les icônes sociales ---
