@@ -2,8 +2,13 @@
 
 namespace JLG\Sidebar\Accessibility;
 
+use function sanitize_key;
+
 class Checklist
 {
+    public const DEFAULT_CONTEXT_KEY = '__global__';
+    public const PROFILE_CONTEXT_PREFIX = 'profile__';
+
     /**
      * Returns the WCAG 2.2 AA items tracked in the accessibility checklist.
      *
@@ -130,5 +135,115 @@ class Checklist
         }
 
         return $defaults;
+    }
+
+    /**
+     * Normalizes a list of checklist entries into a boolean map keyed by item id.
+     *
+     * @param array<string, mixed> $input
+     *
+     * @return array<string, bool>
+     */
+    public static function normalizeStatuses(array $input): array
+    {
+        $defaults = self::getDefaultStatuses();
+
+        foreach ($defaults as $id => $default) {
+            $defaults[$id] = !empty($input[$id]);
+        }
+
+        return $defaults;
+    }
+
+    public static function getContextKeyForProfile(string $profileId): string
+    {
+        $sanitized = sanitize_key($profileId);
+
+        if ($sanitized === '') {
+            return '';
+        }
+
+        return self::PROFILE_CONTEXT_PREFIX . $sanitized;
+    }
+
+    /**
+     * @param mixed $contextKey
+     */
+    public static function normalizeContextKey($contextKey): string
+    {
+        if (!is_string($contextKey) || $contextKey === '') {
+            return '';
+        }
+
+        if ($contextKey === self::DEFAULT_CONTEXT_KEY) {
+            return self::DEFAULT_CONTEXT_KEY;
+        }
+
+        if (strpos($contextKey, self::PROFILE_CONTEXT_PREFIX) === 0) {
+            $profileId = substr($contextKey, strlen(self::PROFILE_CONTEXT_PREFIX));
+            $normalized = sanitize_key($profileId);
+
+            return $normalized === '' ? '' : self::PROFILE_CONTEXT_PREFIX . $normalized;
+        }
+
+        $fallback = sanitize_key($contextKey);
+
+        if ($fallback === '') {
+            return '';
+        }
+
+        return self::PROFILE_CONTEXT_PREFIX . $fallback;
+    }
+
+    /**
+     * @param mixed $stored
+     *
+     * @return array<string, array<string, bool>>
+     */
+    public static function normalizeStoredContexts($stored): array
+    {
+        $contexts = [];
+
+        if (!is_array($stored)) {
+            $contexts[self::DEFAULT_CONTEXT_KEY] = self::getDefaultStatuses();
+
+            return $contexts;
+        }
+
+        $hasNested = false;
+
+        foreach ($stored as $value) {
+            if (is_array($value)) {
+                $hasNested = true;
+
+                break;
+            }
+        }
+
+        if (!$hasNested) {
+            $contexts[self::DEFAULT_CONTEXT_KEY] = self::normalizeStatuses($stored);
+        } else {
+            foreach ($stored as $contextKey => $statuses) {
+                if (!is_array($statuses)) {
+                    continue;
+                }
+
+                $normalizedKey = self::normalizeContextKey($contextKey);
+
+                if ($normalizedKey === '') {
+                    continue;
+                }
+
+                $contexts[$normalizedKey] = self::normalizeStatuses($statuses);
+            }
+        }
+
+        if (!isset($contexts[self::DEFAULT_CONTEXT_KEY])) {
+            $contexts[self::DEFAULT_CONTEXT_KEY] = self::getDefaultStatuses();
+        }
+
+        ksort($contexts);
+
+        return $contexts;
     }
 }

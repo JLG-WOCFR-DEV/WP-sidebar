@@ -84,18 +84,8 @@ class SettingsSanitizer
     public function sanitize_accessibility_checklist($value): array
     {
         $input = is_array($value) ? $value : [];
-        $sanitized = [];
 
-        foreach (Checklist::getItems() as $item) {
-            $id = $item['id'] ?? '';
-            if (!is_string($id) || $id === '') {
-                continue;
-            }
-
-            $sanitized[$id] = !empty($input[$id]);
-        }
-
-        return $sanitized;
+        return Checklist::normalizeStoredContexts($input);
     }
 
     public function sanitize_settings($input, ?array $existingOptionsOverride = null): array
@@ -574,7 +564,7 @@ class SettingsSanitizer
                     $existingItem = $existingMenuItems[$index];
                 }
 
-                $allowedItemTypes = ['custom', 'post', 'page', 'category', 'nav_menu', 'cta'];
+                $allowedItemTypes = ['custom', 'post', 'page', 'category', 'nav_menu', 'cta', 'separator'];
                 $rawItemType = $item['type'] ?? ($existingItem['type'] ?? '');
                 $itemType = sanitize_key($rawItemType);
                 if ($itemType === '' && isset($existingItem['type'])) {
@@ -621,6 +611,11 @@ class SettingsSanitizer
                 }
 
                 switch ($effectiveItemType) {
+                    case 'separator':
+                        $sanitizedItem['value'] = '';
+                        $sanitizedItem['icon'] = '';
+                        $sanitizedItem['icon_type'] = 'svg_inline';
+                        break;
                     case 'custom':
                         $rawValue = array_key_exists('value', $item) ? $item['value'] : ($existingItem['value'] ?? '');
                         $sanitizedItem['value'] = esc_url_raw($rawValue);

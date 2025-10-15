@@ -110,12 +110,18 @@ class MenuPage
             [
                 'type' => 'object',
                 'sanitize_callback' => [$this->sanitizer, 'sanitize_accessibility_checklist'],
-                'default' => Checklist::getDefaultStatuses(),
+                'default' => [
+                    Checklist::DEFAULT_CONTEXT_KEY => Checklist::getDefaultStatuses(),
+                ],
                 'show_in_rest' => [
                     'schema' => [
                         'type' => 'object',
                         'description' => __('Statuts individuels pour chaque contrôle de la checklist accessibilité.', 'sidebar-jlg'),
-                        'properties' => $this->buildAccessibilityChecklistSchema(),
+                        'additionalProperties' => [
+                            'type' => 'object',
+                            'properties' => $this->buildAccessibilityChecklistSchema(),
+                            'additionalProperties' => false,
+                        ],
                     ],
                 ],
             ]
@@ -421,6 +427,10 @@ class MenuPage
             ],
             'i18n' => [
                 'menuItemDefaultTitle' => __('Nouvel élément', 'sidebar-jlg'),
+                'menuSeparatorDefaultTitle' => __('Séparateur', 'sidebar-jlg'),
+                'menuSeparatorDescription' => __('Ce séparateur structure le menu sans lien cliquable.', 'sidebar-jlg'),
+                'menuSeparatorIconDisabled' => __('Les séparateurs n’affichent pas d’icône.', 'sidebar-jlg'),
+                'menuSeparatorPlaceholder' => __('Titre de section (optionnel)', 'sidebar-jlg'),
                 'socialIconDefaultTitle' => __('Nouvelle icône', 'sidebar-jlg'),
                 'svgUrlOutOfScopeWithDescription' => __('Cette URL ne sera pas enregistrée. Utilisez une adresse dans %s.', 'sidebar-jlg'),
                 'svgUrlOutOfScope' => __('Cette URL ne sera pas enregistrée car elle est en dehors de la zone autorisée.', 'sidebar-jlg'),
@@ -506,6 +516,11 @@ class MenuPage
                 'auditIssueCode' => __('Code : %s', 'sidebar-jlg'),
                 'auditIssueSelector' => __('Sélecteur : %s', 'sidebar-jlg'),
                 'auditIssueContext' => __('Extrait :', 'sidebar-jlg'),
+                'accessibilityContextLabel' => __('Profil analysé', 'sidebar-jlg'),
+                'accessibilityContextGlobal' => __('Réglages globaux', 'sidebar-jlg'),
+                'accessibilityContextProfile' => __('Profil : %s', 'sidebar-jlg'),
+                'accessibilityOverviewLabel' => __('Progression par profil', 'sidebar-jlg'),
+                'accessibilityOverviewValue' => __('%1$s critères sur %2$s (%3$s%%)', 'sidebar-jlg'),
                 'navMenuFieldLabel' => __('Menu WordPress', 'sidebar-jlg'),
                 'navMenuSelectPlaceholder' => __('Sélectionnez un menu…', 'sidebar-jlg'),
                 'navMenuDepthLabel' => __('Profondeur maximale', 'sidebar-jlg'),
@@ -560,9 +575,11 @@ class MenuPage
                 'refresh' => __('Actualiser l’aperçu', 'sidebar-jlg'),
                 'activeProfile' => __('Profil actif : %s', 'sidebar-jlg'),
             ],
-            'accessibility_checklist' => get_option(
-                'sidebar_jlg_accessibility_checklist',
-                Checklist::getDefaultStatuses()
+            'accessibility_checklist' => Checklist::normalizeStoredContexts(
+                get_option(
+                    'sidebar_jlg_accessibility_checklist',
+                    [Checklist::DEFAULT_CONTEXT_KEY => Checklist::getDefaultStatuses()]
+                )
             ),
         ]);
 

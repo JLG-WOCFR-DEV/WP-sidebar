@@ -186,6 +186,24 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
 
         $nodeType = isset($node['type']) ? (string) $node['type'] : '';
 
+        if ($nodeType === 'separator') {
+            $label = isset($node['label']) && is_string($node['label']) ? $node['label'] : '';
+
+            ob_start();
+            ?>
+            <li<?php echo $classAttr; ?><?php echo $dataAttributes; ?> role="presentation">
+                <span class="menu-separator__line" aria-hidden="true"></span>
+                <?php if ($label !== '') : ?>
+                    <span class="menu-separator__label"><?php echo esc_html($label); ?></span>
+                    <span class="menu-separator__line" aria-hidden="true"></span>
+                <?php endif; ?>
+            </li>
+            <?php
+            $html .= ob_get_clean();
+
+            continue;
+        }
+
         if ($nodeType === 'cta') {
             $ctaData = is_array($node['cta'] ?? null) ? $node['cta'] : [];
             $ctaTitle = isset($ctaData['title']) && is_string($ctaData['title']) ? $ctaData['title'] : '';

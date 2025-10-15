@@ -1532,6 +1532,36 @@ class SidebarRenderer
     {
         $type = isset($item['type']) ? (string) $item['type'] : '';
 
+        if ($type === 'separator') {
+            $label = '';
+            if (isset($item['label']) && is_string($item['label'])) {
+                $label = sanitize_text_field($item['label']);
+            }
+
+            $classes = ['menu-item', 'menu-item-static', 'menu-separator'];
+            if ($label !== '') {
+                $classes[] = 'menu-separator--labeled';
+            }
+
+            return [
+                'type' => 'separator',
+                'label' => $label,
+                'url' => '',
+                'classes' => self::normalizeMenuClasses($classes),
+                'is_current' => false,
+                'is_current_ancestor' => false,
+                'children' => [],
+                'icon' => [
+                    'type' => '',
+                    'markup' => '',
+                    'url' => '',
+                    'is_custom' => false,
+                ],
+                'origin' => 'static',
+                'data_attributes' => [],
+            ];
+        }
+
         if ($type === 'cta') {
             $title = '';
             if (isset($item['cta_title']) && is_string($item['cta_title'])) {

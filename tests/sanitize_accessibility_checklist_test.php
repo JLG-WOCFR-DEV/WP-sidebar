@@ -34,26 +34,60 @@ function assertSameChecklist($expected, $actual, string $message): void
     }
 }
 
-$input = [];
+$flatInput = [];
 foreach ($expectedKeys as $index => $key) {
-    $input[$key] = $index % 2 === 0 ? '1' : '';
+    $flatInput[$key] = $index % 2 === 0 ? '1' : '';
 }
 
-$result = $sanitizer->sanitize_accessibility_checklist($input);
-$expected = [];
+$flatResult = $sanitizer->sanitize_accessibility_checklist($flatInput);
+$flatExpected = [
+    Checklist::DEFAULT_CONTEXT_KEY => [],
+];
 foreach ($expectedKeys as $index => $key) {
-    $expected[$key] = $index % 2 === 0;
+    $flatExpected[Checklist::DEFAULT_CONTEXT_KEY][$key] = $index % 2 === 0;
 }
 
-assertSameChecklist($expected, $result, 'Sanitizer converts checklist entries to booleans and preserves keys');
+assertSameChecklist($flatExpected, $flatResult, 'Flat checklist is wrapped into the default context with boolean values.');
 
-$invalidResult = $sanitizer->sanitize_accessibility_checklist(['unknown' => true]);
-$expectedFalse = [];
-foreach ($expectedKeys as $key) {
-    $expectedFalse[$key] = false;
-}
+$profileContext = Checklist::getContextKeyForProfile('marketing-team');
+$anotherContext = Checklist::getContextKeyForProfile('support');
 
-assertSameChecklist($expectedFalse, $invalidResult, 'Sanitizer ignores unknown keys and defaults to false');
+$nestedInput = [
+    Checklist::DEFAULT_CONTEXT_KEY => [
+        $expectedKeys[0] => true,
+        $expectedKeys[1] => false,
+    ],
+    'marketing team' => [
+        $expectedKeys[0] => '1',
+        $expectedKeys[2] => '1',
+    ],
+    'profile__support' => [
+        $expectedKeys[1] => true,
+    ],
+    'invalid' => 'not an array',
+];
+
+$nestedResult = $sanitizer->sanitize_accessibility_checklist($nestedInput);
+
+$nestedExpected = [
+    Checklist::DEFAULT_CONTEXT_KEY => array_fill_keys($expectedKeys, false),
+    $profileContext => array_fill_keys($expectedKeys, false),
+    $anotherContext => array_fill_keys($expectedKeys, false),
+];
+$nestedExpected[Checklist::DEFAULT_CONTEXT_KEY][$expectedKeys[0]] = true;
+$nestedExpected[Checklist::DEFAULT_CONTEXT_KEY][$expectedKeys[1]] = false;
+$nestedExpected[$profileContext][$expectedKeys[0]] = true;
+$nestedExpected[$profileContext][$expectedKeys[2]] = true;
+$nestedExpected[$anotherContext][$expectedKeys[1]] = true;
+
+assertSameChecklist($nestedExpected, $nestedResult, 'Nested contexts are normalized and additional contexts added.');
+
+$invalidResult = $sanitizer->sanitize_accessibility_checklist('not an array');
+$expectedDefaults = [
+    Checklist::DEFAULT_CONTEXT_KEY => array_fill_keys($expectedKeys, false),
+];
+
+assertSameChecklist($expectedDefaults, $invalidResult, 'Non-array values reset to default checklist state.');
 
 if (!$testsPassed) {
     exit(1);
