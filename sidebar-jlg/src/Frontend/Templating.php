@@ -47,12 +47,21 @@ class Templating
 
             $content = $iconMarkup ?? sprintf('<span class="no-icon-label">%s</span>', esc_html($ariaLabel));
 
+            $newWindowAnnouncement = __('s’ouvre dans une nouvelle fenêtre', 'sidebar-jlg');
+            $announcedLabel = sprintf(
+                /* translators: %s: Social network label. */
+                __('%s – s’ouvre dans une nouvelle fenêtre', 'sidebar-jlg'),
+                $ariaLabel
+            );
+            $screenReaderSuffix = sprintf('<span class="screen-reader-text">%s</span>', esc_html($newWindowAnnouncement));
+
             $iconsMarkup[] = sprintf(
-                '<a href="%1$s"%2$s target="_blank" rel="noopener noreferrer" aria-label="%3$s">%4$s</a>',
+                '<a href="%1$s"%2$s target="_blank" rel="noopener noreferrer" aria-label="%3$s">%4$s%5$s</a>',
                 $href,
                 $classAttribute,
-                esc_attr($ariaLabel),
-                $content
+                esc_attr($announcedLabel),
+                $content,
+                $screenReaderSuffix
             );
         }
 
