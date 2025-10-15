@@ -43,40 +43,6 @@ $widgetTemplates = [
     'woocommerce' => $widgetTemplateDirectory . 'widget-woocommerce.php',
 ];
 
-$makeInlineIconDecorative = static function (string $markup): string {
-    if (stripos($markup, '<svg') === false) {
-        return $markup;
-    }
-
-    $normalized = preg_replace_callback(
-        '/<svg\b([^>]*)>/i',
-        static function (array $matches): string {
-            $attributes = $matches[1];
-
-            $attributes = preg_replace("/\s+aria-hidden=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
-            $attributes = preg_replace("/\s+focusable=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
-            $attributes = preg_replace("/\s+role=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
-
-            $cleanAttributes = trim($attributes);
-
-            $openingTag = '<svg';
-
-            if ($cleanAttributes !== '') {
-                $openingTag .= ' ' . $cleanAttributes;
-            }
-
-            return $openingTag . ' aria-hidden="true" focusable="false" role="presentation">';
-        },
-        $markup
-    );
-
-    if ($normalized === null) {
-        return $markup;
-    }
-
-    return $normalized;
-};
-
 $socialOrientation = '';
 if (isset($options['social_orientation']) && is_string($options['social_orientation'])) {
     $socialOrientation = $options['social_orientation'];
@@ -244,7 +210,7 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
                         <?php
                     } elseif (($icon['type'] ?? '') === 'svg_inline' && !empty($icon['markup'])) {
                         $iconClass = ($icon['is_custom'] ?? false) ? 'menu-icon svg-icon' : 'menu-icon';
-                        $inlineMarkup = $makeInlineIconDecorative((string) $icon['markup']);
+                        $inlineMarkup = Templating::makeInlineSvgDecorative((string) $icon['markup']);
                         ?>
                         <span class="<?php echo esc_attr($iconClass); ?>" aria-hidden="true"><?php echo wp_kses_post($inlineMarkup); ?></span>
                         <?php
@@ -423,10 +389,10 @@ $horizontalAlignment = $options['horizontal_bar_alignment'] ?? 'space-between';
             $close_button_markup = '<span class="close-sidebar-fallback" aria-hidden="true">&times;</span>';
 
             if (isset($allIcons['close_white']) && $allIcons['close_white'] !== '') {
-                $close_button_markup = (string) $allIcons['close_white'];
-            } else {
-                $close_button_markup = wp_kses_post($close_button_markup);
+                $close_button_markup = Templating::makeInlineSvgDecorative((string) $allIcons['close_white']);
             }
+
+            $close_button_markup = wp_kses_post($close_button_markup);
             ?>
             <button class="close-sidebar-btn" type="button" aria-label="<?php esc_attr_e('Fermer le menu', 'sidebar-jlg'); ?>">
                 <?php echo $close_button_markup; ?>

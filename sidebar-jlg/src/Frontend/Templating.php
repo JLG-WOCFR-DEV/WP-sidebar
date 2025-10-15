@@ -27,6 +27,9 @@ class Templating
 
             $iconKey = isset($social['icon']) ? (string) $social['icon'] : '';
             $iconMarkup = $iconKey !== '' && isset($allIcons[$iconKey]) ? (string) $allIcons[$iconKey] : null;
+            if ($iconMarkup !== null) {
+                $iconMarkup = self::makeInlineSvgDecorative($iconMarkup);
+            }
 
             $defaultLabel = self::humanizeIconKey($iconKey);
             $ariaLabel = $customLabel !== '' ? $customLabel : $defaultLabel;
@@ -47,10 +50,10 @@ class Templating
 
             $content = $iconMarkup ?? sprintf('<span class="no-icon-label">%s</span>', esc_html($ariaLabel));
 
-            $newWindowAnnouncement = __('s’ouvre dans une nouvelle fenêtre', 'sidebar-jlg');
+            $newWindowAnnouncement = __('s\'ouvre dans une nouvelle fenêtre', 'sidebar-jlg');
             $announcedLabel = sprintf(
                 /* translators: %s: Social network label. */
-                __('%s – s’ouvre dans une nouvelle fenêtre', 'sidebar-jlg'),
+                __('%s – s\'ouvre dans une nouvelle fenêtre', 'sidebar-jlg'),
                 $ariaLabel
             );
             $screenReaderSuffix = sprintf('<span class="screen-reader-text">%s</span>', esc_html($newWindowAnnouncement));
@@ -72,7 +75,10 @@ class Templating
         $classes = 'social-icons';
         $orientationClass = trim($orientation);
         if ($orientationClass !== '') {
-            $classes .= ' ' . $orientationClass;
+            $sanitizedOrientation = sanitize_html_class($orientationClass, '');
+            if ($sanitizedOrientation !== '') {
+                $classes .= ' ' . $sanitizedOrientation;
+            }
         }
 
         return sprintf(
@@ -107,5 +113,41 @@ class Templating
         }
 
         return ucwords($readable);
+    }
+
+    public static function makeInlineSvgDecorative(string $markup): string
+    {
+        if (stripos($markup, '<svg') === false) {
+            return $markup;
+        }
+
+        $normalized = preg_replace_callback(
+            '/<svg\b([^>]*)>/i',
+            static function (array $matches): string {
+                $attributes = $matches[1];
+
+                $attributes = preg_replace("/\s+aria-hidden=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+                $attributes = preg_replace("/\s+focusable=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+                $attributes = preg_replace("/\s+role=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+                $attributes = preg_replace("/\s+tabindex=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+
+                $cleanAttributes = trim($attributes);
+
+                $openingTag = '<svg';
+
+                if ($cleanAttributes !== '') {
+                    $openingTag .= ' ' . $cleanAttributes;
+                }
+
+                return $openingTag . ' aria-hidden="true" focusable="false" role="presentation">';
+            },
+            $markup
+        );
+
+        if ($normalized === null) {
+            return $markup;
+        }
+
+        return $normalized;
     }
 }

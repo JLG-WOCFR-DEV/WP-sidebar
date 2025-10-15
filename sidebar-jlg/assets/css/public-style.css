@@ -752,7 +752,7 @@ body.sidebar-open .pro-sidebar::after {
     overflow: hidden;
 }
 .sidebar-menu .menu-item-cta .menu-cta.menu-cta--clicked {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent-color, rgba(13, 110, 253, 1)) 55%, transparent),
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent-color, rgba(8, 66, 152, 1)) 55%, transparent),
         0 24px 60px color-mix(in srgb, rgba(12, 12, 18, 0.85) 70%, var(--primary-accent-color, rgba(94, 93, 206, 0.45)) 30%);
 }
 .sidebar-menu .menu-item-cta .menu-cta::after {
@@ -789,7 +789,7 @@ body.sidebar-open .pro-sidebar::after {
     justify-content: center;
     padding: 0.75rem 1.75rem;
     border-radius: 999px;
-    background: var(--primary-accent-color, rgba(13, 110, 253, 1));
+    background: var(--primary-accent-color, rgba(8, 66, 152, 1));
     color: #fff;
     font-weight: 600;
     letter-spacing: 0.03em;
@@ -800,7 +800,7 @@ body.sidebar-open .pro-sidebar::after {
     z-index: 1;
 }
 .sidebar-menu .menu-item-cta .menu-cta[data-cta-clicked="true"] .menu-cta__button {
-    background: color-mix(in srgb, var(--primary-accent-color, rgba(13, 110, 253, 1)) 70%, transparent);
+    background: color-mix(in srgb, var(--primary-accent-color, rgba(8, 66, 152, 1)) 70%, transparent);
 }
 .sidebar-menu .menu-item-cta .menu-cta__button:hover,
 .sidebar-menu .menu-item-cta .menu-cta__button:focus,
