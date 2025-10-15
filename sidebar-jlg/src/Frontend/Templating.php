@@ -27,6 +27,9 @@ class Templating
 
             $iconKey = isset($social['icon']) ? (string) $social['icon'] : '';
             $iconMarkup = $iconKey !== '' && isset($allIcons[$iconKey]) ? (string) $allIcons[$iconKey] : null;
+            if ($iconMarkup !== null) {
+                $iconMarkup = self::makeInlineSvgDecorative($iconMarkup);
+            }
 
             $defaultLabel = self::humanizeIconKey($iconKey);
             $ariaLabel = $customLabel !== '' ? $customLabel : $defaultLabel;
@@ -107,5 +110,40 @@ class Templating
         }
 
         return ucwords($readable);
+    }
+
+    public static function makeInlineSvgDecorative(string $markup): string
+    {
+        if (stripos($markup, '<svg') === false) {
+            return $markup;
+        }
+
+        $normalized = preg_replace_callback(
+            '/<svg\b([^>]*)>/i',
+            static function (array $matches): string {
+                $attributes = $matches[1];
+
+                $attributes = preg_replace("/\s+aria-hidden=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+                $attributes = preg_replace("/\s+focusable=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+                $attributes = preg_replace("/\s+role=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+
+                $cleanAttributes = trim($attributes);
+
+                $openingTag = '<svg';
+
+                if ($cleanAttributes !== '') {
+                    $openingTag .= ' ' . $cleanAttributes;
+                }
+
+                return $openingTag . ' aria-hidden="true" focusable="false" role="presentation">';
+            },
+            $markup
+        );
+
+        if ($normalized === null) {
+            return $markup;
+        }
+
+        return $normalized;
     }
 }
