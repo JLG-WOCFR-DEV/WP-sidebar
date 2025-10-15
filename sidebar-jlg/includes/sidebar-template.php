@@ -125,7 +125,7 @@ $toggleCollapseLabel = $toggleCollapseLabelOption !== '' ? $toggleCollapseLabelO
 
 $submenuIndex = 0;
 
-$renderMenuNodes = static function (array $nodes, string $layout) use (&$renderMenuNodes, $toggleExpandLabel, $toggleCollapseLabel, &$submenuIndex): string {
+$renderMenuNodes = static function (array $nodes, string $layout) use (&$renderMenuNodes, $toggleExpandLabel, $toggleCollapseLabel, &$submenuIndex, $makeInlineIconDecorative): string {
     if ($nodes === []) {
         return '';
     }
