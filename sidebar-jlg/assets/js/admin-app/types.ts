@@ -21,6 +21,8 @@ export interface SidebarAppStrings {
   redo: string;
   closeCanvas: string;
   previewError: string;
+  previewCanvasTitle?: string;
+  previewCanvasDescription?: string;
   onboardingTitle: string;
   onboardingDescription: string;
   onboardingSteps: string[];

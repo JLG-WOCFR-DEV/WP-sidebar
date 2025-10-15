@@ -6,7 +6,8 @@ import {
   PanelBody,
   Spinner,
 } from '@wordpress/components';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { useOptionsStore } from '../store/optionsStore';
 import type { SidebarOptions } from '../types';
@@ -37,6 +38,15 @@ const findFirstCtaIndex = (options: SidebarOptions): number => {
   });
 };
 
+const FOCUSABLE_SELECTOR =
+  'a[href], area[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+interface InertSnapshot {
+  element: HTMLElement;
+  ariaHidden: string | null;
+  inert: boolean;
+}
+
 const PreviewCanvas = (): JSX.Element | null => {
   const isOpen = useOptionsStore((state) => state.isCanvasOpen);
   const closeCanvas = useOptionsStore((state) => state.closeCanvas);
@@ -54,7 +64,82 @@ const PreviewCanvas = (): JSX.Element | null => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const inertSnapshotRef = useRef<InertSnapshot[]>([]);
+
+  const dialogTitleId = useMemo(
+    () => `sidebar-jlg-preview-title-${Math.random().toString(36).slice(2)}`,
+    []
+  );
+  const dialogDescriptionId = useMemo(
+    () => `sidebar-jlg-preview-description-${Math.random().toString(36).slice(2)}`,
+    []
+  );
+
+  const getFocusableElements = useCallback((): HTMLElement[] => {
+    if (!surfaceRef.current) {
+      return [];
+    }
+
+    const nodes = Array.from(
+      surfaceRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+    );
+
+    return nodes.filter((element) => {
+      if (element.hasAttribute('disabled') || element.getAttribute('aria-hidden') === 'true') {
+        return false;
+      }
+
+      if (element.tabIndex < 0) {
+        return false;
+      }
+
+      return element.offsetParent !== null;
+    });
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeCanvas();
+        return;
+      }
+
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const focusable = getFocusableElements();
+
+      if (!focusable.length) {
+        event.preventDefault();
+        surfaceRef.current?.focus({ preventScroll: true });
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey) {
+        if (!active || active === first || !surfaceRef.current?.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+        return;
+      }
+
+      if (active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    },
+    [closeCanvas, getFocusableElements]
+  );
 
   const ctaIndex = useMemo(() => findFirstCtaIndex(options), [options]);
   const ctaColor = useMemo(() => {
@@ -125,6 +210,67 @@ const PreviewCanvas = (): JSX.Element | null => {
       return;
     }
 
+    restoreFocusRef.current = (document.activeElement as HTMLElement | null) ?? null;
+
+    const dialog = dialogRef.current;
+    if (dialog?.parentElement) {
+      const siblings = Array.from(dialog.parentElement.children).filter(
+        (node): node is HTMLElement => node instanceof HTMLElement && node !== dialog
+      );
+
+      inertSnapshotRef.current = siblings.map((element) => {
+        const snapshot: InertSnapshot = {
+          element,
+          ariaHidden: element.getAttribute('aria-hidden'),
+          inert: element.hasAttribute('inert'),
+        };
+
+        element.setAttribute('aria-hidden', 'true');
+        element.setAttribute('inert', '');
+
+        return snapshot;
+      });
+    }
+
+    const surface = surfaceRef.current;
+    const focusTimer = surface
+      ? window.setTimeout(() => {
+          const focusable = getFocusableElements();
+          const target = focusable[0] ?? surface;
+          target.focus({ preventScroll: true });
+        }, 0)
+      : undefined;
+
+    return () => {
+      if (typeof focusTimer === 'number') {
+        window.clearTimeout(focusTimer);
+      }
+
+      inertSnapshotRef.current.forEach(({ element, ariaHidden, inert }) => {
+        if (ariaHidden === null) {
+          element.removeAttribute('aria-hidden');
+        } else {
+          element.setAttribute('aria-hidden', ariaHidden);
+        }
+
+        if (inert) {
+          element.setAttribute('inert', '');
+        } else {
+          element.removeAttribute('inert');
+        }
+      });
+      inertSnapshotRef.current = [];
+
+      restoreFocusRef.current?.focus({ preventScroll: true });
+      restoreFocusRef.current = null;
+    };
+  }, [getFocusableElements, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
     const container = previewRef.current;
     if (!container || ctaIndex < 0) {
       return;
@@ -168,10 +314,22 @@ const PreviewCanvas = (): JSX.Element | null => {
   }
 
   return (
-    <div className="sidebar-jlg-preview-canvas" role="dialog" aria-modal="true">
+    <div className="sidebar-jlg-preview-canvas" ref={dialogRef} role="presentation">
       <div className="sidebar-jlg-preview-canvas__backdrop" aria-hidden="true" onClick={closeCanvas} />
-      <div className="sidebar-jlg-preview-canvas__surface">
+      <div
+        className="sidebar-jlg-preview-canvas__surface"
+        ref={surfaceRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={dialogTitleId}
+        aria-describedby={dialogDescriptionId}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+      >
         <header className="sidebar-jlg-preview-canvas__toolbar">
+          <h2 id={dialogTitleId} className="screen-reader-text">
+            {strings?.previewCanvasTitle ?? 'Aperçu de la sidebar JLG'}
+          </h2>
           <div className="sidebar-jlg-preview-canvas__toolbar-group">
             <Button variant="secondary" onClick={undo} disabled={!canUndo}>
               {strings?.undo ?? 'Annuler'}
@@ -184,6 +342,10 @@ const PreviewCanvas = (): JSX.Element | null => {
             {strings?.closeCanvas ?? 'Fermer'}
           </Button>
         </header>
+        <p id={dialogDescriptionId} className="screen-reader-text">
+          {strings?.previewCanvasDescription ??
+            'Aperçu interactif de la sidebar. Les touches Tab et Maj+Tab parcourent les contrôles, Échap ferme la fenêtre.'}
+        </p>
         {error && (
           <div className="sidebar-jlg-preview-canvas__notice">
             <Notice status="error" onRemove={() => setError(null)}>
