@@ -50,10 +50,10 @@ class Templating
 
             $content = $iconMarkup ?? sprintf('<span class="no-icon-label">%s</span>', esc_html($ariaLabel));
 
-            $newWindowAnnouncement = __('s’ouvre dans une nouvelle fenêtre', 'sidebar-jlg');
+            $newWindowAnnouncement = __('s\'ouvre dans une nouvelle fenêtre', 'sidebar-jlg');
             $announcedLabel = sprintf(
                 /* translators: %s: Social network label. */
-                __('%s – s’ouvre dans une nouvelle fenêtre', 'sidebar-jlg'),
+                __('%s – s\'ouvre dans une nouvelle fenêtre', 'sidebar-jlg'),
                 $ariaLabel
             );
             $screenReaderSuffix = sprintf('<span class="screen-reader-text">%s</span>', esc_html($newWindowAnnouncement));
@@ -75,7 +75,10 @@ class Templating
         $classes = 'social-icons';
         $orientationClass = trim($orientation);
         if ($orientationClass !== '') {
-            $classes .= ' ' . $orientationClass;
+            $sanitizedOrientation = sanitize_html_class($orientationClass, '');
+            if ($sanitizedOrientation !== '') {
+                $classes .= ' ' . $sanitizedOrientation;
+            }
         }
 
         return sprintf(
@@ -126,6 +129,7 @@ class Templating
                 $attributes = preg_replace("/\s+aria-hidden=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
                 $attributes = preg_replace("/\s+focusable=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
                 $attributes = preg_replace("/\s+role=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+                $attributes = preg_replace("/\s+tabindex=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
 
                 $cleanAttributes = trim($attributes);
 

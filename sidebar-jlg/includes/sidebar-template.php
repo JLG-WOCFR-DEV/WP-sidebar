@@ -389,10 +389,10 @@ $horizontalAlignment = $options['horizontal_bar_alignment'] ?? 'space-between';
             $close_button_markup = '<span class="close-sidebar-fallback" aria-hidden="true">&times;</span>';
 
             if (isset($allIcons['close_white']) && $allIcons['close_white'] !== '') {
-                $close_button_markup = (string) $allIcons['close_white'];
-            } else {
-                $close_button_markup = wp_kses_post($close_button_markup);
+                $close_button_markup = Templating::makeInlineSvgDecorative((string) $allIcons['close_white']);
             }
+
+            $close_button_markup = wp_kses_post($close_button_markup);
             ?>
             <button class="close-sidebar-btn" type="button" aria-label="<?php esc_attr_e('Fermer le menu', 'sidebar-jlg'); ?>">
                 <?php echo $close_button_markup; ?>
