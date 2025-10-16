@@ -7,9 +7,12 @@ class MenuCache
     private const CACHE_TTL = 86400;
     private const OBJECT_CACHE_GROUP = 'sidebar_jlg';
     private const LOCALE_INDEX_CACHE_KEY = 'menu_cache_index';
+    private const LOCALE_ENTRY_CACHE_PREFIX = 'menu_cache_entry_';
+    private const LOCALE_ENTRY_OPTION_PREFIX = 'sidebar_jlg_cached_locale_entry_';
     private const DEFAULT_SUFFIX_KEY = '__default__';
     private const METRICS_KEY = 'metrics';
     private const METRICS_SUFFIX_ALIAS = 'metrics_profile';
+    private const MAINTENANCE_CRON_HOOK = 'sidebar_jlg_menu_cache_maintenance';
 
     private string $optionName = 'sidebar_jlg_cached_locales';
 
@@ -17,6 +20,19 @@ class MenuCache
      * @var array<string, array<string, mixed>>|null
      */
     private ?array $loadedLocaleIndex = null;
+
+    /**
+     * @var array<string, array<string, int>>
+     */
+    private array $pendingEntryExpirations = [];
+
+    public function __construct()
+    {
+        if (function_exists('add_action')) {
+            add_action(self::MAINTENANCE_CRON_HOOK, [$this, 'purgeExpiredEntries']);
+            add_action('init', [$this, 'scheduleMaintenanceEvent']);
+        }
+    }
 
     public function getLocaleForCache(): string
     {
@@ -199,6 +215,85 @@ class MenuCache
         ]);
     }
 
+    public function scheduleMaintenanceEvent(): void
+    {
+        if (!function_exists('wp_next_scheduled') || !function_exists('wp_schedule_event')) {
+            return;
+        }
+
+        if (wp_next_scheduled(self::MAINTENANCE_CRON_HOOK) !== false) {
+            return;
+        }
+
+        $delay = defined('HOUR_IN_SECONDS') ? HOUR_IN_SECONDS : 3600;
+        wp_schedule_event(time() + $delay, 'twicedaily', self::MAINTENANCE_CRON_HOOK);
+    }
+
+    public function purgeExpiredEntries(): void
+    {
+        $index = $this->getLocaleIndex();
+        $registry = $this->getLocaleRegistry();
+        $updated = false;
+
+        foreach ($registry as $locale => $suffixes) {
+            foreach ($suffixes as $suffixKey => $_present) {
+                $entry = $this->loadLocaleEntry($locale, $suffixKey);
+
+                if ($entry === null) {
+                    if (isset($index[$locale][$suffixKey])) {
+                        unset($index[$locale][$suffixKey]);
+                        $this->removeMetricsForEntry($index, $locale, $suffixKey);
+
+                        if ($this->isLocaleIndexEmpty($index, $locale)) {
+                            unset($index[$locale]);
+                        }
+
+                        $updated = true;
+                    }
+
+                    continue;
+                }
+
+                $transientKey = isset($entry['transient_key']) && is_string($entry['transient_key'])
+                    ? $entry['transient_key']
+                    : '';
+                $expiresAt = isset($entry['expires_at']) ? (int) $entry['expires_at'] : 0;
+
+                $isExpired = $expiresAt > 0 && $expiresAt <= time();
+
+                if (!$isExpired && $transientKey !== '' && function_exists('get_transient')) {
+                    $value = get_transient($transientKey);
+                    if ($value === false) {
+                        $isExpired = true;
+                    }
+                }
+
+                if (!$isExpired) {
+                    continue;
+                }
+
+                if ($transientKey !== '' && function_exists('delete_transient')) {
+                    delete_transient($transientKey);
+                }
+
+                if (isset($index[$locale][$suffixKey])) {
+                    unset($index[$locale][$suffixKey]);
+                    $this->removeMetricsForEntry($index, $locale, $suffixKey);
+
+                    if ($this->isLocaleIndexEmpty($index, $locale)) {
+                        unset($index[$locale]);
+                    }
+
+                    $updated = true;
+                }
+            }
+        }
+
+        if ($updated) {
+            $this->persistLocaleIndex($index);
+        }
+    }
+
     public function forgetLocaleIndex(): void
     {
         $this->clearLocaleIndexStorage();
@@ -215,16 +310,23 @@ class MenuCache
         $suffixKey = $this->normalizeSuffixKey($normalizedSuffix);
         $transientKey = $this->buildTransientKey($normalizedLocale, $normalizedSuffix);
 
-        if (isset($index[$normalizedLocale][$suffixKey]) && $index[$normalizedLocale][$suffixKey] === $transientKey) {
-            return;
+        if (!isset($this->pendingEntryExpirations[$normalizedLocale])) {
+            $this->pendingEntryExpirations[$normalizedLocale] = [];
         }
+
+        $this->pendingEntryExpirations[$normalizedLocale][$suffixKey] = time() + self::CACHE_TTL;
+
+        $isNewKey = !isset($index[$normalizedLocale][$suffixKey])
+            || $index[$normalizedLocale][$suffixKey] !== $transientKey;
 
         if (!isset($index[$normalizedLocale]) || !is_array($index[$normalizedLocale])) {
             $index[$normalizedLocale] = [];
         }
 
         $index[$normalizedLocale][$suffixKey] = $transientKey;
-        $this->resetMetricsForEntry($index, $normalizedLocale, $suffixKey);
+        if ($isNewKey) {
+            $this->resetMetricsForEntry($index, $normalizedLocale, $suffixKey);
+        }
 
         $this->persistLocaleIndex($index);
     }
@@ -330,13 +432,55 @@ class MenuCache
             return $this->loadedLocaleIndex;
         }
 
-        $stored = get_option($this->optionName, []);
-        $normalized = $this->normalizeStoredIndex($stored);
+        $registry = $this->getLocaleRegistry();
+        $index = [];
 
-        $this->storeLocaleIndexInObjectCache($normalized);
-        $this->loadedLocaleIndex = $normalized;
+        foreach ($registry as $locale => $suffixes) {
+            foreach ($suffixes as $suffixKey => $_flag) {
+                $entry = $this->loadLocaleEntry($locale, $suffixKey);
 
-        return $normalized;
+                if ($entry === null) {
+                    continue;
+                }
+
+                $transientKey = isset($entry['transient_key']) && is_string($entry['transient_key'])
+                    ? $entry['transient_key']
+                    : $this->buildTransientKey($locale, $this->suffixKeyToSuffix($suffixKey));
+
+                if (!isset($index[$locale])) {
+                    $index[$locale] = [];
+                }
+
+                $index[$locale][$suffixKey] = $transientKey;
+
+                if (!isset($index[$locale][self::METRICS_KEY])) {
+                    $index[$locale][self::METRICS_KEY] = [];
+                }
+
+                $index[$locale][self::METRICS_KEY][$suffixKey] = [
+                    'hits' => isset($entry['hits']) ? max(0, (int) $entry['hits']) : 0,
+                    'misses' => isset($entry['misses']) ? max(0, (int) $entry['misses']) : 0,
+                ];
+            }
+        }
+
+        if ($index === []) {
+            $stored = $this->getLocaleRegistryRaw();
+
+            if ($this->isLegacyRegistry($stored)) {
+                $legacyIndex = $this->normalizeStoredIndex($stored);
+
+                if ($legacyIndex !== []) {
+                    $this->persistLocaleIndex($legacyIndex);
+                    $index = $legacyIndex;
+                }
+            }
+        }
+
+        $this->storeLocaleIndexInObjectCache($index);
+        $this->loadedLocaleIndex = $index;
+
+        return $index;
     }
 
     /**
@@ -504,27 +648,103 @@ class MenuCache
     private function persistLocaleIndex(array $index): void
     {
         $normalized = $this->normalizeStoredIndex($index);
-
-        if ($this->loadedLocaleIndex !== null && $this->loadedLocaleIndex === $normalized) {
-            return;
-        }
-
         $this->loadedLocaleIndex = $normalized;
 
-        if ($normalized === []) {
-            $this->storeLocaleIndexInObjectCache($normalized);
-            $this->deleteLocaleIndexOption();
+        $existingRegistry = $this->getLocaleRegistry();
+        $seenEntries = [];
 
-            return;
+        foreach ($normalized as $locale => $profiles) {
+            if (!is_array($profiles)) {
+                continue;
+            }
+
+            if (!isset($seenEntries[$locale])) {
+                $seenEntries[$locale] = [];
+            }
+
+            $metricsBuckets = isset($profiles[self::METRICS_KEY]) && is_array($profiles[self::METRICS_KEY])
+                ? $profiles[self::METRICS_KEY]
+                : [];
+
+            foreach ($profiles as $suffixKey => $storedKey) {
+                if ($suffixKey === self::METRICS_KEY) {
+                    continue;
+                }
+
+                $suffix = $this->suffixKeyToSuffix($suffixKey);
+                $transientKey = is_string($storedKey) && $storedKey !== ''
+                    ? $storedKey
+                    : $this->buildTransientKey($locale, $suffix);
+
+                $metrics = isset($metricsBuckets[$suffixKey]) && is_array($metricsBuckets[$suffixKey])
+                    ? $metricsBuckets[$suffixKey]
+                    : ['hits' => 0, 'misses' => 0];
+
+                $currentEntry = $this->loadLocaleEntry($locale, $suffixKey);
+                $expiresAt = $currentEntry['expires_at'] ?? null;
+
+                if (isset($this->pendingEntryExpirations[$locale][$suffixKey])) {
+                    $expiresAt = $this->pendingEntryExpirations[$locale][$suffixKey];
+                }
+
+                if (!is_int($expiresAt) || $expiresAt <= 0) {
+                    $expiresAt = time() + self::CACHE_TTL;
+                }
+
+                $entryData = [
+                    'transient_key' => $transientKey,
+                    'hits' => isset($metrics['hits']) ? max(0, (int) $metrics['hits']) : 0,
+                    'misses' => isset($metrics['misses']) ? max(0, (int) $metrics['misses']) : 0,
+                    'expires_at' => $expiresAt,
+                ];
+
+                $this->storeLocaleEntry($locale, $suffixKey, $entryData);
+                $seenEntries[$locale][$suffixKey] = true;
+            }
+        }
+
+        $this->pendingEntryExpirations = [];
+
+        foreach ($existingRegistry as $locale => $suffixes) {
+            foreach ($suffixes as $suffixKey => $_flag) {
+                if (!isset($seenEntries[$locale][$suffixKey])) {
+                    $this->deleteLocaleEntry($locale, $suffixKey);
+                }
+            }
+        }
+
+        $registryToStore = [];
+        foreach ($seenEntries as $locale => $suffixes) {
+            foreach ($suffixes as $suffixKey => $_flag) {
+                if (!isset($registryToStore[$locale])) {
+                    $registryToStore[$locale] = [];
+                }
+
+                $registryToStore[$locale][$suffixKey] = true;
+            }
+        }
+
+        if ($registryToStore === []) {
+            $this->deleteLocaleIndexOption();
+        } else {
+            $this->saveLocaleRegistry($registryToStore);
         }
 
         $this->storeLocaleIndexInObjectCache($normalized);
-        update_option($this->optionName, $normalized, 'no');
     }
 
     private function clearLocaleIndexStorage(): void
     {
+        $registry = $this->getLocaleRegistry();
+
+        foreach ($registry as $locale => $suffixes) {
+            foreach ($suffixes as $suffixKey => $_flag) {
+                $this->deleteLocaleEntry($locale, $suffixKey);
+            }
+        }
+
         $this->loadedLocaleIndex = [];
+        $this->pendingEntryExpirations = [];
         $this->deleteLocaleIndexOption();
         $this->deleteLocaleIndexFromObjectCache();
     }
@@ -571,6 +791,193 @@ class MenuCache
         }
 
         wp_cache_delete(self::LOCALE_INDEX_CACHE_KEY, self::OBJECT_CACHE_GROUP);
+    }
+
+    /**
+     * @return array<string, array<string, bool>>
+     */
+    private function getLocaleRegistry(): array
+    {
+        $raw = $this->getLocaleRegistryRaw();
+
+        if ($this->isLegacyRegistry($raw)) {
+            return [];
+        }
+
+        $registry = [];
+
+        foreach ($raw as $locale => $suffixes) {
+            if (!is_array($suffixes)) {
+                continue;
+            }
+
+            $normalizedLocale = $this->normalizeLocale((string) $locale);
+
+            if ($normalizedLocale === '') {
+                continue;
+            }
+
+            foreach ($suffixes as $suffixKey => $flag) {
+                if ($suffixKey === self::METRICS_KEY) {
+                    continue;
+                }
+
+                if ($flag === false) {
+                    continue;
+                }
+
+                $normalizedSuffixKey = $this->normalizeStoredSuffixKey($suffixKey);
+
+                if (!isset($registry[$normalizedLocale])) {
+                    $registry[$normalizedLocale] = [];
+                }
+
+                $registry[$normalizedLocale][$normalizedSuffixKey] = true;
+            }
+        }
+
+        return $registry;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getLocaleRegistryRaw(): array
+    {
+        $stored = get_option($this->optionName, []);
+
+        return is_array($stored) ? $stored : [];
+    }
+
+    /**
+     * @param array<string, array<string, bool>> $registry
+     */
+    private function saveLocaleRegistry(array $registry): void
+    {
+        $normalized = [];
+
+        foreach ($registry as $locale => $suffixes) {
+            if (!is_array($suffixes)) {
+                continue;
+            }
+
+            $normalizedLocale = $this->normalizeLocale((string) $locale);
+
+            if ($normalizedLocale === '') {
+                continue;
+            }
+
+            foreach ($suffixes as $suffixKey => $flag) {
+                if ($flag === false) {
+                    continue;
+                }
+
+                $normalizedSuffixKey = $this->normalizeStoredSuffixKey($suffixKey);
+
+                if (!isset($normalized[$normalizedLocale])) {
+                    $normalized[$normalizedLocale] = [];
+                }
+
+                $normalized[$normalizedLocale][$normalizedSuffixKey] = true;
+            }
+        }
+
+        update_option($this->optionName, $normalized, 'no');
+    }
+
+    private function getLocaleEntryCacheKey(string $locale, string $suffixKey): string
+    {
+        return self::LOCALE_ENTRY_CACHE_PREFIX . $locale . '|' . $suffixKey;
+    }
+
+    private function getLocaleEntryOptionName(string $locale, string $suffixKey): string
+    {
+        return self::LOCALE_ENTRY_OPTION_PREFIX . strtolower($locale . '_' . $suffixKey);
+    }
+
+    private function loadLocaleEntry(string $locale, string $suffixKey): ?array
+    {
+        $cacheKey = $this->getLocaleEntryCacheKey($locale, $suffixKey);
+
+        if (function_exists('wp_cache_get')) {
+            $cached = wp_cache_get($cacheKey, self::OBJECT_CACHE_GROUP);
+
+            if ($cached !== false) {
+                return is_array($cached) ? $cached : null;
+            }
+        }
+
+        $optionName = $this->getLocaleEntryOptionName($locale, $suffixKey);
+        $stored = get_option($optionName, null);
+
+        if (!is_array($stored)) {
+            return null;
+        }
+
+        if (function_exists('wp_cache_set')) {
+            wp_cache_set($cacheKey, $stored, self::OBJECT_CACHE_GROUP, self::CACHE_TTL);
+        }
+
+        return $stored;
+    }
+
+    private function storeLocaleEntry(string $locale, string $suffixKey, array $entry): void
+    {
+        $optionName = $this->getLocaleEntryOptionName($locale, $suffixKey);
+
+        $payload = [
+            'transient_key' => isset($entry['transient_key']) && is_string($entry['transient_key'])
+                ? $entry['transient_key']
+                : '',
+            'hits' => isset($entry['hits']) ? max(0, (int) $entry['hits']) : 0,
+            'misses' => isset($entry['misses']) ? max(0, (int) $entry['misses']) : 0,
+            'expires_at' => isset($entry['expires_at']) ? (int) $entry['expires_at'] : 0,
+        ];
+
+        update_option($optionName, $payload, 'no');
+
+        if (function_exists('wp_cache_set')) {
+            wp_cache_set($this->getLocaleEntryCacheKey($locale, $suffixKey), $payload, self::OBJECT_CACHE_GROUP, self::CACHE_TTL);
+        }
+    }
+
+    private function deleteLocaleEntry(string $locale, string $suffixKey): void
+    {
+        $optionName = $this->getLocaleEntryOptionName($locale, $suffixKey);
+        delete_option($optionName);
+
+        if (function_exists('wp_cache_delete')) {
+            wp_cache_delete($this->getLocaleEntryCacheKey($locale, $suffixKey), self::OBJECT_CACHE_GROUP);
+        }
+    }
+
+    private function isLegacyRegistry($stored): bool
+    {
+        if (!is_array($stored)) {
+            return false;
+        }
+
+        foreach ($stored as $locale => $profiles) {
+            if (is_int($locale)) {
+                return true;
+            }
+
+            if (!is_array($profiles)) {
+                return true;
+            }
+
+            foreach ($profiles as $suffixKey => $value) {
+                if ($suffixKey === self::METRICS_KEY) {
+                    return true;
+                }
+
+                if (!is_bool($value)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -106,6 +106,41 @@ $cache->set('en_US', '<div>EN profile B refreshed</div>', 'profile-b');
 assertTrue(isset($GLOBALS['wp_test_transients'][$frKey]), 'FR cached HTML stored after repopulating.');
 assertTrue(isset($GLOBALS['wp_test_transients'][$enProfileKey]), 'EN profile cached HTML stored after repopulating.');
 
+// Record a fresh hit for the FR profile to track metrics stability across maintenance.
+$cache->get('fr_FR', 'profile-a');
+
+$frEntryOptionName = 'sidebar_jlg_cached_locale_entry_fr_fr_profile-a';
+$enEntryOptionName = 'sidebar_jlg_cached_locale_entry_en_us_profile-b';
+
+$frEntryBeforeMaintenance = get_option($frEntryOptionName, []);
+$frHitsBeforeMaintenance = is_array($frEntryBeforeMaintenance) ? ($frEntryBeforeMaintenance['hits'] ?? 0) : 0;
+
+$enProfileEntry = get_option($enEntryOptionName, []);
+if (is_array($enProfileEntry)) {
+    $enProfileEntry['expires_at'] = time() - 10;
+    update_option($enEntryOptionName, $enProfileEntry, 'no');
+    if (function_exists('wp_cache_delete')) {
+        wp_cache_delete('menu_cache_entry_en_US|profile-b', 'sidebar_jlg');
+    }
+}
+
+$cache->purgeExpiredEntries();
+
+assertTrue(!isset($GLOBALS['wp_test_transients'][$enProfileKey]), 'Expired EN profile entry purged by maintenance job.');
+assertTrue(isset($GLOBALS['wp_test_transients'][$frKey]), 'FR cache persists after maintenance purge.');
+assertTrue(!isset($GLOBALS['wp_test_options'][$enEntryOptionName]), 'Expired profile index entry removed from registry option store.');
+
+$frEntryAfterMaintenance = get_option($frEntryOptionName, []);
+$frHitsAfterMaintenance = is_array($frEntryAfterMaintenance) ? ($frEntryAfterMaintenance['hits'] ?? null) : null;
+assertSame($frHitsBeforeMaintenance, $frHitsAfterMaintenance, 'Maintenance purge keeps hit counter for unaffected entries.');
+
+$expectedAfterMaintenance = [
+    ['locale' => 'en_US', 'suffix' => null],
+    ['locale' => 'fr_FR', 'suffix' => 'profile-a'],
+];
+
+assertSame($expectedAfterMaintenance, $cache->getCachedLocales(), 'Maintenance purge removes only expired locale/profile entries.');
+
 $cache->clear();
 
 assertTrue(!isset($GLOBALS['wp_test_transients'][$frKey]), 'FR cached HTML cleared.');
