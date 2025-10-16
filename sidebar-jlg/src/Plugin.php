@@ -22,6 +22,7 @@ use JLG\Sidebar\Settings\SettingsRepository;
 class Plugin
 {
     private const MAINTENANCE_FLAG_OPTION = 'sidebar_jlg_pending_maintenance';
+    private const MAINTENANCE_CRON_HOOK = 'sidebar_jlg_run_maintenance';
     private string $pluginFile;
     private string $version;
     private DefaultSettings $defaults;
@@ -97,6 +98,7 @@ class Plugin
         add_filter('sanitize_option_sidebar_jlg_active_profile', [$this->sanitizer, 'sanitize_active_profile'], 10, 2);
         add_action('init', [$this, 'loadTextdomain']);
         add_action('plugins_loaded', [$this, 'onPluginsLoaded'], 1);
+        add_action(self::MAINTENANCE_CRON_HOOK, [$this, 'handleScheduledMaintenance'], 10, 0);
         add_action('upgrader_process_complete', [$this, 'handleUpgrade'], 10, 2);
         add_action('update_option_sidebar_jlg_settings', [$this, 'handleSettingsUpdated'], 10, 3);
         add_action('add_option_sidebar_jlg_profiles', [$this, 'handleProfilesOptionChanged'], 10, 2);
@@ -140,13 +142,13 @@ class Plugin
     public function onPluginsLoaded(): void
     {
         $this->primeMaintenanceFlag();
+        $this->dispatchPendingMaintenance('bootstrap');
 
         if (!$this->isAdminContext()) {
             return;
         }
 
         $this->registerActivationErrorNoticeIfNeeded();
-        $this->maybeRunMaintenance();
     }
 
     /**
@@ -381,17 +383,9 @@ class Plugin
             : basename($this->pluginFile);
 
         if (in_array($pluginBasename, $updatedPlugins, true)) {
-            $this->runMaintenanceTasks();
+            $this->markMaintenancePending();
+            $this->dispatchPendingMaintenance('upgrade');
         }
-    }
-
-    public function maybeRunMaintenance(): void
-    {
-        if (!$this->shouldRunMaintenanceOnCurrentRequest()) {
-            return;
-        }
-
-        $this->runMaintenanceTasks();
     }
 
     private function runMaintenanceTasks(): void
@@ -406,23 +400,6 @@ class Plugin
         $this->settings->revalidateStoredOptions();
     }
 
-    private function shouldRunMaintenanceOnCurrentRequest(): bool
-    {
-        if ($this->maintenanceCompleted) {
-            return false;
-        }
-
-        if (!$this->hasMaintenanceWorkPending()) {
-            return false;
-        }
-
-        if ($this->isRestrictedRequestContext()) {
-            return false;
-        }
-
-        return true;
-    }
-
     private function hasMaintenanceWorkPending(): bool
     {
         if ($this->isMaintenanceFlagSet()) {
@@ -430,35 +407,6 @@ class Plugin
         }
 
         return $this->isPluginVersionOutdated();
-    }
-
-    private function isRestrictedRequestContext(): bool
-    {
-        if (function_exists('wp_installing') && wp_installing()) {
-            return true;
-        }
-
-        if (function_exists('wp_doing_cron') && wp_doing_cron()) {
-            return true;
-        }
-
-        if (function_exists('wp_doing_ajax') && wp_doing_ajax()) {
-            return true;
-        }
-
-        if (defined('REST_REQUEST') && REST_REQUEST) {
-            return true;
-        }
-
-        if (defined('WP_CLI') && WP_CLI) {
-            return false;
-        }
-
-        if (function_exists('current_user_can') && !current_user_can('manage_options')) {
-            return true;
-        }
-
-        return false;
     }
 
     private function primeMaintenanceFlag(): void
@@ -482,7 +430,7 @@ class Plugin
 
         $value = get_option(self::MAINTENANCE_FLAG_OPTION, '');
 
-        return $value === 'yes';
+        return is_string($value) && $value !== '';
     }
 
     private function markMaintenancePending(): void
@@ -491,7 +439,17 @@ class Plugin
             return;
         }
 
-        update_option(self::MAINTENANCE_FLAG_OPTION, 'yes', 'no');
+        $state = $this->getMaintenanceState();
+
+        if ($state === 'pending' || $state === 'scheduled' || $state === 'running') {
+            return;
+        }
+
+        $updated = update_option(self::MAINTENANCE_FLAG_OPTION, 'pending', 'no');
+
+        if ($updated) {
+            $this->logMaintenanceState('pending');
+        }
     }
 
     private function clearPendingMaintenanceFlag(): void
@@ -500,7 +458,141 @@ class Plugin
             return;
         }
 
+        $this->logMaintenanceState('completed');
         delete_option(self::MAINTENANCE_FLAG_OPTION);
+    }
+
+    private function getMaintenanceState(): string
+    {
+        if (!function_exists('get_option')) {
+            return '';
+        }
+
+        $value = get_option(self::MAINTENANCE_FLAG_OPTION, '');
+
+        return is_string($value) ? $value : '';
+    }
+
+    private function dispatchPendingMaintenance(string $origin): void
+    {
+        if (!$this->hasMaintenanceWorkPending()) {
+            return;
+        }
+
+        $state = $this->getMaintenanceState();
+
+        if ($state === 'scheduled' && $this->isMaintenanceEventScheduled()) {
+            return;
+        }
+
+        if (!function_exists('wp_schedule_single_event')) {
+            $this->logMaintenanceState('inline:' . $origin);
+            $this->runMaintenanceTasks();
+
+            return;
+        }
+
+        if ($state === 'pending') {
+            if (!$this->transitionMaintenanceState('pending', 'scheduled')) {
+                return;
+            }
+
+            $this->logMaintenanceState('scheduled:' . $origin);
+        } elseif ($state === '' && $this->isPluginVersionOutdated()) {
+            $this->markMaintenancePending();
+            $state = $this->getMaintenanceState();
+
+            if ($state !== 'pending') {
+                return;
+            }
+
+            if (!$this->transitionMaintenanceState('pending', 'scheduled')) {
+                return;
+            }
+
+            $this->logMaintenanceState('scheduled:' . $origin);
+        } elseif ($state === 'scheduled') {
+            $this->logMaintenanceState('rescheduled:' . $origin);
+        } else {
+            return;
+        }
+
+        $timestamp = time();
+
+        if ($timestamp <= 0) {
+            $timestamp = time();
+        }
+
+        wp_schedule_single_event($timestamp + 5, self::MAINTENANCE_CRON_HOOK);
+    }
+
+    public function handleScheduledMaintenance(): void
+    {
+        $state = $this->getMaintenanceState();
+
+        if ($state === '') {
+            if (!$this->isPluginVersionOutdated()) {
+                return;
+            }
+
+            $this->markMaintenancePending();
+            $state = $this->getMaintenanceState();
+        }
+
+        if ($state !== 'scheduled' && $state !== 'pending') {
+            return;
+        }
+
+        if ($state === 'pending' && !$this->transitionMaintenanceState('pending', 'running')) {
+            return;
+        }
+
+        if ($state === 'scheduled' && !$this->transitionMaintenanceState('scheduled', 'running')) {
+            return;
+        }
+
+        $this->runMaintenanceTasks();
+    }
+
+    private function transitionMaintenanceState(string $expected, string $next): bool
+    {
+        if (!function_exists('get_option') || !function_exists('update_option')) {
+            return false;
+        }
+
+        $current = get_option(self::MAINTENANCE_FLAG_OPTION, '');
+
+        if (!is_string($current) || $current !== $expected) {
+            return false;
+        }
+
+        $updated = update_option(self::MAINTENANCE_FLAG_OPTION, $next, 'no');
+
+        if ($updated) {
+            $this->logMaintenanceState($next);
+        }
+
+        return $updated;
+    }
+
+    private function isMaintenanceEventScheduled(): bool
+    {
+        if (!function_exists('wp_next_scheduled')) {
+            return false;
+        }
+
+        $timestamp = wp_next_scheduled(self::MAINTENANCE_CRON_HOOK);
+
+        return $timestamp !== false;
+    }
+
+    private function logMaintenanceState(string $state): void
+    {
+        if (!function_exists('error_log')) {
+            return;
+        }
+
+        error_log(sprintf('[Sidebar JLG] Maintenance state: %s', $state));
     }
 
     private function isPluginVersionOutdated(): bool

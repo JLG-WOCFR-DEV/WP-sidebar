@@ -346,12 +346,30 @@ if (isset($registeredHooks['plugins_loaded'])) {
 }
 
 assertTrue(
+    ($GLOBALS['wp_test_options']['sidebar_jlg_pending_maintenance'] ?? null) === 'scheduled',
+    'Maintenance flag marked as scheduled after plugins_loaded'
+);
+
+if (isset($registeredHooks['sidebar_jlg_run_maintenance'])) {
+    foreach ($registeredHooks['sidebar_jlg_run_maintenance'] as $listener) {
+        $callback = $listener['callback'];
+        $acceptedArgs = $listener['accepted_args'];
+
+        if ($acceptedArgs > 0) {
+            call_user_func_array($callback, array_fill(0, $acceptedArgs, null));
+        } else {
+            call_user_func($callback);
+        }
+    }
+}
+
+assertTrue(
     empty($GLOBALS['wp_test_options']['sidebar_jlg_pending_maintenance'] ?? null),
-    'Maintenance flag cleared after plugins_loaded maintenance run'
+    'Maintenance flag cleared after scheduled maintenance run'
 );
 assertTrue(
     ($GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] ?? null) === SIDEBAR_JLG_VERSION,
-    'Plugin version updated to current release during maintenance run'
+    'Plugin version updated to current release during scheduled maintenance run'
 );
 
 assertTrue(

@@ -57,10 +57,13 @@ $simulateHook = static function (string $hook, array $registeredHooks): void {
 };
 
 $originalAddActionOverride = $GLOBALS['wp_test_function_overrides']['add_action'] ?? null;
+$originalScheduleOverride = $GLOBALS['wp_test_function_overrides']['wp_schedule_single_event'] ?? null;
+$originalNextScheduledOverride = $GLOBALS['wp_test_function_overrides']['wp_next_scheduled'] ?? null;
 
-// Frontend request primes the maintenance flag without executing heavy work.
+// Frontend request primes the maintenance flag and schedules the deferred task.
 $GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] = '4.7.0';
 unset($GLOBALS['wp_test_options']['sidebar_jlg_pending_maintenance']);
+$GLOBALS['wp_test_cron_events'] = [];
 
 $registeredHooks = [];
 $GLOBALS['wp_test_function_overrides']['add_action'] = static function ($hook, $callback, $priority = 10, $accepted_args = 1) use (&$registeredHooks): void {
@@ -77,44 +80,47 @@ $GLOBALS['test_is_admin'] = false;
 $simulateHook('plugins_loaded', $registeredHooks);
 
 assertTestCondition(
-    ($GLOBALS['wp_test_options']['sidebar_jlg_pending_maintenance'] ?? null) === 'yes',
-    'Frontend bootstrap marks maintenance flag when version is outdated'
+    ($GLOBALS['wp_test_options']['sidebar_jlg_pending_maintenance'] ?? null) === 'scheduled',
+    'Frontend bootstrap marks maintenance flag as scheduled when version is outdated'
 );
 assertTestCondition(
     ($GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] ?? null) === '4.7.0',
-    'Frontend bootstrap does not update plugin version option'
+    'Frontend bootstrap defers plugin version update until maintenance runs'
 );
 
-// Admin request runs the maintenance tasks and clears the flag.
-$registeredHooks = [];
-$GLOBALS['wp_test_function_overrides']['add_action'] = static function ($hook, $callback, $priority = 10, $accepted_args = 1) use (&$registeredHooks): void {
-    $registeredHooks[$hook][] = [
-        'callback' => $callback,
-        'accepted_args' => (int) $accepted_args,
-    ];
-};
+assertTestCondition(
+    !empty($GLOBALS['wp_test_cron_events']['sidebar_jlg_run_maintenance'] ?? []),
+    'Frontend bootstrap schedules the single maintenance event'
+);
 
-$GLOBALS['test_is_admin'] = true;
-$GLOBALS['test_current_user_can'] = true;
-
-$adminPlugin = new SidebarPlugin(__DIR__ . '/../sidebar-jlg/sidebar-jlg.php', SIDEBAR_JLG_VERSION);
-$adminPlugin->register();
-
-$simulateHook('plugins_loaded', $registeredHooks);
+// Run the scheduled maintenance task.
+$simulateHook('sidebar_jlg_run_maintenance', $registeredHooks);
 
 assertTestCondition(
     empty($GLOBALS['wp_test_options']['sidebar_jlg_pending_maintenance'] ?? null),
-    'Admin bootstrap clears maintenance flag after running tasks'
+    'Deferred maintenance clears the pending flag after execution'
 );
 assertTestCondition(
     ($GLOBALS['wp_test_options']['sidebar_jlg_plugin_version'] ?? null) === SIDEBAR_JLG_VERSION,
-    'Admin bootstrap updates plugin version to current release'
+    'Deferred maintenance updates plugin version to current release'
 );
 
 if ($originalAddActionOverride === null) {
     unset($GLOBALS['wp_test_function_overrides']['add_action']);
 } else {
     $GLOBALS['wp_test_function_overrides']['add_action'] = $originalAddActionOverride;
+}
+
+if ($originalScheduleOverride === null) {
+    unset($GLOBALS['wp_test_function_overrides']['wp_schedule_single_event']);
+} else {
+    $GLOBALS['wp_test_function_overrides']['wp_schedule_single_event'] = $originalScheduleOverride;
+}
+
+if ($originalNextScheduledOverride === null) {
+    unset($GLOBALS['wp_test_function_overrides']['wp_next_scheduled']);
+} else {
+    $GLOBALS['wp_test_function_overrides']['wp_next_scheduled'] = $originalNextScheduledOverride;
 }
 
 if ($testsPassed) {
