@@ -36,6 +36,8 @@ update_option('sidebar_jlg_cached_locales', [
     ['locale' => $locale, 'suffix' => $rawSuffix],
 ]);
 
+update_option('sidebar_jlg_pending_maintenance', 'scheduled');
+
 $baseTransient = 'sidebar_jlg_full_html_' . $locale;
 $profileTransient = $baseTransient . '_' . $expectedSuffix;
 
@@ -56,6 +58,9 @@ assertFalse(get_transient($profileTransient), 'Profile cache transient is remove
 
 $localesOption = get_option('sidebar_jlg_cached_locales', null);
 assertSame(null, $localesOption, 'Cached locales option is removed during uninstall');
+
+$maintenanceState = get_option('sidebar_jlg_pending_maintenance', null);
+assertSame(null, $maintenanceState, 'Pending maintenance flag is removed during uninstall');
 
 if ($testsPassed) {
     echo "Uninstall cache cleanup test passed.\n";
