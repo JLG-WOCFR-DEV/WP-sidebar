@@ -64,6 +64,11 @@ class SettingsRepository
     private const NAV_MENU_CACHE_GROUP = 'sidebar_jlg';
     private const NAV_MENU_CACHE_TTL = 300;
 
+    public const REVALIDATION_QUEUE_OPTION = 'sidebar_jlg_settings_revalidation_queue';
+    public const REVALIDATION_QUEUE_FLAG_OPTION = 'sidebar_jlg_settings_revalidation_pending';
+    public const REVALIDATION_QUEUED_ACTION = 'sidebar_jlg_settings_revalidation_queued';
+    private const PLUGIN_MAINTENANCE_FLAG_OPTION = 'sidebar_jlg_pending_maintenance';
+
     /**
      * @var array<int, bool>
      */
@@ -132,13 +137,21 @@ class SettingsRepository
         $options = wp_parse_args($optionsFromDb, $defaults);
 
         $revalidated = $this->revalidateCustomIcons($options);
+
         if ($revalidated !== $options) {
-            update_option('sidebar_jlg_settings', $revalidated);
+            if ($this->shouldApplyRevalidationImmediately()) {
+                update_option('sidebar_jlg_settings', $revalidated);
+                $this->clearQueuedRevalidation();
+            } else {
+                $this->queueRevalidatedOptions($revalidated);
+            }
+        } else {
+            $this->clearQueueIfRedundant();
         }
 
         $finalOptions = wp_parse_args($revalidated, $defaults);
         $finalOptions = $this->normalizeRuntimeChoices($finalOptions);
-        $this->optionsCacheRaw = $revalidated;
+        $this->optionsCacheRaw = $optionsFromDb;
         $this->optionsCache = $finalOptions;
 
         return $finalOptions;
@@ -149,7 +162,32 @@ class SettingsRepository
         $existingOptions = $this->getStoredOptions();
         $sanitized = $this->sanitizer->sanitize_settings($options, $existingOptions);
 
+        if (isset($options['profiles']) && is_array($options['profiles'])) {
+            $profilesPayload = [];
+
+            foreach ($options['profiles'] as $profile) {
+                if (!is_array($profile)) {
+                    continue;
+                }
+
+                if (isset($profile['settings']) && is_array($profile['settings'])) {
+                    if (array_key_exists('enable_sidebar', $profile['settings'])) {
+                        $profile['settings']['enable_sidebar'] = $this->normalizeProfileBoolean($profile['settings']['enable_sidebar']);
+                    } else {
+                        unset($profile['settings']['enable_sidebar']);
+                    }
+                }
+
+                $profilesPayload[] = $profile;
+            }
+
+            if ($profilesPayload !== []) {
+                $sanitized['profiles'] = array_values($profilesPayload);
+            }
+        }
+
         update_option('sidebar_jlg_settings', $sanitized);
+        $this->clearQueuedRevalidation();
         $this->invalidateCache();
     }
 
@@ -425,10 +463,58 @@ class SettingsRepository
         $optionsFromDb = get_option('sidebar_jlg_settings', []);
 
         if (!is_array($optionsFromDb)) {
-            return [];
+            $optionsFromDb = [];
+        }
+
+        $queued = $this->getQueuedRevalidationPayload();
+        if ($queued !== null) {
+            $queuedOptions = isset($queued['options']) && is_array($queued['options'])
+                ? $queued['options']
+                : null;
+
+            if ($queuedOptions !== null) {
+                $optionsFromDb = array_merge($optionsFromDb, $queuedOptions);
+            }
         }
 
         return $optionsFromDb;
+    }
+
+    public function hasQueuedRevalidation(): bool
+    {
+        $payload = $this->getQueuedRevalidationPayload();
+
+        if ($payload === null) {
+            return false;
+        }
+
+        $options = $payload['options'] ?? null;
+
+        return is_array($options) && $options !== [];
+    }
+
+    public function applyQueuedRevalidation(): bool
+    {
+        $payload = $this->getQueuedRevalidationPayload();
+        if ($payload === null) {
+            return false;
+        }
+
+        $queuedOptions = isset($payload['options']) && is_array($payload['options'])
+            ? $payload['options']
+            : null;
+
+        if ($queuedOptions === null) {
+            $this->clearQueuedRevalidation();
+
+            return false;
+        }
+
+        update_option('sidebar_jlg_settings', $queuedOptions);
+        $this->clearQueuedRevalidation();
+        $this->invalidateCache();
+
+        return true;
     }
 
     public function invalidateCache(): void
@@ -445,6 +531,143 @@ class SettingsRepository
 
         add_action('update_option_sidebar_jlg_settings', [$this, 'invalidateCache'], 0, 0);
         add_action('delete_option_sidebar_jlg_settings', [$this, 'invalidateCache'], 0, 0);
+    }
+
+    private function shouldApplyRevalidationImmediately(): bool
+    {
+        if ($this->isPrivilegedAdminRequest()) {
+            return true;
+        }
+
+        if ($this->isMaintenanceScheduled()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function normalizeProfileBoolean($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+
+            if ($normalized === '' || in_array($normalized, ['0', 'false', 'no', 'off', 'disabled'], true)) {
+                return false;
+            }
+
+            if (in_array($normalized, ['1', 'true', 'yes', 'on', 'enabled'], true)) {
+                return true;
+            }
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value !== 0;
+        }
+
+        return !empty($value);
+    }
+
+    private function isPrivilegedAdminRequest(): bool
+    {
+        if (function_exists('wp_doing_cron') && wp_doing_cron()) {
+            return true;
+        }
+
+        if (function_exists('current_user_can') && !current_user_can('manage_options')) {
+            return false;
+        }
+
+        if (function_exists('is_user_logged_in') && !is_user_logged_in()) {
+            return false;
+        }
+
+        if (function_exists('is_admin')) {
+            return is_admin();
+        }
+
+        return false;
+    }
+
+    private function isMaintenanceScheduled(): bool
+    {
+        if (!function_exists('get_option')) {
+            return false;
+        }
+
+        $value = get_option(self::PLUGIN_MAINTENANCE_FLAG_OPTION, '');
+
+        return $value === 'yes';
+    }
+
+    private function queueRevalidatedOptions(array $options): void
+    {
+        if (!function_exists('update_option')) {
+            return;
+        }
+
+        $payload = [
+            'options' => $options,
+            'queued_at' => time(),
+        ];
+
+        update_option(self::REVALIDATION_QUEUE_OPTION, $payload, 'no');
+        update_option(self::REVALIDATION_QUEUE_FLAG_OPTION, 'yes', 'no');
+
+        if (function_exists('do_action')) {
+            do_action(self::REVALIDATION_QUEUED_ACTION, $payload);
+        }
+    }
+
+    private function clearQueuedRevalidation(): void
+    {
+        if (function_exists('delete_option')) {
+            delete_option(self::REVALIDATION_QUEUE_OPTION);
+            delete_option(self::REVALIDATION_QUEUE_FLAG_OPTION);
+        }
+    }
+
+    private function clearQueueIfRedundant(): void
+    {
+        if (!$this->hasQueuedRevalidation()) {
+            return;
+        }
+
+        $payload = $this->getQueuedRevalidationPayload();
+        if ($payload === null) {
+            $this->clearQueuedRevalidation();
+
+            return;
+        }
+
+        $queuedOptions = isset($payload['options']) && is_array($payload['options'])
+            ? $payload['options']
+            : null;
+
+        if ($queuedOptions === null) {
+            $this->clearQueuedRevalidation();
+        }
+    }
+
+    private function getQueuedRevalidationPayload(): ?array
+    {
+        if (!function_exists('get_option')) {
+            return null;
+        }
+
+        $payload = get_option(self::REVALIDATION_QUEUE_OPTION, null);
+
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        return $payload;
     }
 
     private function navMenuExists(int $menuId): ?bool

@@ -123,6 +123,7 @@ if (($selection['is_fallback'] ?? null) !== true || ($selection['id'] ?? '') !==
 }
 
 $GLOBALS['test_is_mobile'] = true;
+$resolver->resetCachedContext();
 $selection = $selector->selectProfile();
 if (($selection['id'] ?? '') !== 'mobile-only') {
     echo "Mobile-specific profile was not selected when device matched.\n";
@@ -135,6 +136,7 @@ if (($selection['is_fallback'] ?? null) !== false) {
 
 $GLOBALS['test_is_mobile'] = false;
 $GLOBALS['test_is_logged_in'] = true;
+$resolver->resetCachedContext();
 $selection = $selector->selectProfile();
 if (($selection['id'] ?? '') !== 'logged-in-only') {
     echo "Logged-in profile was not selected for authenticated users.\n";
@@ -143,6 +145,7 @@ if (($selection['id'] ?? '') !== 'logged-in-only') {
 
 $GLOBALS['test_is_logged_in'] = false;
 $GLOBALS['test_current_time'] = strtotime('2024-04-12 22:30:00'); // Friday 22:30
+$resolver->resetCachedContext();
 $selection = $selector->selectProfile();
 if (($selection['id'] ?? '') !== 'friday-evening') {
     echo "Schedule-based profile was not selected during allowed window.\n";
@@ -150,6 +153,7 @@ if (($selection['id'] ?? '') !== 'friday-evening') {
 }
 
 $GLOBALS['test_current_time'] = strtotime('2024-04-12 20:00:00');
+$resolver->resetCachedContext();
 $selection = $selector->selectProfile();
 if (($selection['id'] ?? '') === 'friday-evening') {
     echo "Schedule-based profile should not apply outside the configured time range.\n";

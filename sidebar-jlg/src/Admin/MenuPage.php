@@ -367,7 +367,8 @@ class MenuPage
         $stylePresets = isset($defaults['style_presets']) && is_array($defaults['style_presets'])
             ? $this->formatStylePresetsForScript($defaults['style_presets'])
             : [];
-        $options = $this->settings->getOptionsWithRevalidation();
+        $this->settings->getOptionsWithRevalidation();
+        $options = $this->settings->getOptions();
         $widgetSchemas = isset($options['widget_schemas']) && is_array($options['widget_schemas'])
             ? $options['widget_schemas']
             : [];
@@ -800,7 +801,8 @@ class MenuPage
         $colorPicker = $this->colorPicker;
         $defaults = $this->settings->getDefaultSettings();
         $stylePresets = $defaults['style_presets'] ?? [];
-        $options = $this->settings->getOptionsWithRevalidation();
+        $this->settings->getOptionsWithRevalidation();
+        $options = $this->settings->getOptions();
         $allIcons = $this->icons->getAllIcons();
         $analyticsSummary = $this->analytics->getSummary();
         $auditStatus = $this->auditRunner->getEnvironmentReport();

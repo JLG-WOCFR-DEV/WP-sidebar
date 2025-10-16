@@ -706,7 +706,8 @@ class Endpoints
 
         check_ajax_referer('jlg_tools_nonce', 'nonce');
 
-        $options = $this->settings->getOptionsWithRevalidation();
+        $this->settings->getOptionsWithRevalidation();
+        $options = $this->settings->getOptions();
 
         $timestamp = current_time('timestamp', true);
         if (!is_int($timestamp)) {
@@ -1249,7 +1250,8 @@ class Endpoints
             return new WP_Error('invalid_canvas_item', __('Élément introuvable.', 'sidebar-jlg'));
         }
 
-        $options = $this->settings->getOptionsWithRevalidation();
+        $this->settings->getOptionsWithRevalidation();
+        $options = $this->settings->getOptions();
         $menuItems = isset($options['menu_items']) && is_array($options['menu_items']) ? $options['menu_items'] : [];
 
         if (!isset($menuItems[$index]) || !is_array($menuItems[$index])) {
@@ -1273,7 +1275,8 @@ class Endpoints
      */
     private function handleCanvasReorder(array $items)
     {
-        $options = $this->settings->getOptionsWithRevalidation();
+        $this->settings->getOptionsWithRevalidation();
+        $options = $this->settings->getOptions();
         $normalized = [];
 
         foreach ($items as $item) {

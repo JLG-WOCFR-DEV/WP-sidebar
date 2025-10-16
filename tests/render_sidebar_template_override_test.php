@@ -26,8 +26,8 @@ namespace {
     $themeTemplate = tempnam($tempDir, 'sidebar-theme');
     $filterTemplate = tempnam($tempDir, 'sidebar-filter');
 
-    file_put_contents($themeTemplate, "<?php echo '<div class=\\"theme-template\\">Theme override</div>';\n");
-    file_put_contents($filterTemplate, "<?php echo '<div class=\\"filter-template\\">Filter override</div>';\n");
+    file_put_contents($themeTemplate, "<div class=\"theme-template\">Theme override</div>\n");
+    file_put_contents($filterTemplate, "<div class=\"filter-template\">Filter override</div>\n");
 
     $GLOBALS['wp_test_function_overrides']['locate_template'] = static function ($templates, $load = false) use ($themeTemplate) {
         return $themeTemplate;

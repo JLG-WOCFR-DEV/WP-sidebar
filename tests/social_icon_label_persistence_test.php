@@ -102,8 +102,17 @@ $html = (string) $html;
 
 unset($GLOBALS['wp_test_function_overrides']['esc_attr']);
 
-assertContains('aria-label="Label &quot;Test &amp; Co&quot;"', $html, 'Custom label is escaped in aria-label attribute');
-assertContains('aria-label="X"', $html, 'Empty label falls back to icon name in aria-label');
+$windowAnnouncement = __('s’ouvre dans une nouvelle fenêtre', 'sidebar-jlg');
+assertContains(
+    sprintf('aria-label="Label &quot;Test &amp; Co&quot; – %s"', $windowAnnouncement),
+    $html,
+    'Custom label is escaped in aria-label attribute'
+);
+assertContains(
+    sprintf('aria-label="X – %s"', $windowAnnouncement),
+    $html,
+    'Empty label falls back to icon name in aria-label'
+);
 
 if (!$testsPassed) {
     exit(1);

@@ -1305,7 +1305,7 @@ class SettingsSanitizer
             }
 
             if (in_array($key, self::PROFILE_BOOLEAN_KEYS, true)) {
-                $sanitized[$key] = !empty($value);
+                $sanitized[$key] = $this->sanitizeProfileBoolean($value);
                 continue;
             }
 
@@ -1344,7 +1344,7 @@ class SettingsSanitizer
             }
 
             if (in_array($key, self::PROFILE_BOOLEAN_KEYS, true)) {
-                $sanitized[$key] = !empty($existingValue);
+                $sanitized[$key] = $this->sanitizeProfileBoolean($existingValue);
             } elseif (in_array($key, self::PROFILE_INTEGER_KEYS, true)) {
                 $sanitized[$key] = $this->sanitizeProfileInteger($existingValue, 0);
             } elseif (in_array($key, self::PROFILE_SLUG_KEYS, true)) {
@@ -1386,6 +1386,30 @@ class SettingsSanitizer
         $sanitized['settings'] = $this->sanitize_settings($settingsSource, $existingSettings);
 
         return $sanitized;
+    }
+
+    private function sanitizeProfileBoolean($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if ($normalized === '' || in_array($normalized, ['0', 'false', 'no', 'off', 'disabled'], true)) {
+                return false;
+            }
+
+            if (in_array($normalized, ['1', 'true', 'yes', 'on', 'enabled'], true)) {
+                return true;
+            }
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value !== 0;
+        }
+
+        return !empty($value);
     }
 
     /**
