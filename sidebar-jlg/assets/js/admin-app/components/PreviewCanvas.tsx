@@ -7,10 +7,10 @@ import {
   Spinner,
 } from '@wordpress/components';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { useOptionsStore } from '../store/optionsStore';
 import type { SidebarOptions } from '../types';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const useDebouncedEffect = (callback: () => void, delay: number, dependencies: unknown[]): void => {
   useEffect(() => {
@@ -38,15 +38,6 @@ const findFirstCtaIndex = (options: SidebarOptions): number => {
   });
 };
 
-const FOCUSABLE_SELECTOR =
-  'a[href], area[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-interface InertSnapshot {
-  element: HTMLElement;
-  ariaHidden: string | null;
-  inert: boolean;
-}
-
 const PreviewCanvas = (): JSX.Element | null => {
   const isOpen = useOptionsStore((state) => state.isCanvasOpen);
   const closeCanvas = useOptionsStore((state) => state.closeCanvas);
@@ -67,8 +58,6 @@ const PreviewCanvas = (): JSX.Element | null => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
-  const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const inertSnapshotRef = useRef<InertSnapshot[]>([]);
 
   const dialogTitleId = useMemo(
     () => `sidebar-jlg-preview-title-${Math.random().toString(36).slice(2)}`,
@@ -79,67 +68,12 @@ const PreviewCanvas = (): JSX.Element | null => {
     []
   );
 
-  const getFocusableElements = useCallback((): HTMLElement[] => {
-    if (!surfaceRef.current) {
-      return [];
-    }
-
-    const nodes = Array.from(
-      surfaceRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-    );
-
-    return nodes.filter((element) => {
-      if (element.hasAttribute('disabled') || element.getAttribute('aria-hidden') === 'true') {
-        return false;
-      }
-
-      if (element.tabIndex < 0) {
-        return false;
-      }
-
-      return element.offsetParent !== null;
-    });
-  }, []);
-
-  const handleKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        closeCanvas();
-        return;
-      }
-
-      if (event.key !== 'Tab') {
-        return;
-      }
-
-      const focusable = getFocusableElements();
-
-      if (!focusable.length) {
-        event.preventDefault();
-        surfaceRef.current?.focus({ preventScroll: true });
-        return;
-      }
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-
-      if (event.shiftKey) {
-        if (!active || active === first || !surfaceRef.current?.contains(active)) {
-          event.preventDefault();
-          last.focus();
-        }
-        return;
-      }
-
-      if (active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    },
-    [closeCanvas, getFocusableElements]
-  );
+  const { handleKeyDown } = useFocusTrap({
+    isActive: isOpen,
+    surfaceRef,
+    ownerRef: dialogRef,
+    onEscape: closeCanvas,
+  });
 
   const ctaIndex = useMemo(() => findFirstCtaIndex(options), [options]);
   const ctaColor = useMemo(() => {
@@ -204,67 +138,6 @@ const PreviewCanvas = (): JSX.Element | null => {
 
     void fetchPreview();
   }, 300, [options, isOpen, preview, fetchPreview]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    restoreFocusRef.current = (document.activeElement as HTMLElement | null) ?? null;
-
-    const dialog = dialogRef.current;
-    if (dialog?.parentElement) {
-      const siblings = Array.from(dialog.parentElement.children).filter(
-        (node): node is HTMLElement => node instanceof HTMLElement && node !== dialog
-      );
-
-      inertSnapshotRef.current = siblings.map((element) => {
-        const snapshot: InertSnapshot = {
-          element,
-          ariaHidden: element.getAttribute('aria-hidden'),
-          inert: element.hasAttribute('inert'),
-        };
-
-        element.setAttribute('aria-hidden', 'true');
-        element.setAttribute('inert', '');
-
-        return snapshot;
-      });
-    }
-
-    const surface = surfaceRef.current;
-    const focusTimer = surface
-      ? window.setTimeout(() => {
-          const focusable = getFocusableElements();
-          const target = focusable[0] ?? surface;
-          target.focus({ preventScroll: true });
-        }, 0)
-      : undefined;
-
-    return () => {
-      if (typeof focusTimer === 'number') {
-        window.clearTimeout(focusTimer);
-      }
-
-      inertSnapshotRef.current.forEach(({ element, ariaHidden, inert }) => {
-        if (ariaHidden === null) {
-          element.removeAttribute('aria-hidden');
-        } else {
-          element.setAttribute('aria-hidden', ariaHidden);
-        }
-
-        if (inert) {
-          element.setAttribute('inert', '');
-        } else {
-          element.removeAttribute('inert');
-        }
-      });
-      inertSnapshotRef.current = [];
-
-      restoreFocusRef.current?.focus({ preventScroll: true });
-      restoreFocusRef.current = null;
-    };
-  }, [getFocusableElements, isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
