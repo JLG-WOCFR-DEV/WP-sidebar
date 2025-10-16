@@ -53,6 +53,11 @@ const useFocusTrap = ({
         return false;
       }
 
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') {
+        return false;
+      }
+
       return true;
     });
   }, [surfaceRef]);
