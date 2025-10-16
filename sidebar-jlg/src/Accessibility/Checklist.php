@@ -181,12 +181,14 @@ class Checklist
 
         if (strpos($contextKey, self::PROFILE_CONTEXT_PREFIX) === 0) {
             $profileId = substr($contextKey, strlen(self::PROFILE_CONTEXT_PREFIX));
+            $profileId = preg_replace('/\s+/', '-', $profileId);
             $normalized = sanitize_key($profileId);
 
             return $normalized === '' ? '' : self::PROFILE_CONTEXT_PREFIX . $normalized;
         }
 
-        $fallback = sanitize_key($contextKey);
+        $fallbackSource = preg_replace('/\s+/', '-', $contextKey);
+        $fallback = sanitize_key($fallbackSource);
 
         if ($fallback === '') {
             return '';

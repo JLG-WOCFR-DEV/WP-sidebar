@@ -152,9 +152,7 @@ function assertSame($expected, $actual, string $message): void
 
 $previousLocalizeOverride = $GLOBALS['wp_test_function_overrides']['wp_localize_script'] ?? null;
 
-$resetContext = static function (): void {
-    global $cache;
-
+$resetContext = static function () use ($plugin, $cache): void {
     $cache->clear();
     $GLOBALS['wp_test_transients'] = [];
     $GLOBALS['test_post_type'] = null;
@@ -162,6 +160,7 @@ $resetContext = static function (): void {
     $GLOBALS['test_queried_object_id'] = null;
     $GLOBALS['test_object_taxonomies'] = [];
     $GLOBALS['test_post_terms'] = [];
+    $plugin->getRequestContextResolver()->resetCachedContext();
 };
 
 // Scenario 1: Subscriber role disables the sidebar entirely.

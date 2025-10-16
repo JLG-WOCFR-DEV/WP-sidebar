@@ -15,6 +15,7 @@ namespace {
     use JLG\Sidebar\Ajax\Endpoints;
     use JLG\Sidebar\Analytics\AnalyticsEventQueue;
     use JLG\Sidebar\Analytics\AnalyticsRepository;
+    use JLG\Sidebar\Analytics\EventRateLimiter;
     use JLG\Sidebar\Cache\MenuCache;
     use JLG\Sidebar\Frontend\ProfileSelector;
     use JLG\Sidebar\Frontend\RequestContextResolver;
@@ -80,9 +81,10 @@ namespace {
 
     $defaults = new DefaultSettings();
     $iconLibrary = new IconLibrary($pluginFile);
-    $settingsRepository = new SettingsRepository($defaults, $iconLibrary);
-    $menuCache = new MenuCache();
     $sanitizer = new SettingsSanitizer($defaults, $iconLibrary);
+    $settingsRepository = new SettingsRepository($defaults, $iconLibrary, $sanitizer);
+    $menuCache = new MenuCache();
+    $eventRateLimiter = new EventRateLimiter();
     $analyticsRepository = new AnalyticsRepository();
     $analyticsQueue = new AnalyticsEventQueue($analyticsRepository);
     $requestContextResolver = new RequestContextResolver();
@@ -105,6 +107,7 @@ namespace {
         $sanitizer,
         $analyticsRepository,
         $analyticsQueue,
+        $eventRateLimiter,
         $pluginFile,
         $sidebarRenderer,
         $auditRunner

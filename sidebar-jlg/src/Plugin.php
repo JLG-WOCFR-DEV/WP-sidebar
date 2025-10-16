@@ -17,6 +17,7 @@ use JLG\Sidebar\Frontend\RequestContextResolver;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\DefaultSettings;
+use JLG\Sidebar\Settings\SettingsMaintenanceRunner;
 use JLG\Sidebar\Settings\SettingsRepository;
 
 class Plugin
@@ -28,6 +29,7 @@ class Plugin
     private DefaultSettings $defaults;
     private IconLibrary $icons;
     private SettingsRepository $settings;
+    private SettingsMaintenanceRunner $settingsMaintenance;
     private MenuCache $cache;
     private SettingsSanitizer $sanitizer;
     private AnalyticsRepository $analytics;
@@ -50,6 +52,7 @@ class Plugin
         $this->icons = new IconLibrary($pluginFile);
         $this->sanitizer = new SettingsSanitizer($this->defaults, $this->icons);
         $this->settings = new SettingsRepository($this->defaults, $this->icons, $this->sanitizer);
+        $this->settingsMaintenance = new SettingsMaintenanceRunner($this->settings);
         $this->cache = new MenuCache();
         $this->analytics = new AnalyticsRepository();
         $this->analyticsQueue = new AnalyticsEventQueue($this->analytics);
@@ -117,6 +120,7 @@ class Plugin
         $this->renderer->registerHooks();
         $this->ajax->registerHooks();
         $this->searchBlock->registerHooks();
+        $this->settingsMaintenance->registerHooks();
         $this->registerContextInvalidationHooks();
 
         $contentChangeHooks = [
@@ -280,9 +284,19 @@ class Plugin
         return $this->analyticsQueue;
     }
 
+    public function getEventRateLimiter(): EventRateLimiter
+    {
+        return $this->eventRateLimiter;
+    }
+
     public function getSidebarRenderer(): SidebarRenderer
     {
         return $this->renderer;
+    }
+
+    public function getRequestContextResolver(): RequestContextResolver
+    {
+        return $this->requestContextResolver;
     }
 
     public function getMenuCache(): MenuCache
