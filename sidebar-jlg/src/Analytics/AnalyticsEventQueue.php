@@ -20,6 +20,7 @@ use function wp_schedule_single_event;
 use function wp_cache_delete;
 use function wp_cache_get;
 use function wp_cache_set;
+use function wp_using_ext_object_cache;
 
 class AnalyticsEventQueue
 {
@@ -27,6 +28,7 @@ class AnalyticsEventQueue
     public const CRON_HOOK = 'sidebar_jlg_flush_analytics_queue';
     public const CACHE_KEY = 'analytics_event_queue_buffer';
     public const CACHE_GROUP = 'sidebar_jlg';
+    public const BUFFER_OPTION_NAME = 'sidebar_jlg_analytics_queue_buffer';
     private const DEFAULT_FLUSH_DELAY = 60;
     private const CACHE_TTL = 600;
 
@@ -60,8 +62,9 @@ class AnalyticsEventQueue
 
     public function flushQueuedEvents(): void
     {
+        $persistentBuffered = $this->drainPersistentQueueBuffer();
         $buffered = $this->drainCachedQueue();
-        $queue = array_merge($this->readQueue(), $buffered);
+        $queue = array_merge($this->readQueue(), $persistentBuffered, $buffered);
         if ($queue === []) {
             $this->clearScheduledFlush();
 
@@ -120,13 +123,7 @@ class AnalyticsEventQueue
     {
         $queue = get_option(self::OPTION_NAME, []);
 
-        if (!is_array($queue)) {
-            return [];
-        }
-
-        return array_values(array_filter($queue, static function ($item) {
-            return is_array($item);
-        }));
+        return $this->normalizeQueue($queue);
     }
 
     /**
@@ -134,15 +131,16 @@ class AnalyticsEventQueue
      */
     private function readCachedQueue(): array
     {
-        $queue = wp_cache_get(self::CACHE_KEY, self::CACHE_GROUP);
-
-        if (!is_array($queue)) {
-            return [];
+        if (!$this->usesPersistentObjectCache()) {
+            $persistentQueue = $this->readPersistentQueueBuffer();
+            if ($persistentQueue !== []) {
+                return $persistentQueue;
+            }
         }
 
-        return array_values(array_filter($queue, static function ($item) {
-            return is_array($item);
-        }));
+        $queue = wp_cache_get(self::CACHE_KEY, self::CACHE_GROUP);
+
+        return $this->normalizeQueue($queue);
     }
 
     /**
@@ -150,7 +148,13 @@ class AnalyticsEventQueue
      */
     private function persistCachedQueue(array $queue): void
     {
-        wp_cache_set(self::CACHE_KEY, $queue, self::CACHE_GROUP, self::CACHE_TTL);
+        if ($this->usesPersistentObjectCache()) {
+            wp_cache_set(self::CACHE_KEY, $queue, self::CACHE_GROUP, self::CACHE_TTL);
+
+            return;
+        }
+
+        update_option(self::BUFFER_OPTION_NAME, $queue);
     }
 
     /**
@@ -158,7 +162,41 @@ class AnalyticsEventQueue
      */
     private function drainCachedQueue(): array
     {
+        if (!$this->usesPersistentObjectCache()) {
+            return [];
+        }
+
         $queue = $this->readCachedQueue();
+        wp_cache_delete(self::CACHE_KEY, self::CACHE_GROUP);
+
+        return $queue;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function readPersistentQueueBuffer(): array
+    {
+        if ($this->usesPersistentObjectCache()) {
+            return [];
+        }
+
+        $queue = get_option(self::BUFFER_OPTION_NAME, []);
+
+        return $this->normalizeQueue($queue);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function drainPersistentQueueBuffer(): array
+    {
+        if ($this->usesPersistentObjectCache()) {
+            return [];
+        }
+
+        $queue = $this->readPersistentQueueBuffer();
+        update_option(self::BUFFER_OPTION_NAME, []);
         wp_cache_delete(self::CACHE_KEY, self::CACHE_GROUP);
 
         return $queue;
@@ -210,5 +248,30 @@ class AnalyticsEventQueue
         }
 
         return null;
+    }
+
+    private function usesPersistentObjectCache(): bool
+    {
+        if (function_exists('wp_using_ext_object_cache')) {
+            return wp_using_ext_object_cache();
+        }
+
+        return false;
+    }
+
+    /**
+     * @param mixed $queue
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeQueue($queue): array
+    {
+        if (!is_array($queue)) {
+            return [];
+        }
+
+        return array_values(array_filter($queue, static function ($item) {
+            return is_array($item);
+        }));
     }
 }
