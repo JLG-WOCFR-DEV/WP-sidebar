@@ -3,9 +3,12 @@
 namespace JLG\Sidebar\Analytics;
 
 use function add_action;
+use function apply_filters;
 use function array_filter;
+use function array_slice;
 use function array_values;
 use function call_user_func;
+use function count;
 use function current_time;
 use function function_exists;
 use function get_option;
@@ -31,6 +34,7 @@ class AnalyticsEventQueue
     public const BUFFER_OPTION_NAME = 'sidebar_jlg_analytics_queue_buffer';
     private const DEFAULT_FLUSH_DELAY = 60;
     private const CACHE_TTL = 600;
+    private const DEFAULT_MAX_QUEUE_SIZE = 500;
 
     private AnalyticsRepository $repository;
 
@@ -56,7 +60,7 @@ class AnalyticsEventQueue
             'timestamp' => $this->resolveEventTimestamp($context),
         ];
 
-        $this->persistCachedQueue($queue);
+        $this->persistCachedQueue($this->enforceQueueLimit($queue));
         $this->scheduleFlushIfNeeded();
     }
 
@@ -148,13 +152,15 @@ class AnalyticsEventQueue
      */
     private function persistCachedQueue(array $queue): void
     {
+        $queue = $this->enforceQueueLimit($queue);
+
         if ($this->usesPersistentObjectCache()) {
             wp_cache_set(self::CACHE_KEY, $queue, self::CACHE_GROUP, self::CACHE_TTL);
 
             return;
         }
 
-        update_option(self::BUFFER_OPTION_NAME, $queue);
+        update_option(self::BUFFER_OPTION_NAME, $queue, false);
     }
 
     /**
@@ -196,7 +202,7 @@ class AnalyticsEventQueue
         }
 
         $queue = $this->readPersistentQueueBuffer();
-        update_option(self::BUFFER_OPTION_NAME, []);
+        update_option(self::BUFFER_OPTION_NAME, [], false);
         wp_cache_delete(self::CACHE_KEY, self::CACHE_GROUP);
 
         return $queue;
@@ -270,8 +276,45 @@ class AnalyticsEventQueue
             return [];
         }
 
-        return array_values(array_filter($queue, static function ($item) {
+        $normalized = array_values(array_filter($queue, static function ($item) {
             return is_array($item);
         }));
+
+        return $this->enforceQueueLimit($normalized);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $queue
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function enforceQueueLimit(array $queue): array
+    {
+        $limit = $this->resolveQueueLimit();
+
+        if ($limit <= 0) {
+            return $queue;
+        }
+
+        $excess = count($queue) - $limit;
+        if ($excess <= 0) {
+            return $queue;
+        }
+
+        return array_slice($queue, -$limit);
+    }
+
+    private function resolveQueueLimit(): int
+    {
+        $limit = self::DEFAULT_MAX_QUEUE_SIZE;
+
+        if (function_exists('apply_filters')) {
+            $filtered = apply_filters('sidebar_jlg_analytics_queue_limit', $limit);
+            if (is_numeric($filtered)) {
+                $limit = (int) $filtered;
+            }
+        }
+
+        return $limit > 0 ? $limit : 0;
     }
 }

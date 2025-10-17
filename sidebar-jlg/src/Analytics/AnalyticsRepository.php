@@ -27,6 +27,7 @@ class AnalyticsRepository
 {
     private const OPTION_NAME = 'sidebar_jlg_analytics';
     private const MAX_DAILY_BUCKETS = 30;
+    private const MAX_SESSION_INTERACTIONS = 50;
 
     /**
      * @var string[]
@@ -612,6 +613,18 @@ class AnalyticsRepository
 
                 $metrics['interactions'][$normalizedInteraction] = ($metrics['interactions'][$normalizedInteraction] ?? 0)
                     + max(0, (int) $rawValue);
+            }
+
+            if ($metrics['interactions'] !== []) {
+                arsort($metrics['interactions']);
+                if (count($metrics['interactions']) > self::MAX_SESSION_INTERACTIONS) {
+                    $metrics['interactions'] = array_slice(
+                        $metrics['interactions'],
+                        0,
+                        self::MAX_SESSION_INTERACTIONS,
+                        true
+                    );
+                }
             }
         }
 

@@ -2,10 +2,14 @@
 
 namespace JLG\Sidebar\Analytics;
 
+use function apply_filters;
 use function array_filter;
+use function array_unique;
 use function array_values;
 use function explode;
+use function function_exists;
 use function get_transient;
+use function is_array;
 use function is_numeric;
 use function is_string;
 use function md5;
@@ -72,23 +76,32 @@ class EventRateLimiter
     private function resolveClientIp(): string
     {
         $candidates = [];
+        $remoteAddr = $this->readServerValue('REMOTE_ADDR');
+        $trustedProxies = $this->getTrustedProxyIps();
 
-        if (isset($_SERVER['HTTP_CLIENT_IP']) && is_string($_SERVER['HTTP_CLIENT_IP'])) {
-            $candidates[] = $_SERVER['HTTP_CLIENT_IP'];
-        }
-
-        if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && is_string($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $forwarded = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-            foreach ($forwarded as $entry) {
-                $trimmed = trim($entry);
-                if ($trimmed !== '') {
-                    $candidates[] = $trimmed;
+        if ($remoteAddr !== '' && $this->isTrustedProxy($remoteAddr, $trustedProxies)) {
+            if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && is_string($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                $forwarded = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+                foreach ($forwarded as $entry) {
+                    $trimmed = trim($entry);
+                    if ($trimmed !== '') {
+                        $candidates[] = $trimmed;
+                    }
                 }
+            }
+
+            $clientIp = $this->readServerValue('HTTP_CLIENT_IP');
+            if ($clientIp !== '') {
+                $candidates[] = $clientIp;
             }
         }
 
-        if (isset($_SERVER['REMOTE_ADDR']) && is_string($_SERVER['REMOTE_ADDR'])) {
-            $candidates[] = $_SERVER['REMOTE_ADDR'];
+        if ($remoteAddr !== '') {
+            $candidates[] = $remoteAddr;
+        }
+
+        if ($candidates !== []) {
+            $candidates = array_values(array_unique($candidates));
         }
 
         foreach ($candidates as $candidate) {
@@ -106,6 +119,60 @@ class EventRateLimiter
         }
 
         return '';
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getTrustedProxyIps(): array
+    {
+        $trusted = [];
+
+        if (function_exists('apply_filters')) {
+            $filtered = apply_filters('sidebar_jlg_trusted_proxy_ips', []);
+            if (is_array($filtered)) {
+                $trusted = $filtered;
+            }
+        }
+
+        $normalized = [];
+        foreach ($trusted as $value) {
+            if (!is_string($value)) {
+                continue;
+            }
+
+            $trimmed = trim($value);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $normalized[] = $trimmed;
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    /**
+     * @param string[] $trusted
+     */
+    private function isTrustedProxy(string $ipAddress, array $trusted): bool
+    {
+        foreach ($trusted as $trustedIp) {
+            if ($trustedIp === $ipAddress) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function readServerValue(string $key): string
+    {
+        if (!isset($_SERVER[$key]) || !is_string($_SERVER[$key])) {
+            return '';
+        }
+
+        return trim($_SERVER[$key]);
     }
 
     private function buildStorageKey(string $ip, string $nonce): string
