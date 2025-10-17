@@ -197,57 +197,7 @@ $textTransformLabels = [
     <p><?php esc_html_e( 'Personnalisez l\'apparence et le comportement de votre sidebar.', 'sidebar-jlg' ); ?></p>
     <p><b><?php esc_html_e( 'Nouveau :', 'sidebar-jlg' ); ?></b> <?php printf( esc_html__( 'Ajoutez vos propres icônes SVG dans le dossier %1$s. Elles apparaîtront dans les listes de sélection !', 'sidebar-jlg' ), '<code>/wp-content/uploads/sidebar-jlg/icons/</code>' ); ?></p>
 
-    <section class="sidebar-jlg-pro-comparison" aria-labelledby="sidebar-jlg-pro-comparison-title">
-        <div class="sidebar-jlg-pro-comparison__intro">
-            <h2 id="sidebar-jlg-pro-comparison-title"><?php esc_html_e( 'Comparatif express avec les suites professionnelles', 'sidebar-jlg' ); ?></h2>
-            <p class="description">
-                <?php esc_html_e( 'Gardez un œil sur les points forts actuels et les chantiers en cours afin d\'aligner l\'expérience sur les références du marché.', 'sidebar-jlg' ); ?>
-            </p>
-        </div>
-        <div class="sidebar-jlg-pro-comparison__grid" role="list">
-            <article class="sidebar-jlg-pro-comparison__item" role="listitem">
-                <header class="sidebar-jlg-pro-comparison__item-header">
-                    <h3><?php esc_html_e( 'UI & UX', 'sidebar-jlg' ); ?></h3>
-                    <span class="sidebar-jlg-pro-comparison__badge is-strength" aria-label="<?php esc_attr_e( 'Atout confirmé', 'sidebar-jlg' ); ?>">
-                        <?php esc_html_e( 'Atout', 'sidebar-jlg' ); ?>
-                    </span>
-                </header>
-                <p><?php esc_html_e( 'Onglets thématiques, aperçu multi-breakpoints et presets prêts à l\'emploi rapprochent l\'ergonomie de celle des builders drag & drop premium.', 'sidebar-jlg' ); ?></p>
-                <p class="sidebar-jlg-pro-comparison__meta"><?php esc_html_e( 'Prochain jalon : édition frontale canvas + historique Undo/Redo.', 'sidebar-jlg' ); ?></p>
-            </article>
-            <article class="sidebar-jlg-pro-comparison__item" role="listitem">
-                <header class="sidebar-jlg-pro-comparison__item-header">
-                    <h3><?php esc_html_e( 'Accessibilité', 'sidebar-jlg' ); ?></h3>
-                    <span class="sidebar-jlg-pro-comparison__badge is-progress" aria-label="<?php esc_attr_e( 'Travail en cours', 'sidebar-jlg' ); ?>">
-                        <?php esc_html_e( 'En progrès', 'sidebar-jlg' ); ?>
-                    </span>
-                </header>
-                <p><?php esc_html_e( 'Les rôles ARIA, le focus trap et les préférences de mouvement sont en place ; la nouvelle check-list guide les équipes vers la conformité WCAG 2.2.', 'sidebar-jlg' ); ?></p>
-                <p class="sidebar-jlg-pro-comparison__meta"><?php esc_html_e( 'Prochain jalon : alertes temps réel sur le contraste et audits Pa11y automatisés.', 'sidebar-jlg' ); ?></p>
-            </article>
-            <article class="sidebar-jlg-pro-comparison__item" role="listitem">
-                <header class="sidebar-jlg-pro-comparison__item-header">
-                    <h3><?php esc_html_e( 'Fiabilité', 'sidebar-jlg' ); ?></h3>
-                    <span class="sidebar-jlg-pro-comparison__badge is-strength" aria-label="<?php esc_attr_e( 'Atout confirmé', 'sidebar-jlg' ); ?>">
-                        <?php esc_html_e( 'Atout', 'sidebar-jlg' ); ?>
-                    </span>
-                </header>
-                <p><?php esc_html_e( 'Cache HTML multi-profils, sanitation poussée des réglages et rollback d\'icônes calquent les standards des solutions professionnelles.', 'sidebar-jlg' ); ?></p>
-                <p class="sidebar-jlg-pro-comparison__meta"><?php esc_html_e( 'Prochain jalon : pipeline de tests E2E et reporting automatique des erreurs AJAX.', 'sidebar-jlg' ); ?></p>
-            </article>
-            <article class="sidebar-jlg-pro-comparison__item" role="listitem">
-                <header class="sidebar-jlg-pro-comparison__item-header">
-                    <h3><?php esc_html_e( 'Visuel', 'sidebar-jlg' ); ?></h3>
-                    <span class="sidebar-jlg-pro-comparison__badge is-progress" aria-label="<?php esc_attr_e( 'Travail en cours', 'sidebar-jlg' ); ?>">
-                        <?php esc_html_e( 'En progrès', 'sidebar-jlg' ); ?>
-                    </span>
-                </header>
-                <p><?php esc_html_e( 'Les presets inspirés de Headless UI, Radix ou Shadcn donnent des rendus premium ; la galerie d\'icônes SVG dédiée renforce l\'identité visuelle.', 'sidebar-jlg' ); ?></p>
-                <p class="sidebar-jlg-pro-comparison__meta"><?php esc_html_e( 'Prochain jalon : design system administrateur et micro-interactions animées.', 'sidebar-jlg' ); ?></p>
-            </article>
-        </div>
-    </section>
-
+    
     <div class="nav-tab-wrapper" role="tablist">
         <a href="#tab-general" class="nav-tab nav-tab-active" id="tab-general-tab" role="tab" aria-controls="tab-general" aria-selected="true" tabindex="0"><?php esc_html_e( 'Général & Comportement', 'sidebar-jlg' ); ?></a>
         <a href="#tab-profiles" class="nav-tab" id="tab-profiles-tab" role="tab" aria-controls="tab-profiles" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Profils', 'sidebar-jlg' ); ?></a>
@@ -258,6 +208,7 @@ $textTransformLabels = [
         <a href="#tab-effects" class="nav-tab" id="tab-effects-tab" role="tab" aria-controls="tab-effects" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Effets & Animations', 'sidebar-jlg' ); ?></a>
         <a href="#tab-analytics" class="nav-tab" id="tab-analytics-tab" role="tab" aria-controls="tab-analytics" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Insights & Analytics', 'sidebar-jlg' ); ?></a>
         <a href="#tab-accessibility" class="nav-tab" id="tab-accessibility-tab" role="tab" aria-controls="tab-accessibility" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Accessibilité & WCAG 2.2', 'sidebar-jlg' ); ?></a>
+        <a href="#tab-pro-comparison" class="nav-tab" id="tab-pro-comparison-tab" role="tab" aria-controls="tab-pro-comparison" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Comparatif Pro', 'sidebar-jlg' ); ?></a>
         <a href="#tab-tools" class="nav-tab" id="tab-tools-tab" role="tab" aria-controls="tab-tools" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Outils', 'sidebar-jlg' ); ?></a>
     </div>
 
@@ -2310,6 +2261,59 @@ $textTransformLabels = [
                 <?php endforeach; ?>
                 <p class="description sidebar-jlg-accessibility__export-hint"><?php esc_html_e( 'Les critères cochés sont enregistrés dans la base WordPress : exportez vos réglages pour partager l’état d’avancement avec votre équipe.', 'sidebar-jlg' ); ?></p>
             </div>
+        </div>
+
+        <div id="tab-pro-comparison" class="tab-content" role="tabpanel" aria-labelledby="tab-pro-comparison-tab" aria-hidden="true" hidden>
+            <section class="sidebar-jlg-pro-comparison" aria-labelledby="sidebar-jlg-pro-comparison-title">
+                <div class="sidebar-jlg-pro-comparison__intro">
+                    <h2 id="sidebar-jlg-pro-comparison-title"><?php esc_html_e( 'Comparatif express avec les suites professionnelles', 'sidebar-jlg' ); ?></h2>
+                    <p class="description">
+                        <?php esc_html_e( 'Gardez un œil sur les points forts actuels et les chantiers en cours afin d\'aligner l\'experience sur les références du marché.', 'sidebar-jlg' ); ?>
+                    </p>
+                </div>
+                <div class="sidebar-jlg-pro-comparison__grid" role="list">
+                    <article class="sidebar-jlg-pro-comparison__item" role="listitem">
+                        <header class="sidebar-jlg-pro-comparison__item-header">
+                            <h3><?php esc_html_e( 'UI & UX', 'sidebar-jlg' ); ?></h3>
+                            <span class="sidebar-jlg-pro-comparison__badge is-strength" aria-label="<?php esc_attr_e( 'Atout confirmé', 'sidebar-jlg' ); ?>">
+                                <?php esc_html_e( 'Atout', 'sidebar-jlg' ); ?>
+                            </span>
+                        </header>
+                        <p><?php esc_html_e( 'Onglets thématiques, aperçu multi-breakpoints et presets prêts à l\'emploi rapprochent l\'ergonomie de celle des builders drag & drop premium.', 'sidebar-jlg' ); ?></p>
+                        <p class="sidebar-jlg-pro-comparison__meta"><?php esc_html_e( 'Prochain jalon : édition frontale canvas + historique Undo/Redo.', 'sidebar-jlg' ); ?></p>
+                    </article>
+                    <article class="sidebar-jlg-pro-comparison__item" role="listitem">
+                        <header class="sidebar-jlg-pro-comparison__item-header">
+                            <h3><?php esc_html_e( 'Accessibilité', 'sidebar-jlg' ); ?></h3>
+                            <span class="sidebar-jlg-pro-comparison__badge is-progress" aria-label="<?php esc_attr_e( 'Travail en cours', 'sidebar-jlg' ); ?>">
+                                <?php esc_html_e( 'En progrès', 'sidebar-jlg' ); ?>
+                            </span>
+                        </header>
+                        <p><?php esc_html_e( 'Les rôles ARIA, le focus trap et les préférences de mouvement sont en place ; la nouvelle check-list guide les équipes vers la conformité WCAG 2.2.', 'sidebar-jlg' ); ?></p>
+                        <p class="sidebar-jlg-pro-comparison__meta"><?php esc_html_e( 'Prochain jalon : alertes temps réel sur le contraste et audits Pa11y automatisés.', 'sidebar-jlg' ); ?></p>
+                    </article>
+                    <article class="sidebar-jlg-pro-comparison__item" role="listitem">
+                        <header class="sidebar-jlg-pro-comparison__item-header">
+                            <h3><?php esc_html_e( 'Fiabilité', 'sidebar-jlg' ); ?></h3>
+                            <span class="sidebar-jlg-pro-comparison__badge is-strength" aria-label="<?php esc_attr_e( 'Atout confirmé', 'sidebar-jlg' ); ?>">
+                                <?php esc_html_e( 'Atout', 'sidebar-jlg' ); ?>
+                            </span>
+                        </header>
+                        <p><?php esc_html_e( 'Cache HTML multi-profils, sanitation poussée des réglages et rollback d\'icônes calquent les standards des solutions professionnelles.', 'sidebar-jlg' ); ?></p>
+                        <p class="sidebar-jlg-pro-comparison__meta"><?php esc_html_e( 'Prochain jalon : pipeline de tests E2E et reporting automatique des erreurs AJAX.', 'sidebar-jlg' ); ?></p>
+                    </article>
+                    <article class="sidebar-jlg-pro-comparison__item" role="listitem">
+                        <header class="sidebar-jlg-pro-comparison__item-header">
+                            <h3><?php esc_html_e( 'Visuel', 'sidebar-jlg' ); ?></h3>
+                            <span class="sidebar-jlg-pro-comparison__badge is-progress" aria-label="<?php esc_attr_e( 'Travail en cours', 'sidebar-jlg' ); ?>">
+                                <?php esc_html_e( 'En progrès', 'sidebar-jlg' ); ?>
+                            </span>
+                        </header>
+                        <p><?php esc_html_e( 'Les presets inspirés de Headless UI, Radix ou Shadcn donnent des rendus premium ; la galerie d\'icônes SVG dédiée renforce l\'identité visuelle.', 'sidebar-jlg' ); ?></p>
+                        <p class="sidebar-jlg-pro-comparison__meta"><?php esc_html_e( 'Prochain jalon : design system administrateur et micro-interactions animées.', 'sidebar-jlg' ); ?></p>
+                    </article>
+                </div>
+            </section>
         </div>
 
         <div id="tab-tools" class="tab-content" role="tabpanel" aria-labelledby="tab-tools-tab" aria-hidden="true" hidden>

@@ -860,7 +860,36 @@ class DefaultSettings
             'animation_type'    => 'slide-left',
             'neon_blur'         => 15,
             'neon_spread'       => 5,
-            'menu_items'        => [],
+            'menu_items'        => [
+                [
+                    'label'     => \__( 'Accueil', 'sidebar-jlg' ),
+                    'type'      => 'custom',
+                    'icon_type' => 'svg_inline',
+                    'icon'      => '',
+                    'value'     => '#accueil',
+                ],
+                [
+                    'label'     => \__( 'Tests', 'sidebar-jlg' ),
+                    'type'      => 'custom',
+                    'icon_type' => 'svg_inline',
+                    'icon'      => '',
+                    'value'     => '#tests',
+                ],
+                [
+                    'label'     => \__( 'Articles', 'sidebar-jlg' ),
+                    'type'      => 'custom',
+                    'icon_type' => 'svg_inline',
+                    'icon'      => '',
+                    'value'     => '#articles',
+                ],
+                [
+                    'label'     => \__( 'Pages', 'sidebar-jlg' ),
+                    'type'      => 'custom',
+                    'icon_type' => 'svg_inline',
+                    'icon'      => '',
+                    'value'     => '#pages',
+                ],
+            ],
             'menu_alignment_desktop' => 'flex-start',
             'menu_alignment_mobile'  => 'flex-start',
             'social_icons'      => [
