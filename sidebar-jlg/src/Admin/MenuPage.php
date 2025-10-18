@@ -589,7 +589,7 @@ class MenuPage
             'version' => $this->version,
         ];
 
-        $assetFile = plugin_dir_path($this->pluginFile) . 'assets/build/admin-app.asset.php';
+        $assetFile = plugin_dir_path($this->pluginFile) . 'assets/build/admin-app.tsx.asset.php';
         if (file_exists($assetFile)) {
             $maybeAsset = include $assetFile;
             if (is_array($maybeAsset)) {
@@ -604,7 +604,7 @@ class MenuPage
 
         wp_enqueue_script(
             'sidebar-jlg-admin-app',
-            plugin_dir_url($this->pluginFile) . 'assets/build/admin-app.js',
+            plugin_dir_url($this->pluginFile) . 'assets/build/admin-app.tsx.js',
             $dependencies,
             $version,
             true
