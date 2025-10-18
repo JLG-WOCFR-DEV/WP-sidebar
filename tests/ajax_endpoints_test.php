@@ -153,6 +153,13 @@ if (!function_exists('wp_cache_delete')) {
     }
 }
 
+if (!function_exists('wp_using_ext_object_cache')) {
+    function wp_using_ext_object_cache(): bool
+    {
+        return true;
+    }
+}
+
 if (!class_exists('WP_Error')) {
     class WP_Error
     {
@@ -1057,7 +1064,8 @@ $analyticsSuccess = $GLOBALS['json_success_payloads'][0] ?? [];
 assertSame('Événement enregistré.', $analyticsSuccess['message'] ?? null, 'Analytics event records success message');
 $analyticsSummary = $analyticsSuccess['summary'] ?? [];
 $queuedEvents = wp_cache_get(AnalyticsEventQueue::CACHE_KEY, AnalyticsEventQueue::CACHE_GROUP);
-assertSame(1, count($queuedEvents ?? []), 'Analytics event is buffered for deferred flush');
+$queuedEventCount = is_array($queuedEvents) ? count($queuedEvents) : 0;
+assertSame(1, $queuedEventCount, 'Analytics event is buffered for deferred flush');
 assertSame([], get_option('sidebar_jlg_analytics_queue', []), 'Analytics queue option remains empty while buffering events');
 assertTrue(wp_next_scheduled('sidebar_jlg_flush_analytics_queue') !== false, 'Analytics flush job scheduled after enqueue');
 assertSame(0, $analyticsSummary['totals']['sidebar_open'] ?? null, 'Immediate analytics summary remains unchanged before flush');
@@ -1086,7 +1094,8 @@ for ($i = 0; $i < 20; $i++) {
 }
 
 $bufferAfterBurst = wp_cache_get(AnalyticsEventQueue::CACHE_KEY, AnalyticsEventQueue::CACHE_GROUP);
-assertSame(20, count($bufferAfterBurst ?? []), 'Twenty events are buffered before hitting the rate limit');
+$bufferAfterBurstCount = is_array($bufferAfterBurst) ? count($bufferAfterBurst) : 0;
+assertSame(20, $bufferAfterBurstCount, 'Twenty events are buffered before hitting the rate limit');
 
 $_POST = [
     'nonce' => 'nonce-jlg_track_event',
@@ -1098,7 +1107,8 @@ invoke_endpoint($endpoints, 'ajax_track_event');
 $rateLimitError = $GLOBALS['json_error_payloads'][0] ?? [];
 assertSame('Trop de requêtes, veuillez patienter avant de réessayer.', $rateLimitError['message'] ?? null, 'Rate limiter blocks analytics event when quota exceeded');
 $bufferAfterLimit = wp_cache_get(AnalyticsEventQueue::CACHE_KEY, AnalyticsEventQueue::CACHE_GROUP);
-assertSame(20, count($bufferAfterLimit ?? []), 'Rate-limited event does not increase buffered analytics queue');
+$bufferAfterLimitCount = is_array($bufferAfterLimit) ? count($bufferAfterLimit) : 0;
+assertSame(20, $bufferAfterLimitCount, 'Rate-limited event does not increase buffered analytics queue');
 
 wp_cache_delete(AnalyticsEventQueue::CACHE_KEY, AnalyticsEventQueue::CACHE_GROUP);
 unset($_SERVER['REMOTE_ADDR']);
