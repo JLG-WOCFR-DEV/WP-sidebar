@@ -37,7 +37,11 @@ class EventRateLimiter
     {
         $this->maxEvents = max(1, $maxEvents);
         $this->windowSeconds = max(1, $windowSeconds);
-        $this->useTransientStorage = function_exists('wp_using_ext_object_cache') && wp_using_ext_object_cache();
+        $this->useTransientStorage = true;
+
+        if (function_exists('wp_using_ext_object_cache') && wp_using_ext_object_cache()) {
+            $this->useTransientStorage = false;
+        }
     }
 
     public function registerHit(string $nonce, ?string $ip = null): bool
