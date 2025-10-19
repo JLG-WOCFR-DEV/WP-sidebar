@@ -45,7 +45,7 @@ final class OptionChoices
             'glow',
             'pulse',
         ],
-        'animation_type' => ['slide-left', 'slide-right', 'fade', 'scale'],
+        'animation_type' => ['slide-left', 'slide-right', 'fade', 'scale', 'zoom'],
         'menu_alignment_desktop' => ['flex-start', 'center', 'flex-end'],
         'menu_alignment_mobile' => ['flex-start', 'center', 'flex-end'],
         'social_orientation' => ['horizontal', 'vertical'],
