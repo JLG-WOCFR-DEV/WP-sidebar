@@ -109,13 +109,7 @@ $baseSettings['profiles'] = [
     ],
 ];
 
-update_option('sidebar_jlg_profiles', $baseSettings['profiles'], 'no');
 $settingsRepository->saveOptions($baseSettings);
-$storedSettings = get_option('sidebar_jlg_settings', []);
-if (is_array($storedSettings)) {
-    $storedSettings['profiles'] = $baseSettings['profiles'];
-    update_option('sidebar_jlg_settings', $storedSettings, 'no');
-}
 
 $cache->clear();
 $GLOBALS['wp_test_transients'] = [];
@@ -189,13 +183,7 @@ $dynamicSettings['profiles'] = [
     ],
 ];
 
-update_option('sidebar_jlg_profiles', $dynamicSettings['profiles'], 'no');
 $settingsRepository->saveOptions($dynamicSettings);
-$storedDynamicSettings = get_option('sidebar_jlg_settings', []);
-if (is_array($storedDynamicSettings)) {
-    $storedDynamicSettings['profiles'] = $dynamicSettings['profiles'];
-    update_option('sidebar_jlg_settings', $storedDynamicSettings, 'no');
-}
 
 switch_to_locale('en_US');
 

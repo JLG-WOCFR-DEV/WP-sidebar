@@ -64,6 +64,8 @@ class SettingsRepository
     private const NAV_MENU_CACHE_GROUP = 'sidebar_jlg';
     private const NAV_MENU_CACHE_TTL = 300;
 
+    private const PROFILES_OPTION = 'sidebar_jlg_profiles';
+
     public const REVALIDATION_QUEUE_OPTION = 'sidebar_jlg_settings_revalidation_queue';
     public const REVALIDATION_QUEUE_FLAG_OPTION = 'sidebar_jlg_settings_revalidation_pending';
     public const REVALIDATION_QUEUED_ACTION = 'sidebar_jlg_settings_revalidation_queued';
@@ -111,15 +113,21 @@ class SettingsRepository
 
     public function getProfiles(): array
     {
-        $storedOptions = $this->getStoredOptions();
+        $storedProfiles = get_option(self::PROFILES_OPTION, null);
 
-        if (!isset($storedOptions['profiles']) || !is_array($storedOptions['profiles'])) {
-            return [];
+        if (!is_array($storedProfiles)) {
+            $storedOptions = $this->getStoredOptions();
+
+            if (!isset($storedOptions['profiles']) || !is_array($storedOptions['profiles'])) {
+                return [];
+            }
+
+            $storedProfiles = $storedOptions['profiles'];
         }
 
         $profiles = [];
 
-        foreach ($storedOptions['profiles'] as $profile) {
+        foreach ($storedProfiles as $profile) {
             if (!is_array($profile)) {
                 continue;
             }
@@ -162,28 +170,34 @@ class SettingsRepository
         $existingOptions = $this->getStoredOptions();
         $sanitized = $this->sanitizer->sanitize_settings($options, $existingOptions);
 
-        if (isset($options['profiles']) && is_array($options['profiles'])) {
+        if (array_key_exists('profiles', $options)) {
             $profilesPayload = [];
 
-            foreach ($options['profiles'] as $profile) {
-                if (!is_array($profile)) {
-                    continue;
-                }
-
-                if (isset($profile['settings']) && is_array($profile['settings'])) {
-                    if (array_key_exists('enable_sidebar', $profile['settings'])) {
-                        $profile['settings']['enable_sidebar'] = $this->normalizeProfileBoolean($profile['settings']['enable_sidebar']);
-                    } else {
-                        unset($profile['settings']['enable_sidebar']);
+            if (is_array($options['profiles'])) {
+                foreach ($options['profiles'] as $profile) {
+                    if (!is_array($profile)) {
+                        continue;
                     }
+
+                    if (isset($profile['settings']) && is_array($profile['settings'])) {
+                        if (array_key_exists('enable_sidebar', $profile['settings'])) {
+                            $profile['settings']['enable_sidebar'] = $this->normalizeProfileBoolean($profile['settings']['enable_sidebar']);
+                        } else {
+                            unset($profile['settings']['enable_sidebar']);
+                        }
+                    }
+
+                    $profilesPayload[] = $profile;
                 }
-
-                $profilesPayload[] = $profile;
             }
 
-            if ($profilesPayload !== []) {
-                $sanitized['profiles'] = array_values($profilesPayload);
+            if ($profilesPayload === []) {
+                delete_option(self::PROFILES_OPTION);
+            } else {
+                update_option(self::PROFILES_OPTION, array_values($profilesPayload));
             }
+
+            unset($sanitized['profiles']);
         }
 
         update_option('sidebar_jlg_settings', $sanitized);
@@ -194,6 +208,7 @@ class SettingsRepository
     public function deleteOptions(): void
     {
         delete_option('sidebar_jlg_settings');
+        delete_option(self::PROFILES_OPTION);
         $this->invalidateCache();
     }
 
