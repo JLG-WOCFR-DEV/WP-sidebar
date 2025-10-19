@@ -57,6 +57,34 @@ const useFocusTrap = ({
     });
   }, [surfaceRef]);
 
+  const getOwnerElement = useCallback((): HTMLElement | null => {
+    return ownerRef?.current ?? surfaceRef.current ?? null;
+  }, [ownerRef, surfaceRef]);
+
+  const getInertRoot = useCallback((): HTMLElement | null => {
+    const ownerElement = getOwnerElement();
+    if (!ownerElement) {
+      return null;
+    }
+
+    const scopedRoot = ownerElement.closest('.sidebar-jlg-admin-app__root') as HTMLElement | null;
+    if (scopedRoot) {
+      return scopedRoot;
+    }
+
+    const parent = ownerElement.parentElement;
+    if (
+      parent instanceof HTMLElement &&
+      parent !== document.body &&
+      parent !== document.documentElement &&
+      parent.id !== 'wpwrap'
+    ) {
+      return parent;
+    }
+
+    return null;
+  }, [getOwnerElement]);
+
   const focusFirstElement = useCallback(() => {
     const focusable = getFocusableElements();
     const target = focusable[0] ?? surfaceRef.current;
@@ -109,14 +137,28 @@ const useFocusTrap = ({
       return undefined;
     }
 
+    const ownerElement = getOwnerElement();
     restoreFocusRef.current = (document.activeElement as HTMLElement | null) ?? null;
 
-    const ownerElement = ownerRef?.current ?? surfaceRef.current;
-    const parent = ownerElement?.parentElement ?? null;
+    const previouslyFocused = restoreFocusRef.current;
+    if (previouslyFocused && ownerElement && !ownerElement.contains(previouslyFocused)) {
+      if (typeof previouslyFocused.blur === 'function') {
+        previouslyFocused.blur();
+      }
+    }
 
-    if (parent && ownerElement) {
-      const siblings = Array.from(parent.children).filter(
-        (node): node is HTMLElement => node instanceof HTMLElement && node !== ownerElement
+    const inertRoot = getInertRoot();
+    let trapContainer: HTMLElement | null = ownerElement;
+
+    if (inertRoot && trapContainer) {
+      while (trapContainer && trapContainer.parentElement !== inertRoot) {
+        trapContainer = trapContainer.parentElement as HTMLElement | null;
+      }
+    }
+
+    if (inertRoot && trapContainer && trapContainer.parentElement === inertRoot) {
+      const siblings = Array.from(inertRoot.children).filter(
+        (node): node is HTMLElement => node instanceof HTMLElement && node !== trapContainer
       );
 
       inertSnapshotRef.current = siblings.map((element) => {
@@ -131,10 +173,22 @@ const useFocusTrap = ({
 
         return snapshot;
       });
+    } else {
+      inertSnapshotRef.current = [];
     }
 
-    const focusTimer = window.setTimeout(() => {
+    const ensureFocusWithinTrap = () => {
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (!ownerElement || (activeElement && ownerElement.contains(activeElement))) {
+        return;
+      }
+
       focusFirstElement();
+    };
+
+    ensureFocusWithinTrap();
+    const focusTimer = window.setTimeout(() => {
+      ensureFocusWithinTrap();
     }, 0);
 
     return () => {
@@ -161,7 +215,7 @@ const useFocusTrap = ({
       restoreFocusRef.current?.focus({ preventScroll: true });
       restoreFocusRef.current = null;
     };
-  }, [focusFirstElement, isActive, ownerRef, surfaceRef]);
+  }, [focusFirstElement, getInertRoot, getOwnerElement, isActive]);
 
   return { handleKeyDown };
 };
