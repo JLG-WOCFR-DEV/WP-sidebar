@@ -46,34 +46,61 @@ const deepClone = <T,>(value: T): T => {
   return JSON.parse(JSON.stringify(value));
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (value === null || typeof value !== 'object') {
+    return false;
+  }
 
-const isDeepEqual = (value: unknown, other: unknown): boolean => {
-  if (Object.is(value, other)) {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+const deepEqual = (a: unknown, b: unknown): boolean => {
+  if (Object.is(a, b)) {
     return true;
   }
 
-  if (Array.isArray(value) && Array.isArray(other)) {
-    if (value.length !== other.length) {
-      return false;
-    }
-
-    return value.every((item, index) => isDeepEqual(item, other[index]));
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime();
   }
 
-  if (isRecord(value) && isRecord(other)) {
-    const valueKeys = Object.keys(value);
-    const otherKeys = Object.keys(other);
+  if (typeof a !== typeof b) {
+    return false;
+  }
 
-    if (valueKeys.length !== otherKeys.length) {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) {
       return false;
     }
 
-    return valueKeys.every((key) =>
-      Object.prototype.hasOwnProperty.call(other, key) &&
-      isDeepEqual(value[key], other[key])
-    );
+    for (let index = 0; index < a.length; index += 1) {
+      if (!deepEqual(a[index], b[index])) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+
+    if (keysA.length !== keysB.length) {
+      return false;
+    }
+
+    for (const key of keysA) {
+      if (!Object.prototype.hasOwnProperty.call(b, key)) {
+        return false;
+      }
+
+      if (!deepEqual(a[key], b[key])) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   return false;
@@ -165,7 +192,7 @@ export const useOptionsStore = create<OptionsStore>((set, get) => ({
     }),
   applyServerOptions: (options) =>
     set((state) => {
-      if (isDeepEqual(state.options, options)) {
+      if (deepEqual(state.options, options)) {
         return state;
       }
 
