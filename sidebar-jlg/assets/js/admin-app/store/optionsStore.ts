@@ -46,6 +46,66 @@ const deepClone = <T,>(value: T): T => {
   return JSON.parse(JSON.stringify(value));
 };
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (value === null || typeof value !== 'object') {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+const deepEqual = (a: unknown, b: unknown): boolean => {
+  if (Object.is(a, b)) {
+    return true;
+  }
+
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime();
+  }
+
+  if (typeof a !== typeof b) {
+    return false;
+  }
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) {
+      return false;
+    }
+
+    for (let index = 0; index < a.length; index += 1) {
+      if (!deepEqual(a[index], b[index])) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+
+    if (keysA.length !== keysB.length) {
+      return false;
+    }
+
+    for (const key of keysA) {
+      if (!Object.prototype.hasOwnProperty.call(b, key)) {
+        return false;
+      }
+
+      if (!deepEqual(a[key], b[key])) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  return false;
+};
+
 const normalizePath = (path: string): string[] =>
   path
     .replace(/\[(\d+)\]/g, '.$1')
@@ -131,9 +191,15 @@ export const useOptionsStore = create<OptionsStore>((set, get) => ({
       };
     }),
   applyServerOptions: (options) =>
-    set(() => ({
-      options: deepClone(options),
-    })),
+    set((state) => {
+      if (deepEqual(state.options, options)) {
+        return state;
+      }
+
+      return {
+        options: deepClone(options),
+      };
+    }),
   undo: () =>
     set((state) => {
       if (!state.history.length) {
