@@ -46,64 +46,36 @@ const deepClone = <T,>(value: T): T => {
   return JSON.parse(JSON.stringify(value));
 };
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> => {
-  if (value === null || typeof value !== 'object') {
-    return false;
-  }
-
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
+const isObjectLike = (value: unknown): value is Record<string, unknown> | unknown[] =>
+  typeof value === 'object' && value !== null;
 
 const deepEqual = (a: unknown, b: unknown): boolean => {
-  if (Object.is(a, b)) {
+  if (a === b) {
     return true;
   }
 
-  if (a instanceof Date && b instanceof Date) {
-    return a.getTime() === b.getTime();
-  }
-
-  if (typeof a !== typeof b) {
+  if (!isObjectLike(a) || !isObjectLike(b)) {
     return false;
   }
 
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) {
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
       return false;
     }
 
-    for (let index = 0; index < a.length; index += 1) {
-      if (!deepEqual(a[index], b[index])) {
-        return false;
-      }
-    }
-
-    return true;
+    return a.every((value, index) => deepEqual(value, b[index]));
   }
 
-  if (isPlainObject(a) && isPlainObject(b)) {
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
+  const aEntries = Object.entries(a);
+  const bEntries = Object.entries(b);
 
-    if (keysA.length !== keysB.length) {
-      return false;
-    }
-
-    for (const key of keysA) {
-      if (!Object.prototype.hasOwnProperty.call(b, key)) {
-        return false;
-      }
-
-      if (!deepEqual(a[key], b[key])) {
-        return false;
-      }
-    }
-
-    return true;
+  if (aEntries.length !== bEntries.length) {
+    return false;
   }
 
-  return false;
+  return aEntries.every(([key, value]) =>
+    Object.prototype.hasOwnProperty.call(b, key) && deepEqual(value, (b as Record<string, unknown>)[key])
+  );
 };
 
 const normalizePath = (path: string): string[] =>
