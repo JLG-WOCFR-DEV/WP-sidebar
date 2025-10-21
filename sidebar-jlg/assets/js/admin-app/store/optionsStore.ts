@@ -46,6 +46,39 @@ const deepClone = <T,>(value: T): T => {
   return JSON.parse(JSON.stringify(value));
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isDeepEqual = (value: unknown, other: unknown): boolean => {
+  if (Object.is(value, other)) {
+    return true;
+  }
+
+  if (Array.isArray(value) && Array.isArray(other)) {
+    if (value.length !== other.length) {
+      return false;
+    }
+
+    return value.every((item, index) => isDeepEqual(item, other[index]));
+  }
+
+  if (isRecord(value) && isRecord(other)) {
+    const valueKeys = Object.keys(value);
+    const otherKeys = Object.keys(other);
+
+    if (valueKeys.length !== otherKeys.length) {
+      return false;
+    }
+
+    return valueKeys.every((key) =>
+      Object.prototype.hasOwnProperty.call(other, key) &&
+      isDeepEqual(value[key], other[key])
+    );
+  }
+
+  return false;
+};
+
 const normalizePath = (path: string): string[] =>
   path
     .replace(/\[(\d+)\]/g, '.$1')
@@ -131,9 +164,15 @@ export const useOptionsStore = create<OptionsStore>((set, get) => ({
       };
     }),
   applyServerOptions: (options) =>
-    set(() => ({
-      options: deepClone(options),
-    })),
+    set((state) => {
+      if (isDeepEqual(state.options, options)) {
+        return state;
+      }
+
+      return {
+        options: deepClone(options),
+      };
+    }),
   undo: () =>
     set((state) => {
       if (!state.history.length) {
