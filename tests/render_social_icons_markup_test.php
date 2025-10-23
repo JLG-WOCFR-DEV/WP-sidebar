@@ -22,8 +22,9 @@ function assertSame($expected, $actual, string $message): void
 }
 
 $allIcons = [
-    'facebook_white'    => '<svg class="facebook"></svg>',
-    'custom_my_brand'   => '<svg class="custom"></svg>',
+    'facebook_white'              => '<svg class="facebook"></svg>',
+    'custom_my_brand'             => '<svg class="custom" focusable="true" role="presentation"></svg>',
+    'custom_accessible_label'     => '<svg class="custom-labeled" role="img" aria-label="Accessible"></svg>',
 ];
 
 $resultWithStandardIcon = Templating::renderSocialIcons([
@@ -34,7 +35,7 @@ $resultWithStandardIcon = Templating::renderSocialIcons([
     ],
 ], $allIcons, 'horizontal');
 
-$expectedStandardMarkup = '<div class="social-icons horizontal"><a href="https://example.com/facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook – s’ouvre dans une nouvelle fenêtre"><svg class="facebook"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
+$expectedStandardMarkup = '<div class="social-icons horizontal"><a href="https://example.com/facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook – s’ouvre dans une nouvelle fenêtre"><svg class="facebook" aria-hidden="true" focusable="false" role="presentation"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedStandardMarkup, $resultWithStandardIcon, 'renders markup for valid social icon with humanized label');
 
 $resultWithCustomLabel = Templating::renderSocialIcons([
@@ -45,7 +46,7 @@ $resultWithCustomLabel = Templating::renderSocialIcons([
     ],
 ], $allIcons, '');
 
-$expectedCustomMarkup = '<div class="social-icons"><a href="https://example.com/custom" target="_blank" rel="noopener noreferrer" aria-label="Mon Label Personnalisé – s’ouvre dans une nouvelle fenêtre"><svg class="custom"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
+$expectedCustomMarkup = '<div class="social-icons"><a href="https://example.com/custom" target="_blank" rel="noopener noreferrer" aria-label="Mon Label Personnalisé – s’ouvre dans une nouvelle fenêtre"><svg class="custom" aria-hidden="true" focusable="false" role="presentation"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedCustomMarkup, $resultWithCustomLabel, 'uses trimmed custom label when provided');
 
 $resultWithCustomFallback = Templating::renderSocialIcons([
@@ -56,7 +57,7 @@ $resultWithCustomFallback = Templating::renderSocialIcons([
     ],
 ], $allIcons, 'vertical');
 
-$expectedCustomFallbackMarkup = '<div class="social-icons vertical"><a href="https://example.com/custom" target="_blank" rel="noopener noreferrer" aria-label="My Brand – s’ouvre dans une nouvelle fenêtre"><svg class="custom"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
+$expectedCustomFallbackMarkup = '<div class="social-icons vertical"><a href="https://example.com/custom" target="_blank" rel="noopener noreferrer" aria-label="My Brand – s’ouvre dans une nouvelle fenêtre"><svg class="custom" aria-hidden="true" focusable="false" role="presentation"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedCustomFallbackMarkup, $resultWithCustomFallback, 'falls back to humanized label for custom icon');
 
 $resultWithMissingIconMarkup = Templating::renderSocialIcons([
@@ -69,5 +70,16 @@ $resultWithMissingIconMarkup = Templating::renderSocialIcons([
 
 $expectedMissingIconMarkup = '<div class="social-icons horizontal"><a href="https://example.com/unknown" class="no-icon" target="_blank" rel="noopener noreferrer" aria-label="Unknown Icon – s’ouvre dans une nouvelle fenêtre"><span class="no-icon-label">Unknown Icon</span><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedMissingIconMarkup, $resultWithMissingIconMarkup, 'renders textual fallback when icon markup is missing');
+
+$resultWithAccessibleCustomIcon = Templating::renderSocialIcons([
+    [
+        'icon'  => 'custom_accessible_label',
+        'url'   => 'https://example.com/access',
+        'label' => '',
+    ],
+], $allIcons, 'horizontal');
+
+$expectedAccessibleMarkup = '<div class="social-icons horizontal"><a href="https://example.com/access" target="_blank" rel="noopener noreferrer" aria-label="Accessible Label – s’ouvre dans une nouvelle fenêtre"><svg class="custom-labeled" role="img" aria-label="Accessible"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
+assertSame($expectedAccessibleMarkup, $resultWithAccessibleCustomIcon, 'preserves ARIA attributes for non-decorative custom icon markup');
 
 exit($testsPassed ? 0 : 1);

@@ -1,4 +1,5 @@
 <?php
+use JLG\Sidebar\Frontend\IconHelpers;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Frontend\Templating;
 
@@ -42,40 +43,6 @@ $widgetTemplates = [
     'slider' => $widgetTemplateDirectory . 'widget-slider.php',
     'woocommerce' => $widgetTemplateDirectory . 'widget-woocommerce.php',
 ];
-
-$makeInlineIconDecorative = static function (string $markup): string {
-    if (stripos($markup, '<svg') === false) {
-        return $markup;
-    }
-
-    $normalized = preg_replace_callback(
-        '/<svg\b([^>]*)>/i',
-        static function (array $matches): string {
-            $attributes = $matches[1];
-
-            $attributes = preg_replace("/\s+aria-hidden=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
-            $attributes = preg_replace("/\s+focusable=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
-            $attributes = preg_replace("/\s+role=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
-
-            $cleanAttributes = trim($attributes);
-
-            $openingTag = '<svg';
-
-            if ($cleanAttributes !== '') {
-                $openingTag .= ' ' . $cleanAttributes;
-            }
-
-            return $openingTag . ' aria-hidden="true" focusable="false" role="presentation">';
-        },
-        $markup
-    );
-
-    if ($normalized === null) {
-        return $markup;
-    }
-
-    return $normalized;
-};
 
 $socialOrientation = '';
 if (isset($options['social_orientation']) && is_string($options['social_orientation'])) {
@@ -262,7 +229,7 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
                         <?php
                     } elseif (($icon['type'] ?? '') === 'svg_inline' && !empty($icon['markup'])) {
                         $iconClass = ($icon['is_custom'] ?? false) ? 'menu-icon svg-icon' : 'menu-icon';
-                        $inlineMarkup = $makeInlineIconDecorative((string) $icon['markup']);
+                        $inlineMarkup = IconHelpers::makeInlineIconDecorative((string) $icon['markup']);
                         ?>
                         <span class="<?php echo esc_attr($iconClass); ?>" aria-hidden="true"><?php echo wp_kses_post($inlineMarkup); ?></span>
                         <?php

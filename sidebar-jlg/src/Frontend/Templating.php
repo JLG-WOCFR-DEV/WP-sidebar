@@ -28,6 +28,10 @@ class Templating
             $iconKey = isset($social['icon']) ? (string) $social['icon'] : '';
             $iconMarkup = $iconKey !== '' && isset($allIcons[$iconKey]) ? (string) $allIcons[$iconKey] : null;
 
+            if ($iconMarkup !== null) {
+                $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
+            }
+
             $defaultLabel = self::humanizeIconKey($iconKey);
             $ariaLabel = $customLabel !== '' ? $customLabel : $defaultLabel;
 

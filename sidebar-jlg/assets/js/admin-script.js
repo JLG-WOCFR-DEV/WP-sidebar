@@ -104,6 +104,28 @@ function joinMessages(...messages) {
     return messages.filter(Boolean).join(' ');
 }
 
+function makeInlineIconDecorative(markup) {
+    if (typeof markup !== 'string' || markup.toLowerCase().indexOf('<svg') === -1) {
+        return markup;
+    }
+
+    if (/<svg\b[^>]*(aria-label|aria-labelledby|aria-describedby|role\s*=\s*["']img["'])/i.test(markup)) {
+        return markup;
+    }
+
+    return markup.replace(/<svg\b([^>]*)>/gi, (match, attributes = '') => {
+        let cleaned = attributes;
+        cleaned = cleaned.replace(/\s+aria-hidden=(['"]).*?\1/gi, '');
+        cleaned = cleaned.replace(/\s+focusable=(['"]).*?\1/gi, '');
+        cleaned = cleaned.replace(/\s+role=(['"]).*?\1/gi, '');
+        cleaned = cleaned.trim();
+
+        const prefix = cleaned ? ` ${cleaned}` : '';
+
+        return `<svg${prefix} aria-hidden="true" focusable="false" role="presentation">`;
+    });
+}
+
 function deepClone(value) {
     if (value === null || typeof value !== 'object') {
         return value;
@@ -2896,11 +2918,11 @@ class SidebarPreviewModule {
             .filter((icon) => icon && icon.url)
             .map((icon) => {
                 const label = this.escapeHtml(icon.label || icon.url);
-                const content = icon.iconHtml && icon.iconHtml.trim() !== ''
-                    ? icon.iconHtml
+                const iconMarkup = icon.iconHtml && icon.iconHtml.trim() !== ''
+                    ? makeInlineIconDecorative(icon.iconHtml)
                     : `<span class="no-icon-label">${label}</span>`;
 
-                return `<a href="#" data-preview-url="${this.escapeHtml(icon.url)}" aria-label="${label}">${content}</a>`;
+                return `<a href="#" data-preview-url="${this.escapeHtml(icon.url)}" aria-label="${label}">${iconMarkup}</a>`;
             })
             .join('');
 
@@ -7437,7 +7459,7 @@ jQuery(document).ready(function($) {
                 Object.keys(response.data).forEach(iconKey => {
                     const markup = response.data[iconKey];
                     if (typeof markup === 'string') {
-                        iconCache[iconKey] = markup;
+                        iconCache[iconKey] = makeInlineIconDecorative(markup);
                     }
                 });
 
