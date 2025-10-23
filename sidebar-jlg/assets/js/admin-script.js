@@ -995,13 +995,13 @@ function initializeWidgetBuilderInterface({ container, hiddenField, schemas: pro
 
         if (!activeWidget) {
             if (editorPlaceholder) {
-                editorPlaceholder.style.display = '';
+                toggleAriaVisibility(editorPlaceholder, true);
             }
             return;
         }
 
         if (editorPlaceholder) {
-            editorPlaceholder.style.display = 'none';
+            toggleAriaVisibility(editorPlaceholder, false);
         }
 
         const schema = normalizedSchemas[activeWidget.type] || {};
@@ -2050,11 +2050,7 @@ class SidebarPreviewModule {
             return;
         }
 
-        if (this.previewSize === 'mobile') {
-            this.overlay.style.display = '';
-        } else {
-            this.overlay.style.display = 'none';
-        }
+        toggleAriaVisibility(this.overlay, this.previewSize === 'mobile');
     }
 
     updateTouchOverlay() {
@@ -3053,14 +3049,14 @@ class SidebarPreviewModule {
             }
 
             this.menuSocialItem.innerHTML = markup;
-            this.menuSocialItem.style.display = markup ? '' : 'none';
+            toggleAriaVisibility(this.menuSocialItem, !!markup);
 
             if (!this.menuList.contains(this.menuSocialItem)) {
                 this.menuList.appendChild(this.menuSocialItem);
             }
 
             if (this.footerSocial) {
-                this.footerSocial.style.display = 'none';
+                toggleAriaVisibility(this.footerSocial, false);
             }
         } else {
             if (!this.footerSocial && this.aside) {
@@ -3076,7 +3072,7 @@ class SidebarPreviewModule {
 
             if (this.footerSocial) {
                 this.footerSocial.innerHTML = markup;
-                this.footerSocial.style.display = markup ? '' : 'none';
+                toggleAriaVisibility(this.footerSocial, !!markup);
             }
 
             if (this.menuSocialItem && this.menuSocialItem.parentElement) {
@@ -8173,7 +8169,8 @@ jQuery(document).ready(function($) {
                 class: 'menu-item-search-status',
                 'aria-live': 'polite'
             });
-            searchContainer.append(fallbackInput, fallbackStatus).css('display', 'none');
+            searchContainer.append(fallbackInput, fallbackStatus);
+            toggleAriaVisibility(searchContainer, false);
             valueWrapper.append(searchContainer);
         }
 
@@ -8214,7 +8211,7 @@ jQuery(document).ready(function($) {
 
             searchInput.val('');
             statusElement.empty();
-            searchContainer.css('display', 'none');
+            toggleAriaVisibility(searchContainer, false);
 
             return;
         }
@@ -8230,7 +8227,7 @@ jQuery(document).ready(function($) {
             `);
             searchInput.val('');
             statusElement.empty();
-            searchContainer.css('display', 'none');
+            toggleAriaVisibility(searchContainer, false);
 
             setItemFallback(defaultFallbackTitle);
         } else if (type === 'cta') {
@@ -8334,7 +8331,7 @@ jQuery(document).ready(function($) {
 
             searchInput.val('');
             statusElement.empty();
-            searchContainer.css('display', 'none');
+            toggleAriaVisibility(searchContainer, false);
         } else if (type === 'post' || type === 'page' || type === 'category') {
             const isContentType = type === 'post' || type === 'page';
             const action = isContentType ? 'jlg_get_posts' : 'jlg_get_categories';
@@ -8387,7 +8384,7 @@ jQuery(document).ready(function($) {
             $paragraph.append($selectElement);
             fieldContainer.append($paragraph);
 
-            searchContainer.css('display', 'flex');
+            toggleAriaVisibility(searchContainer, true, 'flex');
             statusElement.empty();
 
             setItemFallback(defaultFallbackTitle);
@@ -8522,7 +8519,7 @@ jQuery(document).ready(function($) {
 
             searchInput.val('');
             statusElement.empty();
-            searchContainer.css('display', 'none');
+            toggleAriaVisibility(searchContainer, false);
 
             setItemFallback(defaultFallbackTitle);
 
@@ -8590,7 +8587,7 @@ jQuery(document).ready(function($) {
             fieldContainer.empty();
             searchInput.val('');
             statusElement.empty();
-            searchContainer.css('display', 'none');
+            toggleAriaVisibility(searchContainer, false);
 
             setItemFallback(defaultFallbackTitle);
         }
