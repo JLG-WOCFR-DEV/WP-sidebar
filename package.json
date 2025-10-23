@@ -7,8 +7,8 @@
     "test:js": "jest",
     "test:php": "composer test",
     "build": "npm run build:assets",
-    "build:assets": "wp-scripts build sidebar-jlg/assets/js/blocks/sidebar-search.js sidebar-jlg/assets/js/blocks/sidebar-search-view.js sidebar-jlg/assets/js/admin-app.tsx --output-path=sidebar-jlg/assets/build",
-    "start:assets": "wp-scripts start sidebar-jlg/assets/js/blocks/sidebar-search.js sidebar-jlg/assets/js/blocks/sidebar-search-view.js sidebar-jlg/assets/js/admin-app.tsx --output-path=sidebar-jlg/assets/build",
+    "build:assets": "wp-scripts build sidebar-jlg/assets/js/blocks/sidebar-search.js sidebar-jlg/assets/js/blocks/sidebar-search-view.js sidebar-jlg/assets/js/admin-app.tsx sidebar-jlg/assets/js/admin/admin-legacy.ts --output-path=sidebar-jlg/assets/build",
+    "start:assets": "wp-scripts start sidebar-jlg/assets/js/blocks/sidebar-search.js sidebar-jlg/assets/js/blocks/sidebar-search-view.js sidebar-jlg/assets/js/admin-app.tsx sidebar-jlg/assets/js/admin/admin-legacy.ts --output-path=sidebar-jlg/assets/build",
     "audit:accessibility": "pa11y --config pa11y.config.json docs/demo.html"
   },
   "devDependencies": {

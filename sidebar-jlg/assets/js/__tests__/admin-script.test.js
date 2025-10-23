@@ -28,7 +28,7 @@ describe('renderSvgUrlPreview', () => {
       window.sidebarJLG = global.sidebarJLG;
     }
 
-    ({ renderSvgUrlPreview } = require('../admin-script.js'));
+    ({ renderSvgUrlPreview } = require('../admin/admin-legacy.ts'));
   });
 
   afterEach(() => {
