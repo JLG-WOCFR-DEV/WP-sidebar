@@ -347,18 +347,38 @@ class MenuPage
             $this->version
         );
 
+        $adminLegacyAsset = [
+            'dependencies' => ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'wp-data', 'wp-api-fetch', 'wp-element', 'wp-components'],
+            'version' => $this->version,
+        ];
+
+        $legacyAssetPath = plugin_dir_path($this->pluginFile) . 'assets/build/admin-legacy.ts.asset.php';
+        if (file_exists($legacyAssetPath)) {
+            $maybeAsset = include $legacyAssetPath;
+            if (is_array($maybeAsset)) {
+                $adminLegacyAsset = array_merge($adminLegacyAsset, $maybeAsset);
+            }
+        }
+
+        $legacyDependencies = isset($adminLegacyAsset['dependencies']) && is_array($adminLegacyAsset['dependencies'])
+            ? $adminLegacyAsset['dependencies']
+            : ['jquery'];
+        $legacyVersion = isset($adminLegacyAsset['version'])
+            ? (string) $adminLegacyAsset['version']
+            : $this->version;
+
         wp_enqueue_script(
-            'sidebar-jlg-admin-js',
-            plugin_dir_url($this->pluginFile) . 'assets/js/admin-script.js',
-            ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'wp-data', 'wp-api-fetch', 'wp-element', 'wp-components'],
-            $this->version,
+            'sidebar-jlg-admin-legacy',
+            plugin_dir_url($this->pluginFile) . 'assets/build/admin-legacy.ts.js',
+            $legacyDependencies,
+            $legacyVersion,
             true
         );
 
         wp_enqueue_script(
             'sidebar-jlg-admin-canvas-js',
             plugin_dir_url($this->pluginFile) . 'assets/js/admin-canvas.js',
-            ['sidebar-jlg-admin-js'],
+            ['sidebar-jlg-admin-legacy'],
             $this->version,
             true
         );
@@ -397,7 +417,7 @@ class MenuPage
         $lastAudit = $this->getLastAccessibilityAudit();
         $onboardingState = $this->getOnboardingState();
 
-        wp_localize_script('sidebar-jlg-admin-js', 'sidebarJLG', [
+        wp_localize_script('sidebar-jlg-admin-legacy', 'sidebarJLG', [
             'ajax_url' => admin_url('admin-ajax.php', 'relative'),
             'nonce' => wp_create_nonce('jlg_ajax_nonce'),
             'reset_nonce' => wp_create_nonce('jlg_reset_nonce'),
