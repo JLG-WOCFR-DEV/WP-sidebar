@@ -6,6 +6,41 @@ class Templating
 {
     private const ICON_COLOR_SUFFIXES = ['white', 'black'];
 
+    public static function makeInlineIconDecorative(string $markup): string
+    {
+        if (stripos($markup, '<svg') === false) {
+            return $markup;
+        }
+
+        $normalized = preg_replace_callback(
+            '/<svg\b([^>]*)>/i',
+            static function (array $matches): string {
+                $attributes = $matches[1];
+
+                $attributes = preg_replace("/\s+aria-hidden=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+                $attributes = preg_replace("/\s+focusable=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+                $attributes = preg_replace("/\s+role=(?:\"|')[^\"']*(?:\"|')/i", '', $attributes) ?? $attributes;
+
+                $cleanAttributes = trim($attributes);
+
+                $openingTag = '<svg';
+
+                if ($cleanAttributes !== '') {
+                    $openingTag .= ' ' . $cleanAttributes;
+                }
+
+                return $openingTag . ' aria-hidden="true" focusable="false" role="presentation">';
+            },
+            $markup
+        );
+
+        if ($normalized === null) {
+            return $markup;
+        }
+
+        return $normalized;
+    }
+
     public static function renderSocialIcons(array $socialIcons, array $allIcons, string $orientation): string
     {
         if ($socialIcons === []) {
@@ -27,6 +62,12 @@ class Templating
 
             $iconKey = isset($social['icon']) ? (string) $social['icon'] : '';
             $iconMarkup = $iconKey !== '' && isset($allIcons[$iconKey]) ? (string) $allIcons[$iconKey] : null;
+            $isDecorativeInlineIcon = false;
+
+            if ($iconMarkup !== null && stripos($iconMarkup, '<svg') !== false) {
+                $iconMarkup = self::makeInlineIconDecorative($iconMarkup);
+                $isDecorativeInlineIcon = true;
+            }
 
             if ($iconMarkup !== null) {
                 $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
@@ -50,6 +91,10 @@ class Templating
             $classAttribute = $linkClasses === [] ? '' : sprintf(' class="%s"', esc_attr(implode(' ', $linkClasses)));
 
             $content = $iconMarkup ?? sprintf('<span class="no-icon-label">%s</span>', esc_html($ariaLabel));
+
+            if ($isDecorativeInlineIcon && $iconMarkup !== null) {
+                $content = sprintf('<span aria-hidden="true" focusable="false">%s</span>', $iconMarkup);
+            }
 
             $newWindowAnnouncement = __('s’ouvre dans une nouvelle fenêtre', 'sidebar-jlg');
             $announcedLabel = sprintf(
