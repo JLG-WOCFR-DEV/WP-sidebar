@@ -1,3 +1,106 @@
+const TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY = 'toggleAriaVisibilityPrevDisplay';
+const TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY = 'toggleAriaVisibilityPrevTabIndex';
+
+function toElementArray(element) {
+    if (!element) {
+        return [];
+    }
+
+    if (typeof window !== 'undefined' && window.jQuery && element instanceof window.jQuery) {
+        return element.toArray();
+    }
+
+    if (Array.isArray(element)) {
+        return element;
+    }
+
+    if (typeof element === 'object' && typeof element.length === 'number' && typeof element !== 'function') {
+        try {
+            return Array.prototype.slice.call(element);
+        } catch (error) {
+            return [];
+        }
+    }
+
+    return [element];
+}
+
+function isDomElement(value) {
+    return value && typeof value === 'object' && (value.nodeType === 1 || value.nodeType === 9);
+}
+
+function toggleAriaVisibility(element, isVisible) {
+    const elements = toElementArray(element);
+    const shouldShow = !!isVisible;
+
+    elements.forEach((item) => {
+        if (!isDomElement(item)) {
+            return;
+        }
+
+        const target = item;
+        const dataset = target.dataset || {};
+
+        if (shouldShow) {
+            target.hidden = false;
+            target.setAttribute('aria-hidden', 'false');
+            target.setAttribute('aria-disabled', 'false');
+
+            if (dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY] !== undefined) {
+                const previousDisplay = dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY];
+                if (previousDisplay) {
+                    target.style.display = previousDisplay;
+                } else {
+                    target.style.removeProperty('display');
+                }
+                delete dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY];
+            } else {
+                target.style.removeProperty('display');
+            }
+
+            if (dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY] !== undefined) {
+                const previousTabIndex = dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY];
+                if (previousTabIndex === '') {
+                    target.removeAttribute('tabindex');
+                } else {
+                    target.setAttribute('tabindex', previousTabIndex);
+                }
+                delete dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY];
+            } else {
+                target.removeAttribute('tabindex');
+            }
+
+            return;
+        }
+
+        if (dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY] === undefined) {
+            let previousDisplay = '';
+            if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+                const computed = window.getComputedStyle(target);
+                if (computed && computed.display && computed.display !== 'none') {
+                    previousDisplay = computed.display;
+                }
+            }
+            dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY] = previousDisplay;
+        }
+
+        if (dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY] === undefined) {
+            const existingTabIndex = target.getAttribute('tabindex');
+            dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY] = existingTabIndex === null ? '' : existingTabIndex;
+        }
+
+        target.hidden = true;
+        target.setAttribute('aria-hidden', 'true');
+        target.setAttribute('aria-disabled', 'true');
+        target.setAttribute('tabindex', '-1');
+        target.style.display = 'none';
+    });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports.toggleAriaVisibility = toggleAriaVisibility;
+}
+
 function getSidebarGlobalData() {
     if (typeof window !== 'undefined' && window.sidebarJLG && typeof window.sidebarJLG === 'object') {
         return window.sidebarJLG;
@@ -6992,14 +7095,15 @@ jQuery(document).ready(function($) {
     // --- Options de Comportement ---
     const behaviorSelect = $('.desktop-behavior-select');
     behaviorSelect.on('change', function() {
-        $('.push-option-field').toggle($(this).val() === 'push');
+        const isPush = $(this).val() === 'push';
+        toggleAriaVisibility($('.push-option-field'), isPush);
     }).trigger('change');
 
     const layoutStyleRadios = $('input[name="sidebar_jlg_settings[layout_style]"]');
     function updateLayoutStyleFields() {
         const selectedLayout = layoutStyleRadios.filter(':checked').val();
-        $('.floating-options-field').toggle(selectedLayout === 'floating');
-        $('.horizontal-options-field').toggle(selectedLayout === 'horizontal-bar');
+        toggleAriaVisibility($('.floating-options-field'), selectedLayout === 'floating');
+        toggleAriaVisibility($('.horizontal-options-field'), selectedLayout === 'horizontal-bar');
     }
     layoutStyleRadios.on('change', updateLayoutStyleFields);
     updateLayoutStyleFields();
@@ -7010,24 +7114,25 @@ jQuery(document).ready(function($) {
     const searchMethodSelect = $('.search-method-select');
 
     enableSearchCheckbox.on('change', function() {
-        searchOptionsWrapper.toggle($(this).is(':checked'));
+        toggleAriaVisibility(searchOptionsWrapper, $(this).is(':checked'));
     }).trigger('change');
 
     searchMethodSelect.on('change', function() {
         const method = $(this).val();
-        searchOptionsWrapper.find('.search-method-field').hide();
-        searchOptionsWrapper.find(`.search-${method}-field`).show();
+        const methodFields = searchOptionsWrapper.find('.search-method-field');
+        toggleAriaVisibility(methodFields, false);
+        toggleAriaVisibility(searchOptionsWrapper.find(`.search-${method}-field`), true);
     }).trigger('change');
-    
+
     // --- Options de l'en-tête ---
     const logoTypeRadios = $('input[name="sidebar_jlg_settings[header_logo_type]"]');
     logoTypeRadios.on('change', function() {
         if ($(this).val() === 'image') {
-            $('.header-image-options').show();
-            $('.header-text-options').hide();
+            toggleAriaVisibility($('.header-image-options'), true);
+            toggleAriaVisibility($('.header-text-options'), false);
         } else {
-            $('.header-image-options').hide();
-            $('.header-text-options').show();
+            toggleAriaVisibility($('.header-image-options'), false);
+            toggleAriaVisibility($('.header-text-options'), true);
         }
     }).trigger('change');
 
