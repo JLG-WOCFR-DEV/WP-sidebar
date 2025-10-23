@@ -347,23 +347,39 @@ class MenuPage
             $this->version
         );
 
-        $adminLegacyAsset = [
+        $adminLegacyDefaults = [
             'dependencies' => ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'wp-data', 'wp-api-fetch', 'wp-element', 'wp-components'],
             'version' => $this->version,
         ];
+
+        $adminLegacyAsset = $adminLegacyDefaults;
 
         $legacyAssetPath = plugin_dir_path($this->pluginFile) . 'assets/build/admin-legacy.ts.asset.php';
         if (file_exists($legacyAssetPath)) {
             $maybeAsset = include $legacyAssetPath;
             if (is_array($maybeAsset)) {
+                $maybeDependencies = [];
+                if (isset($maybeAsset['dependencies']) && is_array($maybeAsset['dependencies'])) {
+                    $maybeDependencies = $maybeAsset['dependencies'];
+                }
+
                 $adminLegacyAsset = array_merge($adminLegacyAsset, $maybeAsset);
+
+                if (!empty($maybeDependencies)) {
+                    $adminLegacyAsset['dependencies'] = array_values(array_unique(array_merge(
+                        $adminLegacyDefaults['dependencies'],
+                        $maybeDependencies
+                    )));
+                } else {
+                    $adminLegacyAsset['dependencies'] = $adminLegacyDefaults['dependencies'];
+                }
             }
         }
 
         $legacyDependencies = isset($adminLegacyAsset['dependencies']) && is_array($adminLegacyAsset['dependencies'])
             ? $adminLegacyAsset['dependencies']
-            : ['jquery'];
-        $legacyVersion = isset($adminLegacyAsset['version'])
+            : $adminLegacyDefaults['dependencies'];
+        $legacyVersion = isset($adminLegacyAsset['version']) && '' !== (string) $adminLegacyAsset['version']
             ? (string) $adminLegacyAsset['version']
             : $this->version;
 
