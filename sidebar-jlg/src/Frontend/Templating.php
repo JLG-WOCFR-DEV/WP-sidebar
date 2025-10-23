@@ -69,6 +69,10 @@ class Templating
                 $isDecorativeInlineIcon = true;
             }
 
+            if ($iconMarkup !== null) {
+                $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
+            }
+
             $defaultLabel = self::humanizeIconKey($iconKey);
             $ariaLabel = $customLabel !== '' ? $customLabel : $defaultLabel;
 

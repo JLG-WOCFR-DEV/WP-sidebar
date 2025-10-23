@@ -1,4 +1,5 @@
 <?php
+use JLG\Sidebar\Frontend\IconHelpers;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Frontend\Templating;
 
@@ -228,7 +229,7 @@ $renderMenuNodes = static function (array $nodes, string $layout) use (&$renderM
                         <?php
                     } elseif (($icon['type'] ?? '') === 'svg_inline' && !empty($icon['markup'])) {
                         $iconClass = ($icon['is_custom'] ?? false) ? 'menu-icon svg-icon' : 'menu-icon';
-                        $inlineMarkup = Templating::makeInlineIconDecorative((string) $icon['markup']);
+                        $inlineMarkup = IconHelpers::makeInlineIconDecorative((string) $icon['markup']);
                         ?>
                         <span class="<?php echo esc_attr($iconClass); ?>" aria-hidden="true"><?php echo wp_kses_post($inlineMarkup); ?></span>
                         <?php

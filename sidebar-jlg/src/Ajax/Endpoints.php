@@ -8,6 +8,7 @@ use JLG\Sidebar\Analytics\AnalyticsEventQueue;
 use JLG\Sidebar\Analytics\AnalyticsRepository;
 use JLG\Sidebar\Analytics\EventRateLimiter;
 use JLG\Sidebar\Cache\MenuCache;
+use JLG\Sidebar\Frontend\IconHelpers;
 use JLG\Sidebar\Frontend\SidebarRenderer;
 use JLG\Sidebar\Icons\IconLibrary;
 use JLG\Sidebar\Settings\SettingsRepository;
@@ -362,7 +363,7 @@ class Endpoints
             $markup = $available[$iconKey];
 
             if (is_string($markup) && $markup !== '') {
-                $response[$iconKey] = $markup;
+                $response[$iconKey] = IconHelpers::makeInlineIconDecorative($markup);
             }
         }
 
@@ -683,7 +684,7 @@ class Endpoints
 
         $response = [
             'icon_key' => $iconKey,
-            'icon_markup' => $sanitizedSvg,
+            'icon_markup' => IconHelpers::makeInlineIconDecorative($sanitizedSvg),
             'icon_manifest' => $manifest,
             'icon_url' => $iconUrl,
             'message' => __('Icône SVG téléversée avec succès.', 'sidebar-jlg'),

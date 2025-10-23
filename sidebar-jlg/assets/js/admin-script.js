@@ -207,98 +207,26 @@ function joinMessages(...messages) {
     return messages.filter(Boolean).join(' ');
 }
 
-const TOGGLE_ARIA_TABINDEX_DATA = 'data-toggle-aria-tabindex';
-const TOGGLE_ARIA_TABINDEX_ATTR_FLAG = 'data-toggle-aria-tabindex-has-attr';
-
-function normalizeToggleElements(target) {
-    if (!target) {
-        return [];
+function makeInlineIconDecorative(markup) {
+    if (typeof markup !== 'string' || markup.toLowerCase().indexOf('<svg') === -1) {
+        return markup;
     }
 
-    if (typeof window !== 'undefined' && window.jQuery && target instanceof window.jQuery) {
-        return target.get();
+    if (/<svg\b[^>]*(aria-label|aria-labelledby|aria-describedby|role\s*=\s*["']img["'])/i.test(markup)) {
+        return markup;
     }
 
-    if (Array.isArray(target)) {
-        return target;
-    }
+    return markup.replace(/<svg\b([^>]*)>/gi, (match, attributes = '') => {
+        let cleaned = attributes;
+        cleaned = cleaned.replace(/\s+aria-hidden=(['"]).*?\1/gi, '');
+        cleaned = cleaned.replace(/\s+focusable=(['"]).*?\1/gi, '');
+        cleaned = cleaned.replace(/\s+role=(['"]).*?\1/gi, '');
+        cleaned = cleaned.trim();
 
-    if (typeof Element !== 'undefined' && target instanceof Element) {
-        return [target];
-    }
+        const prefix = cleaned ? ` ${cleaned}` : '';
 
-    if (typeof NodeList !== 'undefined' && target instanceof NodeList) {
-        return Array.from(target);
-    }
-
-    if (typeof HTMLCollection !== 'undefined' && target instanceof HTMLCollection) {
-        return Array.from(target);
-    }
-
-    return [target];
-}
-
-function toggleAriaVisibility(target, isVisible, options) {
-    const elements = normalizeToggleElements(target).filter((element) => element && typeof element === 'object' && typeof element.hasAttribute === 'function');
-    if (!elements.length) {
-        return;
-    }
-
-    const normalizedOptions = typeof options === 'string'
-        ? { display: options }
-        : (options && typeof options === 'object' ? options : {});
-    const manageDisplay = normalizedOptions.manageDisplay !== false;
-    const displayValue = typeof normalizedOptions.display === 'string' ? normalizedOptions.display : '';
-    const visible = !!isVisible;
-
-    elements.forEach((element) => {
-        if ('hidden' in element) {
-            element.hidden = !visible;
-        } else if (visible) {
-            element.removeAttribute('hidden');
-        } else {
-            element.setAttribute('hidden', '');
-        }
-
-        element.setAttribute('aria-hidden', visible ? 'false' : 'true');
-        element.setAttribute('aria-disabled', visible ? 'false' : 'true');
-
-        if (!visible) {
-            if (!element.hasAttribute(TOGGLE_ARIA_TABINDEX_DATA)) {
-                const currentTabIndex = typeof element.tabIndex === 'number' ? element.tabIndex : NaN;
-                element.setAttribute(TOGGLE_ARIA_TABINDEX_DATA, Number.isNaN(currentTabIndex) ? '' : String(currentTabIndex));
-                element.setAttribute(TOGGLE_ARIA_TABINDEX_ATTR_FLAG, element.hasAttribute('tabindex') ? '1' : '0');
-            }
-
-            element.tabIndex = -1;
-        } else if (element.hasAttribute(TOGGLE_ARIA_TABINDEX_DATA)) {
-            const storedValue = element.getAttribute(TOGGLE_ARIA_TABINDEX_DATA);
-            const hadAttribute = element.getAttribute(TOGGLE_ARIA_TABINDEX_ATTR_FLAG) === '1';
-            const parsedValue = Number(storedValue);
-
-            if (Number.isNaN(parsedValue)) {
-                element.removeAttribute('tabindex');
-            } else {
-                element.tabIndex = parsedValue;
-                if (hadAttribute) {
-                    element.setAttribute('tabindex', storedValue);
-                } else {
-                    element.removeAttribute('tabindex');
-                }
-            }
-
-            element.removeAttribute(TOGGLE_ARIA_TABINDEX_DATA);
-            element.removeAttribute(TOGGLE_ARIA_TABINDEX_ATTR_FLAG);
-        }
-
-        if (manageDisplay && element.style && typeof element.style.display !== 'undefined') {
-            element.style.display = visible ? displayValue : 'none';
-        }
+        return `<svg${prefix} aria-hidden="true" focusable="false" role="presentation">`;
     });
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports.toggleAriaVisibility = toggleAriaVisibility;
 }
 
 function deepClone(value) {
@@ -3089,11 +3017,11 @@ class SidebarPreviewModule {
             .filter((icon) => icon && icon.url)
             .map((icon) => {
                 const label = this.escapeHtml(icon.label || icon.url);
-                const content = icon.iconHtml && icon.iconHtml.trim() !== ''
-                    ? icon.iconHtml
+                const iconMarkup = icon.iconHtml && icon.iconHtml.trim() !== ''
+                    ? makeInlineIconDecorative(icon.iconHtml)
                     : `<span class="no-icon-label">${label}</span>`;
 
-                return `<a href="#" data-preview-url="${this.escapeHtml(icon.url)}" aria-label="${label}">${content}</a>`;
+                return `<a href="#" data-preview-url="${this.escapeHtml(icon.url)}" aria-label="${label}">${iconMarkup}</a>`;
             })
             .join('');
 
@@ -7632,7 +7560,7 @@ jQuery(document).ready(function($) {
                 Object.keys(response.data).forEach(iconKey => {
                     const markup = response.data[iconKey];
                     if (typeof markup === 'string') {
-                        iconCache[iconKey] = markup;
+                        iconCache[iconKey] = makeInlineIconDecorative(markup);
                     }
                 });
 
