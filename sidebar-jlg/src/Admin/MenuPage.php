@@ -347,8 +347,19 @@ class MenuPage
             $this->version
         );
 
+        $defaultLegacyDependencies = [
+            'jquery',
+            'wp-color-picker',
+            'jquery-ui-sortable',
+            'wp-util',
+            'wp-data',
+            'wp-api-fetch',
+            'wp-element',
+            'wp-components',
+        ];
+
         $adminLegacyAsset = [
-            'dependencies' => ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'wp-data', 'wp-api-fetch', 'wp-element', 'wp-components'],
+            'dependencies' => $defaultLegacyDependencies,
             'version' => $this->version,
         ];
 
@@ -356,13 +367,25 @@ class MenuPage
         if (file_exists($legacyAssetPath)) {
             $maybeAsset = include $legacyAssetPath;
             if (is_array($maybeAsset)) {
+                if (isset($maybeAsset['dependencies']) && is_array($maybeAsset['dependencies'])) {
+                    $adminLegacyAsset['dependencies'] = array_values(
+                        array_unique(array_merge($defaultLegacyDependencies, $maybeAsset['dependencies']))
+                    );
+                    unset($maybeAsset['dependencies']);
+                }
+
+                if (isset($maybeAsset['version'])) {
+                    $adminLegacyAsset['version'] = (string) $maybeAsset['version'];
+                    unset($maybeAsset['version']);
+                }
+
                 $adminLegacyAsset = array_merge($adminLegacyAsset, $maybeAsset);
             }
         }
 
         $legacyDependencies = isset($adminLegacyAsset['dependencies']) && is_array($adminLegacyAsset['dependencies'])
             ? $adminLegacyAsset['dependencies']
-            : ['jquery'];
+            : $defaultLegacyDependencies;
         $legacyVersion = isset($adminLegacyAsset['version'])
             ? (string) $adminLegacyAsset['version']
             : $this->version;
