@@ -349,27 +349,19 @@ class MenuPage
 
         $defaultLegacyDependencies = ['jquery', 'wp-color-picker', 'jquery-ui-sortable', 'wp-util', 'wp-data', 'wp-api-fetch', 'wp-element', 'wp-components'];
         $adminLegacyAsset = [
-            'dependencies' => $defaultLegacyDependencies,
             'version' => $this->version,
         ];
 
         $legacyAssetPath = plugin_dir_path($this->pluginFile) . 'assets/build/admin-legacy.ts.asset.php';
+        $maybeDependencies = [];
         if (file_exists($legacyAssetPath)) {
             $maybeAsset = include $legacyAssetPath;
             if (is_array($maybeAsset)) {
-                $maybeDependencies = isset($maybeAsset['dependencies']) && is_array($maybeAsset['dependencies'])
-                    ? $maybeAsset['dependencies']
-                    : [];
-
-                if (!empty($maybeDependencies)) {
-                    $adminLegacyAsset['dependencies'] = array_values(
-                        array_unique(
-                            array_merge($defaultLegacyDependencies, $maybeDependencies)
-                        )
-                    );
-                }
-
                 if (isset($maybeAsset['dependencies'])) {
+                    if (is_array($maybeAsset['dependencies'])) {
+                        $maybeDependencies = $maybeAsset['dependencies'];
+                    }
+
                     unset($maybeAsset['dependencies']);
                 }
 
@@ -377,19 +369,26 @@ class MenuPage
             }
         }
 
-        $legacyDependencies = isset($adminLegacyAsset['dependencies']) && is_array($adminLegacyAsset['dependencies'])
-            ? $adminLegacyAsset['dependencies']
-            : ['jquery'];
+        $legacyDependencies = array_values(
+            array_unique(
+                array_merge($defaultLegacyDependencies, $maybeDependencies)
+            )
+        );
+
+        if (empty($legacyDependencies)) {
+            $legacyDependencies = $defaultLegacyDependencies;
+        }
 
         if (!in_array('wp-color-picker', $legacyDependencies, true)) {
             $legacyDependencies[] = 'wp-color-picker';
         }
 
-        $legacyDependencies = array_values(array_unique($legacyDependencies));
+        $adminLegacyAsset['dependencies'] = $legacyDependencies;
         $legacyVersion = isset($adminLegacyAsset['version'])
             ? (string) $adminLegacyAsset['version']
             : $this->version;
 
+        wp_enqueue_script('wp-color-picker');
         wp_enqueue_script(
             'sidebar-jlg-admin-legacy',
             plugin_dir_url($this->pluginFile) . 'assets/build/admin-legacy.ts.js',
