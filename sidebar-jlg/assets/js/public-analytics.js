@@ -103,10 +103,82 @@
                 return createNoopAnalytics();
             }
 
+            const MAX_QUEUE_SIZE = 100;
+            const FAILURE_THRESHOLD = 5;
+            const SUSPEND_DURATION = 30000;
+
             const queue = [];
             let sending = false;
             let retryDelay = 0;
             let retryTimeout = null;
+            let consecutiveFailures = 0;
+            let processingSuspended = false;
+            let suspensionTimeout = null;
+
+            const debugEnabled = isTruthy(config.debug);
+            const stateChangeCallback = typeof config.onQueueStateChange === 'function'
+                ? config.onQueueStateChange
+                : null;
+
+            function logDebugWarning(message, context) {
+                if (!debugEnabled || typeof console === 'undefined' || typeof console.warn !== 'function') {
+                    return;
+                }
+
+                if (typeof context !== 'undefined') {
+                    console.warn(message, context);
+                    return;
+                }
+
+                console.warn(message);
+            }
+
+            function notifyStateChange(state) {
+                if (!stateChangeCallback) {
+                    return;
+                }
+
+                try {
+                    stateChangeCallback(state);
+                } catch (error) {
+                    logDebugWarning('sidebarJLGAnalyticsFactory: onQueueStateChange callback failed', error);
+                }
+            }
+
+            function resumeProcessing() {
+                if (!processingSuspended) {
+                    return;
+                }
+
+                processingSuspended = false;
+                suspensionTimeout = null;
+                consecutiveFailures = 0;
+                notifyStateChange({
+                    status: 'resumed',
+                    timestamp: Date.now(),
+                });
+                processQueue();
+            }
+
+            function suspendProcessing() {
+                if (processingSuspended) {
+                    return;
+                }
+
+                processingSuspended = true;
+                notifyStateChange({
+                    status: 'suspended',
+                    reason: 'consecutive-failures',
+                    attempts: consecutiveFailures,
+                    timestamp: Date.now(),
+                });
+
+                if (suspensionTimeout) {
+                    clearTimeout(suspensionTimeout);
+                }
+
+                suspensionTimeout = setTimeout(resumeProcessing, SUSPEND_DURATION);
+            }
 
             function scheduleRetry() {
                 if (retryTimeout) {
@@ -129,7 +201,7 @@
             }
 
             function processQueue() {
-                if (sending) {
+                if (sending || processingSuspended) {
                     return;
                 }
 
@@ -144,9 +216,15 @@
                     .then(() => {
                         queue.shift();
                         resetRetry();
+                        consecutiveFailures = 0;
                     })
                     .catch(() => {
+                        consecutiveFailures += 1;
                         scheduleRetry();
+                        if (consecutiveFailures >= FAILURE_THRESHOLD) {
+                            queue.splice(0, queue.length);
+                            suspendProcessing();
+                        }
                     })
                     .finally(() => {
                         sending = false;
@@ -157,6 +235,11 @@
             }
 
             function enqueue(eventType, context) {
+                if (queue.length >= MAX_QUEUE_SIZE) {
+                    const dropped = queue.shift();
+                    logDebugWarning('sidebarJLGAnalyticsFactory: dropping oldest analytics event due to queue limit', dropped);
+                }
+
                 queue.push({ type: eventType, context });
                 processQueue();
             }
@@ -182,6 +265,10 @@
                 }
 
                 const pending = queue.splice(0, queue.length);
+                consecutiveFailures = 0;
+                if (processingSuspended) {
+                    resumeProcessing();
+                }
                 pending.forEach((event) => {
                     sendEvent(config, event, true).catch(() => {
                         // swallow flush errors
