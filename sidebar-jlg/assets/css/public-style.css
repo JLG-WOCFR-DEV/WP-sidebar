@@ -49,6 +49,102 @@
     box-shadow: var(--jlg-focus-ring-shadow, 0 0 0 3px rgba(34, 113, 177, 0.4)) !important;
 }
 
+/* Slider widget */
+.sidebar-widget--slider {
+    --widget-background: rgba(30, 41, 59, 0.95);
+    --widget-text: #e2e8f0;
+}
+
+.sidebar-widget__slides {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+.sidebar-widget__slide {
+    display: none;
+    background: rgba(15, 23, 42, 0.45);
+    border-radius: calc(var(--widget-radius) - 6px);
+    padding: 0.85rem;
+}
+
+.sidebar-widget__slide.is-active,
+.sidebar-widget__slide[aria-hidden="false"] {
+    display: block;
+}
+
+.sidebar-widget__slide-title {
+    display: block;
+    margin-bottom: 0.35rem;
+}
+
+.sidebar-widget__media {
+    margin-bottom: 0.75rem;
+}
+
+.sidebar-widget__media img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: calc(var(--widget-radius) - 10px);
+}
+
+.sidebar-widget__media-caption {
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    color: rgba(241, 245, 249, 0.75);
+}
+
+.sidebar-widget__slider-controls {
+    margin-top: 0.85rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sidebar-widget__slider-button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(15, 23, 42, 0.35);
+    color: inherit;
+    padding: 0.35rem 0.75rem;
+    border-radius: calc(var(--widget-radius) - 10px);
+    font-size: 0.85rem;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.sidebar-widget__slider-button:focus,
+.sidebar-widget__slider-button:focus-visible {
+    outline: 2px solid var(--widget-accent, rgba(59, 130, 246, 0.75));
+    outline-offset: 2px;
+}
+
+.sidebar-widget__slider-button:hover,
+.sidebar-widget__slider-button:focus-visible {
+    background: rgba(37, 99, 235, 0.45);
+    border-color: rgba(59, 130, 246, 0.7);
+}
+
+.sidebar-widget__slider-button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sidebar-widget__slider-status {
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgba(226, 232, 240, 0.8);
+}
+
+.sidebar-widget--slider .sidebar-widget__slides li {
+    cursor: default;
+}
+
 body {
     transition:
         padding-inline-start var(--transition-speed, 0.4s) ease,
