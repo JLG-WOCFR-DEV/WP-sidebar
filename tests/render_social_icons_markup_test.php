@@ -24,6 +24,7 @@ function assertSame($expected, $actual, string $message): void
 $allIcons = [
     'facebook_white'              => '<svg class="facebook"></svg>',
     'custom_my_brand'             => '<svg class="custom" focusable="true" role="presentation"></svg>',
+    'custom_accessible'           => '<svg class="custom-accessible" aria-labelledby="custom-title" data-test="keep"><title id="custom-title">Mon titre</title></svg>',
     'custom_accessible_label'     => '<svg class="custom-labeled" role="img" aria-label="Accessible"></svg>',
 ];
 

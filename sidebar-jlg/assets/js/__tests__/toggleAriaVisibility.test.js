@@ -130,7 +130,7 @@ describe('toggleAriaVisibility', () => {
         expect(element.getAttribute('aria-hidden')).toBe('false');
         expect(element.getAttribute('aria-disabled')).toBe('false');
         expect(element.getAttribute('tabindex')).toBe('2');
-        expect(element.style.display).toBe('inline-block');
+        expect(element.style.display).toBe('');
     });
 
     test('works with jQuery collections and removes temporary tabindex', () => {

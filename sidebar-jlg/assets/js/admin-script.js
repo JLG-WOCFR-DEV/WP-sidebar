@@ -29,9 +29,10 @@ function isDomElement(value) {
     return value && typeof value === 'object' && (value.nodeType === 1 || value.nodeType === 9);
 }
 
-function toggleAriaVisibility(element, isVisible) {
+function toggleAriaVisibility(element, isVisible, displayValue) {
     const elements = toElementArray(element);
     const shouldShow = !!isVisible;
+    const hasDisplayOverride = typeof displayValue === 'string';
 
     elements.forEach((item) => {
         if (!isDomElement(item)) {
@@ -46,20 +47,25 @@ function toggleAriaVisibility(element, isVisible) {
             target.setAttribute('aria-hidden', 'false');
             target.setAttribute('aria-disabled', 'false');
 
-            if (dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY] !== undefined) {
-                const previousDisplay = dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY];
-                if (previousDisplay) {
-                    target.style.display = previousDisplay;
-                } else {
-                    target.style.removeProperty('display');
-                }
-                delete dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY];
+            const hadStoredDisplay = dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY] !== undefined;
+            const previousDisplay = hadStoredDisplay ? dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY] : '';
+
+            if (hasDisplayOverride) {
+                target.style.display = displayValue;
+            } else if (hadStoredDisplay && previousDisplay) {
+                target.style.display = previousDisplay;
             } else {
                 target.style.removeProperty('display');
             }
 
-            if (dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY] !== undefined) {
-                const previousTabIndex = dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY];
+            if (hadStoredDisplay) {
+                delete dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY];
+            }
+
+            const hadStoredTabIndex = dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY] !== undefined;
+            const previousTabIndex = hadStoredTabIndex ? dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY] : '';
+
+            if (hadStoredTabIndex) {
                 if (previousTabIndex === '') {
                     target.removeAttribute('tabindex');
                 } else {
@@ -74,14 +80,10 @@ function toggleAriaVisibility(element, isVisible) {
         }
 
         if (dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY] === undefined) {
-            let previousDisplay = '';
-            if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
-                const computed = window.getComputedStyle(target);
-                if (computed && computed.display && computed.display !== 'none') {
-                    previousDisplay = computed.display;
-                }
-            }
-            dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY] = previousDisplay;
+            const inlineDisplay = target.style && typeof target.style.display === 'string'
+                ? target.style.display
+                : '';
+            dataset[TOGGLE_ARIA_PREVIOUS_DISPLAY_KEY] = inlineDisplay || '';
         }
 
         if (dataset[TOGGLE_ARIA_PREVIOUS_TAB_INDEX_KEY] === undefined) {
