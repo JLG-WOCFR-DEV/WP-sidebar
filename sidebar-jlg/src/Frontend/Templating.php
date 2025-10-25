@@ -62,14 +62,21 @@ class Templating
 
             $iconKey = isset($social['icon']) ? (string) $social['icon'] : '';
             $iconMarkup = $iconKey !== '' && isset($allIcons[$iconKey]) ? (string) $allIcons[$iconKey] : null;
-            $isDecorativeInlineIcon = false;
+            $shouldWrapDecorativeIcon = false;
 
             if ($iconMarkup !== null && stripos($iconMarkup, '<svg') !== false) {
-                $iconMarkup = self::makeInlineIconDecorative($iconMarkup);
-                $isDecorativeInlineIcon = true;
-            }
+                $hasExplicitAccessibleLabel = self::hasExplicitAccessibleLabel($iconMarkup);
 
-            if ($iconMarkup !== null) {
+                if (!$hasExplicitAccessibleLabel) {
+                    $iconMarkup = self::makeInlineIconDecorative($iconMarkup);
+                }
+
+                $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
+
+                if (!$hasExplicitAccessibleLabel) {
+                    $shouldWrapDecorativeIcon = self::shouldWrapDecorativeIcon($iconMarkup);
+                }
+            } elseif ($iconMarkup !== null) {
                 $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
             }
 
@@ -92,7 +99,7 @@ class Templating
 
             $content = $iconMarkup ?? sprintf('<span class="no-icon-label">%s</span>', esc_html($ariaLabel));
 
-            if ($isDecorativeInlineIcon && $iconMarkup !== null) {
+            if ($shouldWrapDecorativeIcon && $iconMarkup !== null) {
                 $content = sprintf('<span aria-hidden="true" focusable="false">%s</span>', $iconMarkup);
             }
 
@@ -129,6 +136,31 @@ class Templating
             esc_attr($classes),
             implode('', $iconsMarkup)
         );
+    }
+
+    private static function hasExplicitAccessibleLabel(string $markup): bool
+    {
+        if (stripos($markup, 'aria-label=') !== false) {
+            return true;
+        }
+
+        if (stripos($markup, 'role="img"') !== false) {
+            return true;
+        }
+
+        if (stripos($markup, "role='img'") !== false) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static function shouldWrapDecorativeIcon(string $markup): bool
+    {
+        return stripos($markup, '<title') !== false
+            || stripos($markup, '<desc') !== false
+            || stripos($markup, 'aria-labelledby=') !== false
+            || stripos($markup, 'aria-describedby=') !== false;
     }
 
     private static function humanizeIconKey(string $iconKey): string
