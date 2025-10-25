@@ -236,6 +236,7 @@ class AuditRunner
                 $remaining = max(0.0, $this->maxRuntime - $elapsed);
                 $seconds = (int) floor($remaining);
                 $microseconds = (int) round(($remaining - $seconds) * 1000000);
+                $microseconds = min(999999, $microseconds);
 
                 if ($seconds === 0 && $microseconds === 0) {
                     $microseconds = 200000; // 200 ms
