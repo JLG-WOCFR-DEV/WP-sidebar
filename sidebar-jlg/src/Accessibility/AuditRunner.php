@@ -7,11 +7,15 @@ use function abs;
 use function apply_filters;
 use function array_map;
 use function array_unique;
+use function ceil;
 use function esc_url_raw;
 use function escapeshellarg;
 use function escapeshellcmd;
 use function explode;
+use function fclose;
+use function feof;
 use function filter_var;
+use function floor;
 use function function_exists;
 use function in_array;
 use function ini_get;
@@ -23,10 +27,13 @@ use function is_file;
 use function is_resource;
 use function is_string;
 use function json_decode;
+use function max;
 use function microtime;
 use function preg_match;
 use function preg_replace;
 use function preg_split;
+use function proc_get_status;
+use function proc_terminate;
 use function shell_exec;
 use function sprintf;
 use function str_contains;
@@ -34,21 +41,28 @@ use function strtolower;
 use function strpos;
 use function strtoupper;
 use function substr;
+use function stream_select;
+use function stream_set_blocking;
 use function trim;
 use const FILTER_VALIDATE_URL;
 use const PHP_OS;
+use const PHP_EOL;
 
 class AuditRunner
 {
+    private const DEFAULT_MAX_RUNTIME = 60.0;
+
     private string $pluginFile;
     private string $pluginDir;
     private string $projectRoot;
+    private float $maxRuntime;
 
-    public function __construct(string $pluginFile)
+    public function __construct(string $pluginFile, float $maxRuntime = self::DEFAULT_MAX_RUNTIME)
     {
         $this->pluginFile = $pluginFile;
         $this->pluginDir = dirname($pluginFile);
         $this->projectRoot = $this->resolveProjectRoot($this->pluginDir);
+        $this->maxRuntime = $maxRuntime > 0 ? $maxRuntime : self::DEFAULT_MAX_RUNTIME;
     }
 
     /**
@@ -178,25 +192,181 @@ class AuditRunner
 
         if (isset($pipes[0]) && is_resource($pipes[0])) {
             fclose($pipes[0]);
+            $pipes[0] = null;
         }
 
         $stdout = '';
         $stderr = '';
+        $timeoutReached = false;
+
+        $streamMap = [];
 
         if (isset($pipes[1]) && is_resource($pipes[1])) {
-            $stdout = stream_get_contents($pipes[1]) ?: '';
-            fclose($pipes[1]);
+            stream_set_blocking($pipes[1], false);
+            $streamMap[(int) $pipes[1]] = ['resource' => $pipes[1], 'type' => 'stdout'];
         }
 
         if (isset($pipes[2]) && is_resource($pipes[2])) {
-            $stderr = stream_get_contents($pipes[2]) ?: '';
-            fclose($pipes[2]);
+            stream_set_blocking($pipes[2], false);
+            $streamMap[(int) $pipes[2]] = ['resource' => $pipes[2], 'type' => 'stderr'];
         }
 
-        $exitCode = proc_close($process);
+        try {
+            while ($streamMap !== []) {
+                $elapsed = microtime(true) - $start;
+                if ($elapsed >= $this->maxRuntime) {
+                    $timeoutReached = true;
+                    break;
+                }
+
+                $readStreams = [];
+                foreach ($streamMap as $entry) {
+                    if (isset($entry['resource']) && is_resource($entry['resource'])) {
+                        $readStreams[] = $entry['resource'];
+                    }
+                }
+
+                if ($readStreams === []) {
+                    break;
+                }
+
+                $write = null;
+                $except = null;
+
+                $remaining = max(0.0, $this->maxRuntime - $elapsed);
+                $seconds = (int) floor($remaining);
+                $microseconds = (int) round(($remaining - $seconds) * 1000000);
+
+                if ($seconds === 0 && $microseconds === 0) {
+                    $microseconds = 200000; // 200 ms
+                }
+
+                $selected = @stream_select($readStreams, $write, $except, $seconds, $microseconds);
+
+                if ($selected === false) {
+                    break;
+                }
+
+                if ($selected === 0) {
+                    $status = proc_get_status($process);
+                    if (! ($status['running'] ?? false)) {
+                        foreach ($streamMap as $key => $entry) {
+                            $resource = $entry['resource'] ?? null;
+                            if (is_resource($resource) && feof($resource)) {
+                                unset($streamMap[$key]);
+                            }
+                        }
+                    }
+
+                    continue;
+                }
+
+                foreach ($readStreams as $stream) {
+                    $key = (int) $stream;
+                    if (! isset($streamMap[$key])) {
+                        continue;
+                    }
+
+                    $chunk = '';
+                    while (($line = fgets($stream)) !== false) {
+                        $chunk .= $line;
+                    }
+
+                    if ($chunk !== '') {
+                        if (($streamMap[$key]['type'] ?? '') === 'stderr') {
+                            $stderr .= $chunk;
+                        } else {
+                            $stdout .= $chunk;
+                        }
+                    }
+
+                    if (feof($stream)) {
+                        unset($streamMap[$key]);
+                    }
+                }
+            }
+
+            if (! $timeoutReached) {
+                foreach ($streamMap as $key => $entry) {
+                    $resource = $entry['resource'] ?? null;
+                    if (! is_resource($resource)) {
+                        continue;
+                    }
+
+                    $remaining = stream_get_contents($resource);
+                    if ($remaining !== false && $remaining !== '') {
+                        if (($entry['type'] ?? '') === 'stderr') {
+                            $stderr .= $remaining;
+                        } else {
+                            $stdout .= $remaining;
+                        }
+                    }
+
+                    if (feof($resource)) {
+                        unset($streamMap[$key]);
+                    }
+                }
+            }
+        } finally {
+            foreach ($pipes as &$pipe) {
+                if (is_resource($pipe)) {
+                    fclose($pipe);
+                }
+
+                $pipe = null;
+            }
+            unset($pipe);
+        }
+
+        $status = proc_get_status($process);
+
+        if ($timeoutReached) {
+            if ($status['running'] ?? false) {
+                @proc_terminate($process);
+            }
+
+            $exitCode = proc_close($process);
+            $durationMs = (int) round(abs((microtime(true) - $start) * 1000));
+
+            $logOutput = sprintf(
+                'Pa11y interrompu après %.2f secondes (timeout fixé à %.2f secondes).',
+                $durationMs / 1000,
+                $this->maxRuntime
+            );
+
+            $extraOutput = $stderr !== '' ? $stderr : $stdout;
+            if ($extraOutput !== '') {
+                $logOutput .= PHP_EOL . $extraOutput;
+            }
+
+            return [
+                'success' => false,
+                'message' => sprintf(
+                    __('Pa11y a dépassé la durée maximale d’exécution (%d secondes).', 'sidebar-jlg'),
+                    (int) ceil($this->maxRuntime)
+                ),
+                'log' => $this->normalizeLogOutput($logOutput),
+                'exit_code' => $exitCode,
+                'timeout' => true,
+            ];
+        }
+
+        $running = $status['running'] ?? false;
+        $exitCode = null;
+
+        if ($running) {
+            $exitCode = proc_close($process);
+        } else {
+            $exitCode = $status['exitcode'] ?? null;
+            $closeResult = proc_close($process);
+            if ($exitCode === null || $exitCode === -1) {
+                $exitCode = $closeResult;
+            }
+        }
+
         $durationMs = (int) round(abs((microtime(true) - $start) * 1000));
 
-        if ($exitCode !== 0) {
+        if ($exitCode !== 0 || ($status['signaled'] ?? false)) {
             return [
                 'success' => false,
                 'message' => __('Pa11y a retourné une erreur. Consultez les journaux pour plus de détails.', 'sidebar-jlg'),
