@@ -832,6 +832,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ? window.matchMedia('(prefers-reduced-motion: reduce)')
         : null;
     let isReducedMotion = prefersReducedMotionQuery ? prefersReducedMotionQuery.matches : false;
+    const sliderControllers = [];
 
     // Appliquer la classe d'animation
     const animationType = (typeof sidebarSettings !== 'undefined' && sidebarSettings.animation_type) ? sidebarSettings.animation_type : 'slide-left';
@@ -855,6 +856,11 @@ document.addEventListener('DOMContentLoaded', function() {
         isReducedMotion = event.matches;
         applyAnimationPreference();
         applyHoverEffect();
+        sliderControllers.forEach((controller) => {
+            if (controller && typeof controller.handleReducedMotionChange === 'function') {
+                controller.handleReducedMotionChange(isReducedMotion);
+            }
+        });
     }
 
     applyAnimationPreference();
@@ -950,6 +956,301 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+
+    function setupSliderWidgets() {
+        const sliderWidgets = Array.from(sidebar.querySelectorAll('.sidebar-widget--slider'));
+        if (!sliderWidgets.length) {
+            return;
+        }
+
+        sliderWidgets.forEach((widget) => {
+            if (!widget) {
+                return;
+            }
+
+            const list = widget.querySelector('.sidebar-widget__slides');
+            const slides = list ? Array.from(list.querySelectorAll('.sidebar-widget__slide')) : [];
+            const prevButton = widget.querySelector('[data-slider-action="prev"]');
+            const nextButton = widget.querySelector('[data-slider-action="next"]');
+            const toggleButton = widget.querySelector('[data-slider-action="toggle"]');
+            const statusElement = widget.querySelector('[data-slider-status]');
+            const totalSlides = slides.length;
+
+            if (!list || totalSlides === 0) {
+                if (prevButton) {
+                    prevButton.disabled = true;
+                }
+                if (nextButton) {
+                    nextButton.disabled = true;
+                }
+                if (toggleButton) {
+                    toggleButton.disabled = true;
+                }
+                if (statusElement) {
+                    statusElement.textContent = '';
+                }
+                return;
+            }
+
+            let currentIndex = 0;
+            let autoplayTimer = null;
+            const autoplayConfigured = widget.getAttribute('data-widget-autoplay') === 'true';
+            let autoplayDelay = parseInt(widget.getAttribute('data-widget-autoplay-delay'), 10);
+            if (!Number.isFinite(autoplayDelay) || autoplayDelay < 1000) {
+                autoplayDelay = 4500;
+            }
+
+            let isUserPaused = !autoplayConfigured;
+            let isFocusPaused = false;
+            let isPreferencePaused = isReducedMotion;
+
+            const statusTemplate = widget.getAttribute('data-slider-status-template') || '';
+            const liveWhenPlaying = widget.getAttribute('data-slider-live-playing') || 'off';
+            const liveWhenPaused = widget.getAttribute('data-slider-live-paused') || 'polite';
+            const interactionEventName = widget.getAttribute('data-widget-interaction-event');
+            const analyticsTarget = getWidgetAnalyticsTarget(widget);
+
+            const baseToggleLabel = toggleButton ? (toggleButton.textContent || '') : '';
+            const toggleLabels = {
+                play: toggleButton ? (toggleButton.getAttribute('data-label-play') || baseToggleLabel || 'Lecture') : 'Lecture',
+                pause: toggleButton ? (toggleButton.getAttribute('data-label-pause') || baseToggleLabel || 'Pause') : 'Pause',
+            };
+
+            function formatStatus(current, total) {
+                const template = statusTemplate || 'Diapositive %1$s sur %2$s';
+                return template.replace('%1$s', String(current)).replace('%2$s', String(total));
+            }
+
+            function updateStatus() {
+                if (!statusElement) {
+                    return;
+                }
+                statusElement.textContent = formatStatus(currentIndex + 1, totalSlides);
+            }
+
+            function setSlide(index) {
+                const normalized = ((index % totalSlides) + totalSlides) % totalSlides;
+                currentIndex = normalized;
+                slides.forEach((slide, slideIndex) => {
+                    const isActive = slideIndex === normalized;
+                    slide.classList.toggle('is-active', isActive);
+                    slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+                });
+                const activeSlide = slides[normalized];
+                if (list && activeSlide && activeSlide.id) {
+                    list.setAttribute('aria-activedescendant', activeSlide.id);
+                }
+                updateStatus();
+                widget.setAttribute('data-slider-current-index', String(normalized));
+            }
+
+            function updateControlAvailability() {
+                const disableNav = totalSlides <= 1;
+                if (prevButton) {
+                    prevButton.disabled = disableNav;
+                }
+                if (nextButton) {
+                    nextButton.disabled = disableNav;
+                }
+                if (toggleButton) {
+                    toggleButton.disabled = totalSlides <= 1;
+                }
+            }
+
+            function shouldAutoplay() {
+                if (totalSlides <= 1) {
+                    return false;
+                }
+                if (isUserPaused) {
+                    return false;
+                }
+                if (isFocusPaused) {
+                    return false;
+                }
+                if (isPreferencePaused) {
+                    return false;
+                }
+                return true;
+            }
+
+            function clearAutoplayTimer() {
+                if (autoplayTimer) {
+                    window.clearTimeout(autoplayTimer);
+                    autoplayTimer = null;
+                }
+            }
+
+            function updateToggleButton() {
+                if (!toggleButton) {
+                    return;
+                }
+                const playing = shouldAutoplay();
+                const pauseLabel = toggleLabels.pause || toggleLabels.play;
+                const playLabel = toggleLabels.play || toggleLabels.pause;
+                toggleButton.textContent = playing ? pauseLabel : playLabel;
+                toggleButton.setAttribute('aria-pressed', playing ? 'true' : 'false');
+                toggleButton.setAttribute('data-slider-state', playing ? 'playing' : 'paused');
+            }
+
+            function syncAutoplayState() {
+                clearAutoplayTimer();
+                updateControlAvailability();
+                updateToggleButton();
+                const playing = shouldAutoplay();
+                widget.setAttribute('data-slider-state', playing ? 'playing' : 'paused');
+                widget.setAttribute('aria-live', playing ? liveWhenPlaying : liveWhenPaused);
+                if (playing) {
+                    autoplayTimer = window.setTimeout(() => {
+                        moveToIndex(currentIndex + 1, { action: 'autoplay', user: false });
+                    }, autoplayDelay);
+                }
+            }
+
+            function notifyAnalytics(action) {
+                recordSessionInteraction('widget_slider_control');
+                if (!analyticsEnabled || !interactionEventName) {
+                    return;
+                }
+                dispatchAnalytics(interactionEventName, {
+                    target: analyticsTarget,
+                    action,
+                    slide_index: currentIndex + 1,
+                    total_slides: totalSlides,
+                });
+            }
+
+            function moveToIndex(index, options = {}) {
+                if (!totalSlides) {
+                    return;
+                }
+                const normalized = ((index % totalSlides) + totalSlides) % totalSlides;
+                const { user = false, action } = options;
+                setSlide(normalized);
+                if (user) {
+                    markWidgetInteraction(widget);
+                    if (typeof action === 'string' && action !== '') {
+                        notifyAnalytics(action);
+                    } else {
+                        notifyAnalytics('navigate');
+                    }
+                }
+                syncAutoplayState();
+            }
+
+            function pauseForInteraction() {
+                if (!isFocusPaused) {
+                    isFocusPaused = true;
+                    syncAutoplayState();
+                }
+            }
+
+            function resumeFromInteraction() {
+                if (isFocusPaused) {
+                    isFocusPaused = false;
+                    syncAutoplayState();
+                }
+            }
+
+            if (prevButton) {
+                prevButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    moveToIndex(currentIndex - 1, { user: true, action: 'previous' });
+                });
+            }
+
+            if (nextButton) {
+                nextButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    moveToIndex(currentIndex + 1, { user: true, action: 'next' });
+                });
+            }
+
+            if (toggleButton) {
+                toggleButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const playing = shouldAutoplay();
+                    if (playing) {
+                        isUserPaused = true;
+                        notifyAnalytics('pause');
+                    } else {
+                        isUserPaused = false;
+                        isPreferencePaused = false;
+                        notifyAnalytics('play');
+                    }
+                    markWidgetInteraction(widget);
+                    syncAutoplayState();
+                });
+            }
+
+            if (list) {
+                list.addEventListener('keydown', (event) => {
+                    if (event.defaultPrevented) {
+                        return;
+                    }
+                    switch (event.key) {
+                        case 'ArrowRight':
+                        case 'ArrowDown':
+                            event.preventDefault();
+                            moveToIndex(currentIndex + 1, { user: true, action: 'next' });
+                            break;
+                        case 'ArrowLeft':
+                        case 'ArrowUp':
+                            event.preventDefault();
+                            moveToIndex(currentIndex - 1, { user: true, action: 'previous' });
+                            break;
+                        case 'Home':
+                            event.preventDefault();
+                            moveToIndex(0, { user: true, action: 'first' });
+                            break;
+                        case 'End':
+                            event.preventDefault();
+                            moveToIndex(totalSlides - 1, { user: true, action: 'last' });
+                            break;
+                        case ' ': // Space
+                        case 'Spacebar':
+                            if (toggleButton) {
+                                event.preventDefault();
+                                toggleButton.click();
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                });
+            }
+
+            widget.addEventListener('focusin', pauseForInteraction);
+            widget.addEventListener('focusout', () => {
+                window.setTimeout(() => {
+                    if (!widget.contains(document.activeElement)) {
+                        resumeFromInteraction();
+                    }
+                }, 50);
+            });
+            widget.addEventListener('mouseenter', pauseForInteraction);
+            widget.addEventListener('mouseleave', () => {
+                resumeFromInteraction();
+            });
+            widget.addEventListener('touchstart', pauseForInteraction, { passive: true });
+            widget.addEventListener('touchend', () => {
+                window.setTimeout(resumeFromInteraction, 400);
+            });
+            widget.addEventListener('touchcancel', () => {
+                window.setTimeout(resumeFromInteraction, 400);
+            });
+
+            setSlide(currentIndex);
+            syncAutoplayState();
+            sliderControllers.push({
+                handleReducedMotionChange(nextValue) {
+                    isPreferencePaused = nextValue;
+                    syncAutoplayState();
+                },
+            });
+        });
+    }
+
+    setupSliderWidgets();
 
     const SUBMENU_OPEN_CLASS = 'is-open';
     const SUBMENU_TOGGLE_SELECTOR = 'button.submenu-toggle';

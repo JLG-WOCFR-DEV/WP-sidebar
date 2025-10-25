@@ -802,15 +802,39 @@ function initializeWidgetBuilderInterface({ container, hiddenField, schemas: pro
                 const list = document.createElement('div');
                 list.className = 'sidebar-jlg-widget-field__repeater';
 
+                const ensureItemShape = (item) => {
+                    if (!item || typeof item !== 'object') {
+                        return { heading: '', text: '', media: '', media_alt: '', caption: '' };
+                    }
+
+                    return {
+                        heading: typeof item.heading === 'string' ? item.heading : '',
+                        text: typeof item.text === 'string' ? item.text : '',
+                        media: typeof item.media === 'string' ? item.media : '',
+                        media_alt: typeof item.media_alt === 'string' ? item.media_alt : '',
+                        caption: typeof item.caption === 'string' ? item.caption : '',
+                    };
+                };
+
+                const supportsMediaLibrary = typeof window !== 'undefined'
+                    && window.wp
+                    && window.wp.media
+                    && typeof window.wp.media === 'function';
+
                 const renderItems = () => {
                     list.innerHTML = '';
-                    items.forEach((item, index) => {
+
+                    items.forEach((rawItem, index) => {
+                        const item = ensureItemShape(rawItem);
+                        items[index] = item;
+
                         const card = document.createElement('div');
                         card.className = 'sidebar-jlg-widget-field__repeater-item';
+
                         const headingInput = document.createElement('input');
                         headingInput.type = 'text';
                         headingInput.placeholder = getI18nString('widgetsRepeaterHeading', 'Titre');
-                        headingInput.value = typeof item.heading === 'string' ? item.heading : '';
+                        headingInput.value = item.heading;
                         headingInput.addEventListener('input', () => {
                             item.heading = headingInput.value;
                             updateWidgetValue(widget.id, path, items);
@@ -818,9 +842,107 @@ function initializeWidgetBuilderInterface({ container, hiddenField, schemas: pro
 
                         const textArea = document.createElement('textarea');
                         textArea.placeholder = getI18nString('widgetsRepeaterContent', 'Contenu');
-                        textArea.value = typeof item.text === 'string' ? item.text : '';
+                        textArea.value = item.text;
                         textArea.addEventListener('input', () => {
                             item.text = textArea.value;
+                            updateWidgetValue(widget.id, path, items);
+                        });
+
+                        const mediaFieldset = document.createElement('div');
+                        mediaFieldset.className = 'sidebar-jlg-widget-field__repeater-media';
+
+                        const mediaInput = document.createElement('input');
+                        mediaInput.type = 'url';
+                        mediaInput.placeholder = getI18nString('widgetsRepeaterMedia', 'Image (URL)');
+                        mediaInput.value = item.media;
+                        mediaInput.addEventListener('input', () => {
+                            item.media = mediaInput.value.trim();
+                            updateWidgetValue(widget.id, path, items);
+                        });
+                        mediaFieldset.appendChild(mediaInput);
+
+                        const altInput = document.createElement('input');
+                        altInput.type = 'text';
+                        altInput.placeholder = getI18nString('widgetsRepeaterMediaAlt', 'Texte alternatif');
+                        altInput.value = item.media_alt;
+                        altInput.addEventListener('input', () => {
+                            item.media_alt = altInput.value;
+                            updateWidgetValue(widget.id, path, items);
+                        });
+
+                        if (supportsMediaLibrary) {
+                            const actions = document.createElement('div');
+                            actions.className = 'sidebar-jlg-widget-field__repeater-media-actions';
+
+                            const chooseButton = document.createElement('button');
+                            chooseButton.type = 'button';
+                            chooseButton.className = 'button button-secondary';
+                            chooseButton.textContent = getI18nString('widgetsRepeaterMediaChoose', 'Choisir une image');
+                            chooseButton.addEventListener('click', (event) => {
+                                event.preventDefault();
+                                const frame = window.wp.media({
+                                    title: getI18nString('widgetsRepeaterMediaChoose', 'Choisir une image'),
+                                    button: {
+                                        text: getI18nString('widgetsRepeaterMediaUse', 'Utiliser cette image'),
+                                    },
+                                    multiple: false,
+                                    library: {
+                                        type: ['image'],
+                                    },
+                                });
+
+                                frame.on('select', () => {
+                                    const selection = frame.state().get('selection');
+                                    const attachment = selection && selection.first ? selection.first() : null;
+                                    if (!attachment || typeof attachment.toJSON !== 'function') {
+                                        return;
+                                    }
+
+                                    const data = attachment.toJSON();
+                                    const url = data && typeof data.url === 'string' ? data.url : '';
+                                    if (url) {
+                                        mediaInput.value = url;
+                                        item.media = url;
+                                    }
+
+                                    const altText = data && typeof data.alt === 'string' ? data.alt : '';
+                                    if (altText && !item.media_alt) {
+                                        altInput.value = altText;
+                                        item.media_alt = altText;
+                                    }
+
+                                    updateWidgetValue(widget.id, path, items);
+                                });
+
+                                frame.open();
+                            });
+
+                            const removeMediaButton = document.createElement('button');
+                            removeMediaButton.type = 'button';
+                            removeMediaButton.className = 'button-link';
+                            removeMediaButton.textContent = getI18nString('widgetsRepeaterMediaRemove', 'Retirer l’image');
+                            removeMediaButton.addEventListener('click', (event) => {
+                                event.preventDefault();
+                                mediaInput.value = '';
+                                altInput.value = '';
+                                item.media = '';
+                                item.media_alt = '';
+                                updateWidgetValue(widget.id, path, items);
+                            });
+
+                            actions.appendChild(chooseButton);
+                            actions.appendChild(removeMediaButton);
+                            mediaFieldset.appendChild(actions);
+                        }
+
+                        mediaFieldset.appendChild(altInput);
+
+                        const captionInput = document.createElement('input');
+                        captionInput.type = 'text';
+                        captionInput.placeholder = getI18nString('widgetsRepeaterCaption', 'Légende');
+                        captionInput.value = item.caption;
+                        captionInput.addEventListener('input', () => {
+                            item.caption = captionInput.value;
                             updateWidgetValue(widget.id, path, items);
                         });
 
@@ -836,6 +958,8 @@ function initializeWidgetBuilderInterface({ container, hiddenField, schemas: pro
 
                         card.appendChild(headingInput);
                         card.appendChild(textArea);
+                        card.appendChild(mediaFieldset);
+                        card.appendChild(captionInput);
                         card.appendChild(removeButton);
 
                         list.appendChild(card);
@@ -849,7 +973,7 @@ function initializeWidgetBuilderInterface({ container, hiddenField, schemas: pro
                 addItemButton.className = 'button';
                 addItemButton.textContent = getI18nString('widgetsRepeaterAdd', 'Ajouter un élément');
                 addItemButton.addEventListener('click', () => {
-                    items.push({ heading: '', text: '' });
+                    items.push({ heading: '', text: '', media: '', media_alt: '', caption: '' });
                     updateWidgetValue(widget.id, path, items);
                     renderItems();
                 });

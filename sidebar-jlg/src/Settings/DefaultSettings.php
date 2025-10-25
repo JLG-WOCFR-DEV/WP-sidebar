@@ -2,6 +2,8 @@
 
 namespace JLG\Sidebar\Settings;
 
+use function __;
+
 class DefaultSettings
 {
     public const WIDGET_SCHEMAS = [
@@ -199,6 +201,9 @@ class DefaultSettings
                         [
                             'heading' => 'Satisfaction client',
                             'text' => '95% des utilisateurs recommandent notre solution.',
+                            'media' => '',
+                            'media_alt' => '',
+                            'caption' => '',
                         ],
                     ],
                     'schema' => [
@@ -217,7 +222,22 @@ class DefaultSettings
                             'label' => 'Image (URL)',
                             'default' => '',
                         ],
+                        'media_alt' => [
+                            'type' => 'text',
+                            'label' => __('Texte alternatif', 'sidebar-jlg'),
+                            'default' => '',
+                        ],
+                        'caption' => [
+                            'type' => 'text',
+                            'label' => __('Légende', 'sidebar-jlg'),
+                            'default' => '',
+                        ],
                     ],
+                ],
+                'controls_description' => [
+                    'type' => 'textarea',
+                    'label' => __('Consigne d’utilisation des contrôles', 'sidebar-jlg'),
+                    'default' => '',
                 ],
             ],
             'style' => [
