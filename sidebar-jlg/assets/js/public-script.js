@@ -2024,15 +2024,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (successMessage) {
             successMessage.classList.add('is-visible');
 
-            if (successMessage.getAttribute('role') !== 'status') {
+            if (!successMessage.hasAttribute('role')) {
                 successMessage.setAttribute('role', 'status');
             }
 
-            if (successMessage.getAttribute('aria-live') !== 'polite') {
+            if (!successMessage.hasAttribute('aria-live')) {
                 successMessage.setAttribute('aria-live', 'polite');
             }
 
-            if (successMessage.getAttribute('aria-atomic') !== 'true') {
+            if (!successMessage.hasAttribute('aria-atomic')) {
                 successMessage.setAttribute('aria-atomic', 'true');
             }
         }
