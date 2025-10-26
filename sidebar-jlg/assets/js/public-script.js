@@ -2023,8 +2023,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const successMessage = widgetElement.querySelector('[data-widget-success-message]');
         if (successMessage) {
             successMessage.classList.add('is-visible');
-            successMessage.setAttribute('role', 'status');
-            successMessage.setAttribute('aria-live', 'polite');
+
+            if (!successMessage.hasAttribute('role')) {
+                successMessage.setAttribute('role', 'status');
+            }
+
+            if (!successMessage.hasAttribute('aria-live')) {
+                successMessage.setAttribute('aria-live', 'polite');
+            }
+
+            if (!successMessage.hasAttribute('aria-atomic')) {
+                successMessage.setAttribute('aria-atomic', 'true');
+            }
         }
 
         if (form.hasAttribute('data-widget-form')) {
