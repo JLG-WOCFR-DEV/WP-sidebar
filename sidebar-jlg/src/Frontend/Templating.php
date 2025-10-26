@@ -161,6 +161,14 @@ class Templating
 
     private static function shouldWrapDecorativeIcon(string $markup): bool
     {
+        if (stripos($markup, '<title') !== false || stripos($markup, '<desc') !== false) {
+            $label = self::extractSvgTextLabel($markup);
+
+            if ($label !== null) {
+                return false;
+            }
+        }
+
         return stripos($markup, '<title') !== false
             || stripos($markup, '<desc') !== false
             || stripos($markup, 'aria-labelledby=') !== false
