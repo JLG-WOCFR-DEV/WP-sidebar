@@ -99,7 +99,13 @@ $style_attribute = $style_rules !== [] ? ' style="' . esc_attr( implode( ';', $s
         </div>
 
         <?php if ( $success_message !== '' ) : ?>
-            <p class="sidebar-widget__success" data-widget-success-message><?php echo esc_html( $success_message ); ?></p>
+            <p
+                class="sidebar-widget__success"
+                data-widget-success-message
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+            ><?php echo esc_html( $success_message ); ?></p>
         <?php endif; ?>
     </div>
 </div>
