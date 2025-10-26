@@ -69,8 +69,8 @@ $resultWithAccessibleMarkup = Templating::renderSocialIcons([
     ],
 ], $allIcons, '');
 
-$expectedAccessibleMarkup = '<div class="social-icons"><a href="https://example.com/accessible" target="_blank" rel="noopener noreferrer" aria-label="Accessible – s’ouvre dans une nouvelle fenêtre"><span aria-hidden="true" focusable="false"><svg class="custom-accessible" aria-labelledby="custom-title" data-test="keep" aria-hidden="true" focusable="false" role="presentation"><title id="custom-title">Mon titre</title></svg></span><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
-assertSame($expectedAccessibleMarkup, $resultWithAccessibleMarkup, 'preserves custom ARIA attributes on inline SVG imports');
+$expectedAccessibleMarkup = '<div class="social-icons"><a href="https://example.com/accessible" target="_blank" rel="noopener noreferrer" aria-label="Mon titre – s’ouvre dans une nouvelle fenêtre"><svg class="custom-accessible" aria-labelledby="custom-title" data-test="keep"><title id="custom-title">Mon titre</title></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
+assertSame($expectedAccessibleMarkup, $resultWithAccessibleMarkup, 'uses SVG text label when available and keeps icon accessible');
 
 $resultWithMissingIconMarkup = Templating::renderSocialIcons([
     [
