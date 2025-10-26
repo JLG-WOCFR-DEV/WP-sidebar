@@ -63,24 +63,22 @@ class Templating
             $iconKey = isset($social['icon']) ? (string) $social['icon'] : '';
             $iconMarkup = $iconKey !== '' && isset($allIcons[$iconKey]) ? (string) $allIcons[$iconKey] : null;
             $shouldWrapDecorativeIcon = false;
+            $extractedSvgLabel = null;
 
             if ($iconMarkup !== null && stripos($iconMarkup, '<svg') !== false) {
+                $extractedSvgLabel = self::extractSvgTextLabel($iconMarkup);
                 $hasExplicitAccessibleLabel = self::hasExplicitAccessibleLabel($iconMarkup);
 
                 if (!$hasExplicitAccessibleLabel) {
                     $iconMarkup = self::makeInlineIconDecorative($iconMarkup);
-                }
-
-                $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
-
-                if (!$hasExplicitAccessibleLabel) {
+                    $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
                     $shouldWrapDecorativeIcon = self::shouldWrapDecorativeIcon($iconMarkup);
                 }
             } elseif ($iconMarkup !== null) {
                 $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
             }
 
-            $defaultLabel = self::humanizeIconKey($iconKey);
+            $defaultLabel = $extractedSvgLabel ?? self::humanizeIconKey($iconKey);
             $ariaLabel = $customLabel !== '' ? $customLabel : $defaultLabel;
 
             $href = esc_url($social['url']);
@@ -144,15 +142,21 @@ class Templating
             return true;
         }
 
-        if (stripos($markup, 'role="img"') !== false) {
+        if (stripos($markup, 'aria-labelledby=') !== false) {
             return true;
         }
 
-        if (stripos($markup, "role='img'") !== false) {
+        if (stripos($markup, 'aria-describedby=') !== false) {
             return true;
         }
 
-        return false;
+        if (preg_match('/role\s*=\s*(?:"|\')img(?:"|\')/i', $markup)) {
+            return true;
+        }
+
+        $textualLabel = self::extractSvgTextLabel($markup);
+
+        return $textualLabel !== null;
     }
 
     private static function shouldWrapDecorativeIcon(string $markup): bool
@@ -161,6 +165,39 @@ class Templating
             || stripos($markup, '<desc') !== false
             || stripos($markup, 'aria-labelledby=') !== false
             || stripos($markup, 'aria-describedby=') !== false;
+    }
+
+    private static function extractSvgTextLabel(string $markup): ?string
+    {
+        if (stripos($markup, '<title') === false && stripos($markup, '<desc') === false) {
+            return null;
+        }
+
+        if (!preg_match_all('/<(title|desc)\b[^>]*>(.*?)<\/\1>/is', $markup, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+            return null;
+        }
+
+        $firstMatch = null;
+
+        foreach ($matches as $match) {
+            if ($firstMatch === null || $match[0][1] < $firstMatch[0][1]) {
+                $firstMatch = $match;
+            }
+        }
+
+        if ($firstMatch === null) {
+            return null;
+        }
+
+        $rawText = strip_tags($firstMatch[2][0]);
+        $decoded = html_entity_decode($rawText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $label = trim($decoded);
+
+        if ($label === '') {
+            return null;
+        }
+
+        return $label;
     }
 
     private static function humanizeIconKey(string $iconKey): string

@@ -25,6 +25,7 @@ $allIcons = [
     'facebook_white'              => '<svg class="facebook"></svg>',
     'custom_my_brand'             => '<svg class="custom" focusable="true" role="presentation"></svg>',
     'custom_accessible'           => '<svg class="custom-accessible" aria-labelledby="custom-title" data-test="keep"><title id="custom-title">Mon titre</title></svg>',
+    'custom_title_only'           => '<svg class="custom-title"><title>Libellé Interne</title></svg>',
     'custom_accessible_label'     => '<svg class="custom-labeled" role="img" aria-label="Accessible"></svg>',
 ];
 
@@ -69,7 +70,7 @@ $resultWithAccessibleMarkup = Templating::renderSocialIcons([
     ],
 ], $allIcons, '');
 
-$expectedAccessibleMarkup = '<div class="social-icons"><a href="https://example.com/accessible" target="_blank" rel="noopener noreferrer" aria-label="Accessible – s’ouvre dans une nouvelle fenêtre"><span aria-hidden="true" focusable="false"><svg class="custom-accessible" aria-labelledby="custom-title" data-test="keep" aria-hidden="true" focusable="false" role="presentation"><title id="custom-title">Mon titre</title></svg></span><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
+$expectedAccessibleMarkup = '<div class="social-icons"><a href="https://example.com/accessible" target="_blank" rel="noopener noreferrer" aria-label="Mon titre – s’ouvre dans une nouvelle fenêtre"><svg class="custom-accessible" aria-labelledby="custom-title" data-test="keep"><title id="custom-title">Mon titre</title></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedAccessibleMarkup, $resultWithAccessibleMarkup, 'preserves custom ARIA attributes on inline SVG imports');
 
 $resultWithMissingIconMarkup = Templating::renderSocialIcons([
@@ -93,5 +94,16 @@ $resultWithAccessibleCustomIcon = Templating::renderSocialIcons([
 
 $expectedAccessibleMarkup = '<div class="social-icons horizontal"><a href="https://example.com/access" target="_blank" rel="noopener noreferrer" aria-label="Accessible Label – s’ouvre dans une nouvelle fenêtre"><svg class="custom-labeled" role="img" aria-label="Accessible"></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
 assertSame($expectedAccessibleMarkup, $resultWithAccessibleCustomIcon, 'preserves ARIA attributes for non-decorative custom icon markup');
+
+$svgTitleResult = Templating::renderSocialIcons([
+    [
+        'icon'  => 'custom_title_only',
+        'url'   => 'https://example.com/title',
+        'label' => '',
+    ],
+], $allIcons, '');
+
+$expectedSvgTitleMarkup = '<div class="social-icons"><a href="https://example.com/title" target="_blank" rel="noopener noreferrer" aria-label="Libellé Interne – s’ouvre dans une nouvelle fenêtre"><svg class="custom-title"><title>Libellé Interne</title></svg><span class="screen-reader-text">s’ouvre dans une nouvelle fenêtre</span></a></div>';
+assertSame($expectedSvgTitleMarkup, $svgTitleResult, 'uses <title> text as fallback label for accessible SVG icons');
 
 exit($testsPassed ? 0 : 1);
