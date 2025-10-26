@@ -63,24 +63,23 @@ class Templating
             $iconKey = isset($social['icon']) ? (string) $social['icon'] : '';
             $iconMarkup = $iconKey !== '' && isset($allIcons[$iconKey]) ? (string) $allIcons[$iconKey] : null;
             $shouldWrapDecorativeIcon = false;
+            $hasExplicitAccessibleLabel = false;
+            $svgTextLabel = null;
 
             if ($iconMarkup !== null && stripos($iconMarkup, '<svg') !== false) {
+                $svgTextLabel = self::extractSvgTextLabel($iconMarkup);
                 $hasExplicitAccessibleLabel = self::hasExplicitAccessibleLabel($iconMarkup);
 
                 if (!$hasExplicitAccessibleLabel) {
                     $iconMarkup = self::makeInlineIconDecorative($iconMarkup);
-                }
-
-                $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
-
-                if (!$hasExplicitAccessibleLabel) {
+                    $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
                     $shouldWrapDecorativeIcon = self::shouldWrapDecorativeIcon($iconMarkup);
                 }
             } elseif ($iconMarkup !== null) {
                 $iconMarkup = IconHelpers::makeInlineIconDecorative($iconMarkup);
             }
 
-            $defaultLabel = self::humanizeIconKey($iconKey);
+            $defaultLabel = $svgTextLabel ?? self::humanizeIconKey($iconKey);
             $ariaLabel = $customLabel !== '' ? $customLabel : $defaultLabel;
 
             $href = esc_url($social['url']);
@@ -144,6 +143,14 @@ class Templating
             return true;
         }
 
+        if (stripos($markup, 'aria-labelledby=') !== false) {
+            return true;
+        }
+
+        if (stripos($markup, 'aria-describedby=') !== false) {
+            return true;
+        }
+
         if (stripos($markup, 'role="img"') !== false) {
             return true;
         }
@@ -152,15 +159,62 @@ class Templating
             return true;
         }
 
-        return false;
+        return self::extractSvgTextLabel($markup) !== null;
     }
 
     private static function shouldWrapDecorativeIcon(string $markup): bool
     {
+        if (stripos($markup, '<title') !== false || stripos($markup, '<desc') !== false) {
+            $label = self::extractSvgTextLabel($markup);
+
+            if ($label !== null) {
+                return false;
+            }
+        }
+
         return stripos($markup, '<title') !== false
             || stripos($markup, '<desc') !== false
             || stripos($markup, 'aria-labelledby=') !== false
             || stripos($markup, 'aria-describedby=') !== false;
+    }
+
+    private static function extractSvgTextLabel(string $markup): ?string
+    {
+        if (stripos($markup, '<svg') === false) {
+            return null;
+        }
+
+        if (stripos($markup, '<title') === false && stripos($markup, '<desc') === false) {
+            return null;
+        }
+
+        $previousUseInternalErrors = libxml_use_internal_errors(true);
+
+        try {
+            $document = new \DOMDocument();
+            $wrappedMarkup = '<svg-wrapper>' . $markup . '</svg-wrapper>';
+
+            if (@$document->loadXML($wrappedMarkup, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING) === false) {
+                return null;
+            }
+
+            foreach (['title', 'desc'] as $tagName) {
+                $nodes = $document->getElementsByTagName($tagName);
+
+                foreach ($nodes as $node) {
+                    $text = trim($node->textContent);
+
+                    if ($text !== '') {
+                        return $text;
+                    }
+                }
+            }
+
+            return null;
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousUseInternalErrors);
+        }
     }
 
     private static function humanizeIconKey(string $iconKey): string
