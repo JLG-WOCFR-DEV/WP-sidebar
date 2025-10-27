@@ -6,6 +6,10 @@ use function __;
 
 class DefaultSettings
 {
+    private const TEXT_DOMAIN = 'sidebar-jlg';
+
+    private const TRANSLATABLE_KEYS = ['label'];
+
     public const WIDGET_SCHEMAS = [
         'cta' => [
             'label' => 'Bloc CTA',
@@ -224,19 +228,19 @@ class DefaultSettings
                         ],
                         'media_alt' => [
                             'type' => 'text',
-                            'label' => __('Texte alternatif', 'sidebar-jlg'),
+                            'label' => 'Texte alternatif',
                             'default' => '',
                         ],
                         'caption' => [
                             'type' => 'text',
-                            'label' => __('Légende', 'sidebar-jlg'),
+                            'label' => 'Légende',
                             'default' => '',
                         ],
                     ],
                 ],
                 'controls_description' => [
                     'type' => 'textarea',
-                    'label' => __('Consigne d’utilisation des contrôles', 'sidebar-jlg'),
+                    'label' => 'Consigne d’utilisation des contrôles',
                     'default' => '',
                 ],
             ],
@@ -790,12 +794,33 @@ class DefaultSettings
         ],
     ];
 
+    public static function getWidgetSchemas(): array
+    {
+        return self::translateSchemaLabels(self::WIDGET_SCHEMAS);
+    }
+
+    private static function translateSchemaLabels(array $schemas): array
+    {
+        foreach ($schemas as $key => $value) {
+            if (is_array($value)) {
+                $schemas[$key] = self::translateSchemaLabels($value);
+                continue;
+            }
+
+            if (is_string($value) && in_array($key, self::TRANSLATABLE_KEYS, true)) {
+                $schemas[$key] = __($value, self::TEXT_DOMAIN);
+            }
+        }
+
+        return $schemas;
+    }
+
     /**
      * Returns the default plugin settings.
      */
     public function all(): array
     {
-        return [
+        $settings = [
             'enable_sidebar'    => true,
             'enable_analytics'  => false,
             'app_name'          => 'Sidebar JLG',
@@ -882,28 +907,28 @@ class DefaultSettings
             'neon_spread'       => 5,
             'menu_items'        => [
                 [
-                    'label'     => \__( 'Accueil', 'sidebar-jlg' ),
+                    'label'     => 'Accueil',
                     'type'      => 'custom',
                     'icon_type' => 'svg_inline',
                     'icon'      => '',
                     'value'     => '#accueil',
                 ],
                 [
-                    'label'     => \__( 'Tests', 'sidebar-jlg' ),
+                    'label'     => 'Tests',
                     'type'      => 'custom',
                     'icon_type' => 'svg_inline',
                     'icon'      => '',
                     'value'     => '#tests',
                 ],
                 [
-                    'label'     => \__( 'Articles', 'sidebar-jlg' ),
+                    'label'     => 'Articles',
                     'type'      => 'custom',
                     'icon_type' => 'svg_inline',
                     'icon'      => '',
                     'value'     => '#articles',
                 ],
                 [
-                    'label'     => \__( 'Pages', 'sidebar-jlg' ),
+                    'label'     => 'Pages',
                     'type'      => 'custom',
                     'icon_type' => 'svg_inline',
                     'icon'      => '',
@@ -925,6 +950,8 @@ class DefaultSettings
             'widgets'           => [],
             'widget_schemas'    => self::WIDGET_SCHEMAS,
         ];
+
+        return self::translateSchemaLabels($settings);
     }
 
     public function getStylePresets(): array
