@@ -1251,8 +1251,13 @@ input:checked + .jlg-slider:before { transform: translateX(26px); }
     display: none;
 }
 
-.sidebar-jlg-admin-app__root.is-mounted + #sidebar-jlg-legacy-settings {
-    display: none;
+.sidebar-jlg-admin-app__root.is-mounted + #sidebar-jlg-legacy-settings #tab-general-tab,
+.sidebar-jlg-admin-app__root.is-mounted + #sidebar-jlg-legacy-settings #tab-profiles-tab,
+.sidebar-jlg-admin-app__root.is-mounted + #sidebar-jlg-legacy-settings #tab-presets-tab,
+.sidebar-jlg-admin-app__root.is-mounted + #sidebar-jlg-legacy-settings #tab-general,
+.sidebar-jlg-admin-app__root.is-mounted + #sidebar-jlg-legacy-settings #tab-profiles,
+.sidebar-jlg-admin-app__root.is-mounted + #sidebar-jlg-legacy-settings #tab-presets {
+    display: none !important;
 }
 
 #sidebar-jlg-legacy-settings {

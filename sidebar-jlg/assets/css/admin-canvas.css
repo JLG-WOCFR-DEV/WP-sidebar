@@ -1,9 +1,6 @@
-[data-sidebar-experience].sidebar-jlg-canvas-ready {
-    min-height: 100vh;
-}
-
 [data-sidebar-experience][data-sidebar-experience-mode='canvas'] {
     position: relative;
+    min-height: 100vh;
 }
 
 [data-sidebar-experience][data-sidebar-experience-mode='canvas'] #sidebar-jlg-form,

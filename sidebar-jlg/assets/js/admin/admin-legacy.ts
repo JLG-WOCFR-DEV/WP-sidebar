@@ -5907,7 +5907,8 @@ jQuery(document).ready(function($) {
             const $box = $(this).closest('.menu-item-box');
             const label = $box.find('.item-label').val() || $box.find('.item-title').text();
 
-            if (confirm(`Supprimer "${label}" ?`)) {
+            const confirmMessage = getI18nString('menuItemDeleteConfirm', 'Supprimer "%s" ?').replace('%s', label);
+            if (confirm(confirmMessage)) {
                 $box.fadeOut(200, function() {
                     $(this).remove();
                     reindexFields();
@@ -6861,7 +6862,7 @@ jQuery(document).ready(function($) {
         });
         
         if (hasError) {
-            if (!confirm('Des erreurs d\'indexation ont été détectées. Voulez-vous continuer ?')) {
+            if (!confirm(getI18nString('indexationErrorsConfirm', 'Des erreurs d\'indexation ont été détectées. Voulez-vous continuer ?'))) {
                 e.preventDefault();
                 return false;
             }
@@ -6870,7 +6871,7 @@ jQuery(document).ready(function($) {
 
     // --- Réinitialisation des réglages ---
     $('#reset-jlg-settings').on('click', function() {
-        if (!confirm("Êtes-vous sûr de vouloir réinitialiser tous les réglages ? Cette action est irréversible.")) {
+        if (!confirm(getI18nString('resetSettingsConfirm', 'Êtes-vous sûr de vouloir réinitialiser tous les réglages ? Cette action est irréversible.'))) {
             return;
         }
 

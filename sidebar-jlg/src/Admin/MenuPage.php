@@ -61,14 +61,12 @@ class MenuPage
 
     public function addAdminMenu(): void
     {
-        add_menu_page(
+        add_theme_page(
             __('Sidebar JLG Settings', 'sidebar-jlg'),
             __('Sidebar JLG', 'sidebar-jlg'),
             'manage_options',
             'sidebar-jlg',
-            [$this, 'render'],
-            'dashicons-slides',
-            100
+            [$this, 'render']
         );
     }
 
@@ -320,7 +318,7 @@ class MenuPage
 
     public function enqueueAssets(string $hook): void
     {
-        if ('toplevel_page_sidebar-jlg' !== $hook) {
+        if ('appearance_page_sidebar-jlg' !== $hook) {
             return;
         }
 
@@ -499,6 +497,9 @@ class MenuPage
                 'importSuccess' => __('Réglages importés avec succès. Rechargement de la page…', 'sidebar-jlg'),
                 'importError' => __('L’import des réglages a échoué.', 'sidebar-jlg'),
                 'importMissingFile' => __('Veuillez sélectionner un fichier JSON avant de lancer l’import.', 'sidebar-jlg'),
+                'menuItemDeleteConfirm' => __('Supprimer "%s" ?', 'sidebar-jlg'),
+                'indexationErrorsConfirm' => __('Des erreurs d\'indexation ont été détectées. Voulez-vous continuer ?', 'sidebar-jlg'),
+                'resetSettingsConfirm' => __('Êtes-vous sûr de vouloir réinitialiser tous les réglages ? Cette action est irréversible.', 'sidebar-jlg'),
                 'searchNoTarget' => __('Aucun réglage filtrable sur cet onglet.', 'sidebar-jlg'),
                 'searchResultsCount' => __('%d sections affichées.', 'sidebar-jlg'),
                 'searchNoResults' => __('Aucun résultat ne correspond aux mots-clés saisis.', 'sidebar-jlg'),
