@@ -5880,10 +5880,8 @@ jQuery(document).ready(function($) {
             refreshItemTitle($newItem);
         });
 
-        // Gestionnaire d'ajout avec réindexation
-        $(`#${config.addButtonId}`).on('click', function() {
+        function appendBuilderItem(newItem) {
             const newIndex = container.children('.menu-item-box').length;
-            const newItem = config.newItem(newIndex);
             newItem.index = newIndex;
 
             const $newElement = $(template(newItem));
@@ -5895,12 +5893,25 @@ jQuery(document).ready(function($) {
 
             refreshItemTitle($newElement);
 
-            // Réindexation après ajout
             setTimeout(function() {
                 reindexFields();
                 logDebug(`Nouvel élément ajouté à ${config.dataKey}`);
             }, 100);
+        }
+
+        $(`#${config.addButtonId}`).on('click', function() {
+            appendBuilderItem(config.newItem(container.children('.menu-item-box').length));
         });
+
+        if (config.addSeparatorButtonId) {
+            $(`#${config.addSeparatorButtonId}`).on('click', function() {
+                const index = container.children('.menu-item-box').length;
+                const factory = typeof config.newSeparatorItem === 'function'
+                    ? config.newSeparatorItem
+                    : (itemIndex) => Object.assign({}, config.newItem(itemIndex), { type: 'separator', label: '' });
+                appendBuilderItem(factory(index));
+            });
+        }
 
         // Gestionnaire de suppression avec réindexation
         container.on('click', `.${config.deleteButtonClass}`, function() {
@@ -6672,7 +6683,8 @@ jQuery(document).ready(function($) {
         containerId: 'menu-items-container', 
         templateId: 'menu-item',
         dataKey: 'menu_items',
-        addButtonId: 'add-menu-item', 
+        addButtonId: 'add-menu-item',
+        addSeparatorButtonId: 'add-menu-separator',
         deleteButtonClass: 'delete-menu-item',
         newTitle: getI18nString('menuItemDefaultTitle', 'Nouvel élément'),
         newItem: (index) => ({

@@ -1373,15 +1373,12 @@ $textTransformLabels = [
         <!-- Onglet Contenu du Menu -->
         <div id="tab-menu" class="tab-content" role="tabpanel" aria-labelledby="tab-menu-tab" aria-hidden="true" hidden>
             <h2><?php esc_html_e('Construire le menu', 'sidebar-jlg'); ?></h2>
-            <p class="description"><?php esc_html_e('Ajoutez, organisez et supprimez les éléments de votre menu. Glissez-déposez pour réorganiser.', 'sidebar-jlg'); ?></p>
+            <p class="description"><?php esc_html_e('Ajoutez, organisez et supprimez les éléments de votre menu. Glissez-déposez pour réorganiser. Un séparateur structure le menu sans lien cliquable.', 'sidebar-jlg'); ?></p>
             <div id="menu-items-container"></div>
-            <button type="button" class="button button-primary" id="add-menu-item"><?php esc_html_e('Ajouter un élément', 'sidebar-jlg'); ?></button>
-        <!-- Onglet Contenu du Menu -->
-        <div id="tab-menu" class="tab-content" role="tabpanel" aria-labelledby="tab-menu-tab" aria-hidden="true" hidden>
-            <h2><?php esc_html_e('Construire le menu', 'sidebar-jlg'); ?></h2>
-            <p class="description"><?php esc_html_e('Ajoutez, organisez et supprimez les éléments de votre menu. Glissez-déposez pour réorganiser.', 'sidebar-jlg'); ?></p>
-            <div id="menu-items-container"></div>
-            <button type="button" class="button button-primary" id="add-menu-item"><?php esc_html_e('Ajouter un élément', 'sidebar-jlg'); ?></button>
+            <p class="sidebar-jlg-menu-builder-actions">
+                <button type="button" class="button button-primary" id="add-menu-item"><?php esc_html_e('Ajouter un élément', 'sidebar-jlg'); ?></button>
+                <button type="button" class="button" id="add-menu-separator"><?php esc_html_e('Ajouter un séparateur', 'sidebar-jlg'); ?></button>
+            </p>
 
             <div class="sidebar-jlg-custom-icon-upload">
                 <button type="button" class="button sidebar-jlg-upload-svg" data-context="menu">
