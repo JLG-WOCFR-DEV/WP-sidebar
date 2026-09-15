@@ -4447,17 +4447,10 @@ jQuery(document).ready(function($) {
 
         const tone = typeof type === 'string' ? type.toLowerCase() : 'info';
         const toneClassMap = {
-            success: 'sidebar-jlg-toast--success',
-            error: 'sidebar-jlg-toast--error',
-            warning: 'sidebar-jlg-toast--warning',
-            info: 'sidebar-jlg-toast--info'
-        };
-
-        const iconMap = {
-            success: '✓',
-            error: '!',
-            warning: '!',
-            info: 'i'
+            success: 'success',
+            error: 'error',
+            warning: 'warning',
+            info: 'info'
         };
 
         const toneLabels = {
@@ -4468,7 +4461,6 @@ jQuery(document).ready(function($) {
         };
 
         const toneClass = toneClassMap[tone] || toneClassMap.info;
-        const iconLabel = iconMap[tone] || iconMap.info;
         const toneLabel = toneLabels[tone] || toneLabels.info;
         const dismissText = getI18nString('dismissNotice', 'Ignorer cette notification.');
 
@@ -4476,32 +4468,24 @@ jQuery(document).ready(function($) {
             options.autoDismiss = false;
         }
 
-        const noticeId = `sidebar-jlg-toast-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        const $notice = $('<section/>', {
-            class: `sidebar-jlg-toast ${toneClass}`,
+        const noticeId = `sidebar-jlg-notice-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const $notice = $('<div/>', {
+            class: `notice notice-${toneClass} is-dismissible`,
             id: noticeId,
             role: 'status',
             'aria-live': 'polite',
-            'data-sidebar-toast': 'true',
-            'data-autodismiss': options.autoDismiss ? 'true' : 'false',
+            'data-sidebar-notice': 'true',
         });
 
-        const $icon = $('<span/>', {
-            class: 'sidebar-jlg-toast__icon',
-            'aria-hidden': 'true',
-        }).text(iconLabel);
-
-        const $body = $('<div/>', { class: 'sidebar-jlg-toast__body' });
-        const $message = $('<p/>', { class: 'sidebar-jlg-toast__message' });
-        $message.text(resolvedMessage || '');
-
-        const $meta = $('<div/>', { class: 'sidebar-jlg-toast__meta' });
-        const $toneSr = $('<span/>', { class: 'screen-reader-text sidebar-jlg-toast__tone' });
+        const $message = $('<p/>');
+        const $toneSr = $('<span/>', { class: 'screen-reader-text' });
         $toneSr.text(toneLabel);
+        $message.append($toneSr);
+        $message.append(document.createTextNode(resolvedMessage || ''));
 
         const actions = Array.isArray(options.actions) ? options.actions : [];
         if (actions.length) {
-            const $actions = $('<div/>', { class: 'sidebar-jlg-toast__actions' });
+            const $actions = $('<p/>', { class: 'sidebar-jlg-notice-actions' });
             actions.forEach((action) => {
                 if (!action || typeof action !== 'object' || typeof action.label !== 'string') {
                     return;
@@ -4510,7 +4494,7 @@ jQuery(document).ready(function($) {
                 const isLink = typeof action.href === 'string' && action.href;
                 const elementTag = isLink ? '<a/>' : '<button/>';
                 const baseAttributes = {
-                    class: 'sidebar-jlg-toast__action',
+                    class: 'button button-secondary',
                 };
 
                 if (isLink) {
@@ -4543,46 +4527,34 @@ jQuery(document).ready(function($) {
             });
 
             if ($actions.children().length) {
-                $meta.append($actions);
+                $notice.append($message).append($actions);
+            } else {
+                $notice.append($message);
             }
-        }
-
-        $body.append($toneSr).append($message);
-        if ($meta.children().length) {
-            $body.append($meta);
+        } else {
+            $notice.append($message);
         }
 
         const $close = $('<button/>', {
             type: 'button',
-            class: 'sidebar-jlg-toast__close',
-            'aria-label': dismissText,
+            class: 'notice-dismiss',
         });
-
         const $closeSr = $('<span/>', { class: 'screen-reader-text' });
         $closeSr.text(dismissText);
         $close.append($closeSr);
-
-        const $progress = $('<div/>', { class: 'sidebar-jlg-toast__progress' });
-        const $progressBar = $('<div/>', { class: 'sidebar-jlg-toast__progress-bar' });
-        $progress.append($progressBar);
-
-        $notice.append($icon, $body, $close, $progress);
+        $notice.append($close);
 
         const removeNotice = (currentNotice, host = $target) => {
-            if (!currentNotice || !currentNotice.length || currentNotice.hasClass('is-leaving')) {
+            if (!currentNotice || !currentNotice.length) {
                 return;
             }
 
-            currentNotice.addClass('is-leaving');
-
-            setTimeout(() => {
-                currentNotice.remove();
-                updateNoticeCounter(host);
-            }, 220);
+            currentNotice.remove();
+            updateNoticeCounter(host);
         };
 
         const updateNoticeCounter = (host = $target) => {
-            const count = host.find('[data-sidebar-toast]').length;
+            const count = host.find('[data-sidebar-notice]').length;
 
             if (host.is('.sidebar-jlg-aria-notices')) {
                 host.attr('data-sidebar-notices', String(count));
@@ -4602,7 +4574,7 @@ jQuery(document).ready(function($) {
         $target.prepend($notice);
         updateNoticeCounter($target);
 
-        const existing = $target.find('[data-sidebar-toast]');
+        const existing = $target.find('[data-sidebar-notice]');
         if (existing.length > maxVisible) {
             existing.slice(maxVisible).each(function() {
                 removeNotice($(this), $target);
@@ -4630,11 +4602,6 @@ jQuery(document).ready(function($) {
                 timerId = null;
                 closeNotice();
             }, remaining);
-
-            if ($progressBar.length) {
-                $progressBar.css('animation-duration', `${remaining}ms`);
-                $progressBar.css('animation-play-state', 'running');
-            }
         };
 
         const pauseTimer = () => {
@@ -4647,10 +4614,6 @@ jQuery(document).ready(function($) {
 
             if (timerStart !== null) {
                 remaining -= Date.now() - timerStart;
-            }
-
-            if ($progressBar.length) {
-                $progressBar.css('animation-play-state', 'paused');
             }
         };
 
@@ -4672,9 +4635,6 @@ jQuery(document).ready(function($) {
         };
 
         if (options.autoDismiss) {
-            $progressBar.css('animation-duration', `${remaining}ms`);
-            $progressBar.css('animation-play-state', 'paused');
-
             if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
                 window.requestAnimationFrame(startTimer);
             } else {
@@ -4685,8 +4645,6 @@ jQuery(document).ready(function($) {
             $notice.on('mouseleave focusout', () => {
                 setTimeout(resumeTimer, 10);
             });
-        } else {
-            $progressBar.css('animation', 'none');
         }
     }
 

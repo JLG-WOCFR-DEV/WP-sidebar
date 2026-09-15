@@ -3,6 +3,9 @@
  * Plugin Name:       Sidebar - JLG
  * Description:       Une sidebar professionnelle, animée et entièrement personnalisable pour votre site WordPress.
  * Version:           4.10.0
+ * Requires at least: 6.2
+ * Tested up to:     7.1
+ * Requires PHP:     7.4
  * Author:            Jérôme Le Gousse
  * Author URI:        https://example.com
  * License:           GPL v2 or later

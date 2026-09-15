@@ -1,4 +1,59 @@
+function sidebarJlgIsEditorCanvas() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    if (window.SIDEBAR_JLG_IS_EDITOR) {
+        return true;
+    }
+
+    try {
+        if (window.parent && window.parent !== window && window.parent.SIDEBAR_JLG_IS_EDITOR) {
+            return true;
+        }
+    } catch (error) {
+        // Cross-origin parent access is ignored.
+    }
+
+    const body = typeof document !== 'undefined' ? document.body : null;
+    if (body && body.classList) {
+        const editorClassCandidates = [
+            'block-editor-page',
+            'block-editor-iframe__body',
+            'edit-site-visual-editor__body',
+            'site-editor-iframe__body',
+        ];
+
+        if (editorClassCandidates.some((className) => body.classList.contains(className))) {
+            return true;
+        }
+    }
+
+    if (typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-sidebar-jlg-editor]')) {
+        return true;
+    }
+
+    const frame = window.frameElement;
+    if (frame) {
+        const frameName = frame.getAttribute('name') || '';
+        const frameClass = typeof frame.className === 'string' ? frame.className : '';
+        if (frameName === 'editor-canvas' || frameClass.indexOf('editor-canvas') !== -1) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+if (typeof window !== 'undefined') {
+    window.sidebarJlgIsEditorCanvas = sidebarJlgIsEditorCanvas;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    if (sidebarJlgIsEditorCanvas()) {
+        return;
+    }
+
     const sidebar = document.getElementById('pro-sidebar');
     const hamburgerBtn = document.getElementById('hamburger-btn');
     const closeBtn = sidebar ? sidebar.querySelector('.close-sidebar-btn') : null;

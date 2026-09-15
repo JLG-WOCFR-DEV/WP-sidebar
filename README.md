@@ -2,6 +2,8 @@
 
 Une extension WordPress qui fournit une sidebar animée et entièrement personnalisable, pensée pour les équipes qui veulent un rendu professionnel sans renoncer à la simplicité d'administration.
 
+Compatibilité : WordPress 6.2 et versions ultérieures, **testé jusqu’à WordPress 7.1**. PHP 7.4 ou supérieur.
+
 ## Fonctionnalités
 
 ### Activation et intégration natives

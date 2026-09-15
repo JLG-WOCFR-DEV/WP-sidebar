@@ -163,16 +163,6 @@ $textTransformLabels = [
     data-sidebar-experience-mode="simple"
     data-sidebar-form-mode="simple"
 >
-    <div id="sidebar-jlg-admin-app-root" class="sidebar-jlg-admin-app__root">
-        <div class="sidebar-jlg-admin-app__fallback" role="status" aria-live="polite">
-            <p><?php esc_html_e( 'Chargement de la nouvelle interface Sidebar JLG…', 'sidebar-jlg' ); ?></p>
-            <p><?php esc_html_e( 'Si elle ne s’affiche pas, utilisez le formulaire historique ci-dessous.', 'sidebar-jlg' ); ?></p>
-            <noscript>
-                <p><?php esc_html_e( 'Activez JavaScript pour profiter de l’édition réactive. Le formulaire ci-dessous reste disponible.', 'sidebar-jlg' ); ?></p>
-            </noscript>
-        </div>
-    </div>
-    <div id="sidebar-jlg-legacy-settings" class="sidebar-jlg-admin-legacy">
     <h1><?php esc_html_e( 'Réglages de la Sidebar JLG', 'sidebar-jlg' ); ?></h1>
 
     <?php
@@ -197,7 +187,6 @@ $textTransformLabels = [
     <p><?php esc_html_e( 'Personnalisez l\'apparence et le comportement de votre sidebar.', 'sidebar-jlg' ); ?></p>
     <p><b><?php esc_html_e( 'Nouveau :', 'sidebar-jlg' ); ?></b> <?php printf( esc_html__( 'Ajoutez vos propres icônes SVG dans le dossier %1$s. Elles apparaîtront dans les listes de sélection !', 'sidebar-jlg' ), '<code>/wp-content/uploads/sidebar-jlg/icons/</code>' ); ?></p>
 
-    
     <div class="nav-tab-wrapper" role="tablist">
         <a href="#tab-general" class="nav-tab nav-tab-active" id="tab-general-tab" role="tab" aria-controls="tab-general" aria-selected="true" tabindex="0"><?php esc_html_e( 'Général & Comportement', 'sidebar-jlg' ); ?></a>
         <a href="#tab-profiles" class="nav-tab" id="tab-profiles-tab" role="tab" aria-controls="tab-profiles" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Profils', 'sidebar-jlg' ); ?></a>
@@ -211,6 +200,9 @@ $textTransformLabels = [
         <a href="#tab-pro-comparison" class="nav-tab" id="tab-pro-comparison-tab" role="tab" aria-controls="tab-pro-comparison" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Comparatif Pro', 'sidebar-jlg' ); ?></a>
         <a href="#tab-tools" class="nav-tab" id="tab-tools-tab" role="tab" aria-controls="tab-tools" aria-selected="false" tabindex="-1"><?php esc_html_e( 'Outils', 'sidebar-jlg' ); ?></a>
     </div>
+
+    <div id="sidebar-jlg-admin-app-root" class="sidebar-jlg-admin-app__root"></div>
+    <div id="sidebar-jlg-legacy-settings" class="sidebar-jlg-admin-legacy">
 
     <div
         id="sidebar-jlg-preview"
