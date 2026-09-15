@@ -28,6 +28,31 @@ class SearchBlock
     public function registerHooks(): void
     {
         add_action('init', [$this, 'registerBlock']);
+        add_action('enqueue_block_assets', [$this, 'enqueueEditorCanvasGuard']);
+        add_action('enqueue_block_editor_assets', [$this, 'enqueueEditorCanvasGuard']);
+    }
+
+    /**
+     * Flag the WP 7.1 iframed canvas so front JS never boots inside the editor.
+     *
+     * `enqueue_block_assets` runs in the iframe (and on the front). Keep the flag
+     * off on the public site.
+     */
+    public function enqueueEditorCanvasGuard(): void
+    {
+        if (!function_exists('is_admin') || !is_admin()) {
+            return;
+        }
+
+        if (!function_exists('wp_register_script') || !function_exists('wp_enqueue_script') || !function_exists('wp_add_inline_script')) {
+            return;
+        }
+
+        $handle = 'sidebar-jlg-editor-canvas-guard';
+
+        wp_register_script($handle, false, [], $this->version, true);
+        wp_enqueue_script($handle);
+        wp_add_inline_script($handle, 'window.SIDEBAR_JLG_IS_EDITOR = true;', 'before');
     }
 
     public function registerBlock(): void

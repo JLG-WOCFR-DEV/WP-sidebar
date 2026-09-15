@@ -446,6 +446,49 @@ if (!function_exists('wp_test_get_inline_styles')) {
     }
 }
 
+if (!function_exists('wp_add_inline_script')) {
+    function wp_add_inline_script($handle, $data, $position = 'after'): void
+    {
+        $handled = false;
+        wp_test_call_override(__FUNCTION__, func_get_args(), $handled);
+        if ($handled) {
+            return;
+        }
+
+        if (!isset($GLOBALS['wp_test_inline_scripts'][$handle]) || !is_array($GLOBALS['wp_test_inline_scripts'][$handle])) {
+            $GLOBALS['wp_test_inline_scripts'][$handle] = [];
+        }
+
+        $GLOBALS['wp_test_inline_scripts'][$handle][] = [
+            'data' => (string) $data,
+            'position' => (string) $position,
+        ];
+    }
+}
+
+if (!function_exists('wp_test_get_inline_scripts')) {
+    function wp_test_get_inline_scripts(string $handle): string
+    {
+        $scripts = $GLOBALS['wp_test_inline_scripts'][$handle] ?? [];
+
+        if (!is_array($scripts)) {
+            return '';
+        }
+
+        $chunks = [];
+        foreach ($scripts as $script) {
+            if (is_array($script) && isset($script['data'])) {
+                $chunks[] = (string) $script['data'];
+                continue;
+            }
+
+            $chunks[] = (string) $script;
+        }
+
+        return implode("\n", $chunks);
+    }
+}
+
 if (!function_exists('wp_enqueue_script')) {
     function wp_enqueue_script(...$args): void
     {

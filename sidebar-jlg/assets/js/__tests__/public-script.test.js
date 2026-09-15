@@ -206,8 +206,11 @@ describe('public-script.js', () => {
     delete window.PointerEvent;
     delete window.performance;
     delete window.sidebarJLGAnalyticsFactory;
+    delete window.SIDEBAR_JLG_IS_EDITOR;
+    delete window.sidebarJlgIsEditorCanvas;
     removeRecordedListeners();
     document.body.innerHTML = '';
+    document.body.className = '';
     window.localStorage.clear();
   });
 
@@ -738,5 +741,29 @@ describe('public-script.js', () => {
     expect(payload.interactions.menu_link_click).toBeGreaterThan(0);
     expect(payload.interactions.social_link_click).toBeGreaterThan(0);
     expect(payload.interactions.cta_click).toBeGreaterThan(0);
+  });
+
+  test('does not open the sidebar when SIDEBAR_JLG_IS_EDITOR is set', () => {
+    window.SIDEBAR_JLG_IS_EDITOR = true;
+    loadScript();
+
+    hamburgerBtn.click();
+    jest.runOnlyPendingTimers();
+
+    expect(window.sidebarJlgIsEditorCanvas()).toBe(true);
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+    expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  test('does not open the sidebar in the iframed editor canvas', () => {
+    document.body.classList.add('block-editor-iframe__body');
+    loadScript();
+
+    hamburgerBtn.click();
+    jest.runOnlyPendingTimers();
+
+    expect(window.sidebarJlgIsEditorCanvas()).toBe(true);
+    expect(document.body.classList.contains('sidebar-open')).toBe(false);
+    expect(hamburgerBtn.getAttribute('aria-expanded')).toBe('false');
   });
 });

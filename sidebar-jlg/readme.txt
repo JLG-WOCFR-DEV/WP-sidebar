@@ -2,7 +2,7 @@
 Contributors: jlg
 Tags: sidebar, navigation, menu, customizer, analytics
 Requires at least: 6.2
-Tested up to: 6.5
+Tested up to: 7.1
 Requires PHP: 7.4
 Stable tag: 4.10.0
 License: GPLv2 or later
@@ -56,6 +56,7 @@ Activez la collecte depuis l'onglet Général. Les statistiques (ouvertures, cli
 
 = 4.10.0 =
 * Version initiale disponible dans ce dépôt public.
+* Compatibilité déclarée jusqu’à WordPress 7.1 ; JS front isolé du canvas éditeur iframé.
 
 == Upgrade Notice ==
 

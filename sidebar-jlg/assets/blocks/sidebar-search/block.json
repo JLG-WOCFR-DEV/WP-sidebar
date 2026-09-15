@@ -1,5 +1,5 @@
 {
-  "apiVersion": 2,
+  "apiVersion": 3,
   "name": "jlg/sidebar-search",
   "title": "Sidebar JLG – Recherche",
   "description": "Affiche le formulaire de recherche configuré via Sidebar JLG.",

@@ -295,8 +295,38 @@ class SidebarRenderer
         add_action('wp_footer', [$this, 'outputBodyDataScriptFallback'], 5);
     }
 
+    public function isEditorCanvasRequest(): bool
+    {
+        if (function_exists('wp_is_block_editor') && wp_is_block_editor()) {
+            return true;
+        }
+
+        $canvas = isset($_GET['canvas']) ? sanitize_key((string) $_GET['canvas']) : '';
+        if ($canvas === 'edit') {
+            return true;
+        }
+
+        $context = isset($_GET['context']) ? sanitize_key((string) $_GET['context']) : '';
+        if ($context === 'edit') {
+            return true;
+        }
+
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+            if ($uri !== '' && strpos($uri, 'block-renderer') !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function enqueueAssets(): void
     {
+        if ($this->isEditorCanvasRequest()) {
+            return;
+        }
+
         $activeProfile = $this->getActiveProfileData();
         $profile = $activeProfile['profile'];
         $options = $activeProfile['settings'];
@@ -1251,6 +1281,10 @@ class SidebarRenderer
 
     public function outputSidebar(): void
     {
+        if ($this->isEditorCanvasRequest()) {
+            return;
+        }
+
         $html = $this->render();
 
         if (!is_string($html)) {
@@ -1272,6 +1306,10 @@ class SidebarRenderer
 
     private function printBodyDataScript(): void
     {
+        if ($this->isEditorCanvasRequest()) {
+            return;
+        }
+
         if ($this->bodyDataPrinted) {
             return;
         }
@@ -1970,6 +2008,10 @@ class SidebarRenderer
 
     public function addBodyClasses(array $classes): array
     {
+        if ($this->isEditorCanvasRequest()) {
+            return $classes;
+        }
+
         $state = $this->resolveActiveSidebarState();
         if ($state === null) {
             return $classes;
